@@ -9,4 +9,4 @@
 // if encontering an error during these phase free all struct and throw mem error
 int TargPush(char * token);
 
-#endif /* TARG_PARSER_H */
+#endif /* !_TARG_PARSER_H */

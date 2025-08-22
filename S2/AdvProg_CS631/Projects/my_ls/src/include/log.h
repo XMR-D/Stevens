@@ -10,4 +10,4 @@
 #define FUNC_LOG(func, msg) printf("[" func "] " msg "\n")
 
 
-#endif /*LOG_H*/
+#endif /* !_LOG_H */

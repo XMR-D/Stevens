@@ -3,4 +3,4 @@
 
 int tokenize(int argc, char * input[]);
 
-#endif  /* TOKENIZE_H */
+#endif  /* !_TOKENIZE_H */

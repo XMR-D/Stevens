@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <string.h> 
 
-#include "log.h"
 #include "error.h"
+#include "log.h"
 #include "targ_parser.h"
 
 int TargPush(char * token)

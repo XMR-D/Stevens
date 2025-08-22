@@ -8,4 +8,4 @@
 
 int throw_error(char wrng_opt, char * wrng_targ, char * reason, int err);
 
-#endif /* ERROR_H */
+#endif /* !_ERROR_H */
