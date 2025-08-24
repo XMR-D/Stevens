@@ -22,11 +22,11 @@ ls: $(objs-y)
 debug :
 	make debug_flag 'CFLAGS=$(DEBUGFLAGS)'
 debug_flag: $(objs-y)
-	$(CC) $(CFLAGS) -I$(INCLUDE) $^ -o debug_ls
+	$(CC) $(CFLAGS) $(LDFLAGS) -I$(INCLUDE) $^ -o debug_ls
 
 #C and Asm source file compilation with C flags
 %.o: %.c
-	$(CC) $(CFLAGS) -I$(INCLUDE) -c $^ -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) -I$(INCLUDE) -c $^ -o $@
 
 %.S.o: %.S
 	$(AS) $(SFLAGS) -I$(INCLUDE) -c $^ -o $@

@@ -139,6 +139,7 @@ int OptSet(char * token)
             usr_opt->s++;
             break;
         default:
+            throw_error(token[i], NULL, NULL, WRNG_OPT_ERR);
             return WRNG_OPT_ERR;
             break;
 

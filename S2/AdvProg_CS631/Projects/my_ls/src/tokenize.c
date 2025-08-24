@@ -8,13 +8,14 @@
 #include "targ_parser.h"
 #include "tokenize.h"
 
-#define ERR_THROWN
-
 /* opt_delim is put to 1 when '--' is met, meaning next tokens are targets */
 int opt_delim = 0;
 
 /* small interrupt signal to optimize in case of help query (such as --help) */
 int help = 0;
+
+extern TargList * tl_tail;
+extern TargList * targ_list;
 
 int process_token(char * token)
 {
@@ -25,7 +26,14 @@ int process_token(char * token)
         return 0;
     }
 
-    /* token is an option*/
+    /* If the token '--' then state that delim has been found */
+    if (!strcmp(token, "--") && !opt_delim)
+    {
+        opt_delim++;
+        return 0;
+    }
+
+        /* token is an option*/
     if (token[0] == '-' && !opt_delim)
     {
         if (OptSet(token))
@@ -35,19 +43,23 @@ int process_token(char * token)
 
     }
 
-    /* If the token '--' then state that delim has been found */
-    if (!strcmp(token, "--") && !opt_delim)
-    {
-        opt_delim++;
-        return 0;
-    }
-
     /* token is a target */
     else
     {
-        if (TargPush(token))
-            return WRNG_TARG_ERR;
+        TargList * start = tl_tail;
+        int isdir = 0;
+
+        /* target is a directory*/
+        if (token[strlen(token)-1] == '/')
+            isdir++;
+
+        /* target is a file*/
         else
+            start = targ_list;
+
+        if (TargLappend(start, token, isdir))
+            return WRNG_TARG_ERR;
+        else 
             return 0;
     }
 }
@@ -57,19 +69,13 @@ int tokenize(int argc, char * input[])
     WARN("Tokenizer start.");
     int err = 0;
 
-    for (int i = argc; i >= 1 && !help; i--)
+    for (int i = 1; i < argc && !help; i++)
     {
-      
         err = process_token(*input);
         if (err)
             return err;
-
         input++;
-        printf("\n");
     }
-    SUCCESS("Tokensizer end.");
-
-
-    //STEP 2 WORLD
+    SUCCESS("Tokensizer finished successfully.");
     return 0;
 }
