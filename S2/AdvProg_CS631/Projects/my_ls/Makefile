@@ -34,4 +34,4 @@ debug_flag: $(objs-y)
 # Specify that "clean" is not a file and rather a command.
 .PHONY: clean
 clean:
-	rm -rdf ls debug_ls $(SRC_DIR)/*.o
+	rm -rdf ls debug_ls $(SRC_DIR)/*.o valgrind-out.txt
