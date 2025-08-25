@@ -6,10 +6,8 @@
 #include "log.h"
 #include "targ_parser.h"
 
-/* Global variable representing the target list tail, needed to update tail position*/
-extern TargList * tl_tail;
 
-int TargLappend(TargList * list, char * token, int isdir)
+int TargLappend(char * token, int isdir, TargList * list)
 {
     /* Create new list element with appropriate properties */
     struct TargList * elm = malloc(sizeof(TargList));
@@ -32,7 +30,6 @@ int TargLappend(TargList * list, char * token, int isdir)
     {
         list->next = elm;
         elm->prev = list;
-        tl_tail = elm;
         return 0;
     }
 
@@ -68,9 +65,6 @@ int TargLappend(TargList * list, char * token, int isdir)
         elm->prev = list;
     }
 
-    /* In any case update the tail */
-    if (tl_tail->next != NULL)
-        tl_tail = tl_tail->next;
     return 0;
 }
 
@@ -84,15 +78,15 @@ int TargInitDefault(TargList * list)
 
 void TargLfree(TargList * list)
 {
-    if (list != NULL)  {
-        while (!(list->next))
-        {
-            free(list->target);
-            list = list->next;
-        }
-        free(list->target);
+    TargList * next = list->next;
+    
+    while (next != NULL)
+    {
         free(list);
+        list = next;
+        next = list->next;
     }
+    free(list);
 
 }
 

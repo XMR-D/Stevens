@@ -14,12 +14,12 @@ typedef struct TargList {
  * If not it will free all the structrure and exit throwing an error
  * If everything is fine it will create a new list element and add it to target list
  */
-int TargLappend(TargList * list, char * token, int isdir);
+int TargLappend(char * token, int isdir, TargList * list);
 
 /* 
  * Invoked when no target is specified by the user,
  * TargInitDefault add the default target './' to a target list
-*/
+ */
 int TargInitDefault(TargList * list);
 
 /* Freeing mechanism that will free a TargList object when invoked */

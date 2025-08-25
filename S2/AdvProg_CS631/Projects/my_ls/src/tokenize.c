@@ -17,10 +17,10 @@ int help = 0;
 extern TargList * tl_tail;
 extern TargList * targ_list;
 
-int process_token(char * token)
+int process_token(char * token, TargList * head, TargList * tail)
 {
     /* token is an help request*/
-    if (!strcmp(token, "--help"))
+    if (!strcmp(token, "--help") && !opt_delim)
     {
         help++;
         return 0;
@@ -46,34 +46,41 @@ int process_token(char * token)
     /* token is a target */
     else
     {
-        TargList * start = tl_tail;
         int isdir = 0;
 
-        /* target is a directory*/
+        /* target is a directory, hence start at the tail of the list*/
         if (token[strlen(token)-1] == '/')
+        {
+            head = tail;
             isdir++;
+        }
 
-        /* target is a file*/
-        else
-            start = targ_list;
-
-        if (TargLappend(start, token, isdir))
+        if (TargLappend(token, isdir, head))
             return WRNG_TARG_ERR;
         else 
             return 0;
     }
 }
 
-int tokenize(int argc, char * input[])
+int tokenize(int argc, char * input[], TargList * head, TargList * tail)
 {
     WARN("Tokenizer start.");
     int err = 0;
 
     for (int i = 1; i < argc && !help; i++)
     {
-        err = process_token(*input);
+        err = process_token(*input, head, tail);
+       
+        /* In any case update the tail */
+        if (tail->next != NULL)
+            tail = tail->next;
+
         if (err)
             return err;
+
+        if (help)
+            return 0;
+
         input++;
     }
     SUCCESS("Tokensizer finished successfully.");
