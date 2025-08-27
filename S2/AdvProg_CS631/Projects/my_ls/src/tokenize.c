@@ -1,3 +1,5 @@
+#include <sys/stat.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> 
@@ -46,14 +48,23 @@ int process_token(char * token, TargList * head, TargList * tail)
     /* token is a target */
     else
     {
+        struct stat sb;
         int isdir = 0;
+        int isinvalid = 0;
 
         /* target is a directory, hence start at the tail of the list*/
-        if (token[strlen(token)-1] == '/')
+        if (stat(token, &sb) == -1)
+        {
+            isinvalid++;
+            throw_error('\0', token, "No such file or directory", WRNG_TARG_ERR);
+            return 0;
+        }
+        if (S_ISDIR(sb.st_mode))
         {
             head = tail;
             isdir++;
         }
+
 
         if (TargLappend(token, isdir, head))
             return WRNG_TARG_ERR;

@@ -1,11 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h> 
+#include <strings.h> 
 
 #include "error.h"
 #include "log.h"
 #include "targ_parser.h"
-
 
 int TargLappend(char * token, int isdir, TargList * list)
 {
@@ -25,8 +24,8 @@ int TargLappend(char * token, int isdir, TargList * list)
 
     /* Push element where it belongs */
 
-    /* List is empty, just append the element and update the tail*/
-    if (!list->next)
+    /* List is empty, just append the element depending on if it's a target or not */
+    if ((!isdir && !list->next) || (isdir && !list->prev))
     {
         list->next = elm;
         elm->prev = list;
@@ -37,34 +36,56 @@ int TargLappend(char * token, int isdir, TargList * list)
     if (isdir)
     {
         elm->isdir = 1;
-        while((strcmp(token, list->prev->target) < 0)) {
-            list = list->prev;
-            if (list->next->isdir)
-                break;
+
+        /* If the list contain at least one element*/
+        if (list->prev->target)
+        {
+            /* Shift while the element is not placed right and that end of list is not reached */
+            while(list->prev->target && (strcasecmp(token, list->prev->target) <= 0)) 
+            {
+                if ((list->prev == NULL) || !list->prev->isdir)
+                    break;
+                list = list->prev;
+            }
         }
-
-        list->next->prev = elm;
-        elm->next = list->next;
-        list->next = elm;
-        elm->prev = list;
-
+        /* If on edge case (first or last elm in the list) just append the element*/
+        if (!list->prev || !list->next)
+        {
+            list->next = elm;
+            elm->prev = list;
+        }
+        /* else insert it between two existing elements*/
+        else 
+        {
+            list->prev->next = elm;
+            elm->prev = list->prev;
+            list->prev = elm;
+            elm->next = list;
+        }
     }
     /* target is a file so lexicographical sort starting from head then append */
     else
     {
         elm->isdir = 0;
-        while((strcmp(token, list->next->target) > 0)) {
-            list = list->next;
-            if (list->next->isdir)
+        while((strcasecmp(token, list->next->target) > 0)) 
+        {
+            if ((list->next == NULL) || list->next->isdir)
                 break;
+            list = list->next;
         }
 
-        list->next->prev = elm;
-        elm->next = list->next;
-        list->next = elm;
-        elm->prev = list;
+        if (list->next)
+        {
+            list->next->prev = elm;
+            elm->next = list->next;
+            list->next = elm;
+            elm->prev = list;
+        }
+        else {
+            list->next = elm;
+            elm->prev = list;
+        }
     }
-
     return 0;
 }
 
