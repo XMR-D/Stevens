@@ -49,10 +49,21 @@ int TargLappend(char * token, int isdir, TargList * list)
             }
         }
         /* If on edge case (first or last elm in the list) just append the element*/
-        if (!list->prev || !list->next)
+        if (!list->next)
         {
-            list->next = elm;
-            elm->prev = list;
+            if (strcasecmp(token, list->target) <= 0)
+            {
+                list->prev->next = elm;
+                elm->prev = list->prev;
+                list->prev = elm;
+                elm->next = list;
+            }
+            else
+            {
+                list->next = elm;
+                elm->prev = list;
+            }
+            
         }
         /* else insert it between two existing elements*/
         else 
@@ -81,7 +92,8 @@ int TargLappend(char * token, int isdir, TargList * list)
             list->next = elm;
             elm->prev = list;
         }
-        else {
+        else 
+        {
             list->next = elm;
             elm->prev = list;
         }
