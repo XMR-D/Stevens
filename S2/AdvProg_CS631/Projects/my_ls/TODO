@@ -1,0 +1,12 @@
+Priority: 1
+//TODO : Step 2 implementation
+
+
+Priority : 2
+//TODO: Maybe need to set errno to appropriate error code
+//TODO: Need to adapt the reason to why the file cannot be opened (not here)
+//TODO: Create a RETURN CODE variable and edit it if an error is thrown
+//      Throw the last error that occured
+//      Rework the code to match ls(2) descrp and errno err codes
+
+

@@ -44,20 +44,15 @@ int my_ls(int argc, char * argv[])
 		return ret;
 	}
 
-	//TODO : handle case where no target are specified (call append with token "." (treat it as dir))
-	//TODO : see if '.' is always interpreted as a dir if not see what to do
-	//TODO : fix special case where . or .. is invoked
-	//TODO : fix bug when invoking : './ls . -a 0' or './ls . ls ..'
+	if (!targ_list->next)
+		TargLappend(".", 1, 0, targ_list);
 
 
-	WARN("Targets found after tokenization :");
-	TargLlog(targ_list);
-	printf("\n");
+
+	SUCCESS("STEP 1 : TOKENIZATION FINISHED\n");
+
+
 	
-	WARN("Options found after tokenization :");
-	OptionLog(usr_opt);
-
-
 	WARN("freeing structures...");
 	free(usr_opt);
 	TargLfree(targ_list);

@@ -50,6 +50,7 @@ int process_token(char * token, TargList * head, TargList * tail)
     {
         struct stat sb;
         int isdir = 0;
+        int ishidden = 0;
         int isinvalid = 0;
 
         /* target is a directory, hence start at the tail of the list*/
@@ -65,8 +66,13 @@ int process_token(char * token, TargList * head, TargList * tail)
             isdir++;
         }
 
+        /* Not . or .. and start with . so it's an hidden file */
+        if ((strlen(token) > 2) && token[0] == '.' && token[1] != '\0')
+        {
+            ishidden++;
+        }
 
-        if (TargLappend(token, isdir, head))
+        if (TargLappend(token, isdir, ishidden, head))
             return WRNG_TARG_ERR;
         else 
             return 0;

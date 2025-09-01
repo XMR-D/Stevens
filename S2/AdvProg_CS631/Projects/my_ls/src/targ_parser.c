@@ -6,11 +6,13 @@
 #include "log.h"
 #include "targ_parser.h"
 
-int TargLappend(char * token, int isdir, TargList * list)
+int TargLappend(char * token, int isdir, int ishidden, TargList * list)
 {
     /* Create new list element with appropriate properties */
     struct TargList * elm = malloc(sizeof(TargList));
     
+    char * cpy = token;
+
     if (!elm) 
     {
         TargLfree(list);
@@ -19,6 +21,7 @@ int TargLappend(char * token, int isdir, TargList * list)
 
     elm->target = token;
     elm->isdir = isdir;
+    elm->ishidden = ishidden;
     elm->next = NULL;
     elm->prev = list;
 
@@ -37,11 +40,15 @@ int TargLappend(char * token, int isdir, TargList * list)
     {
         elm->isdir = 1;
 
+        /* Skip first char (.) before sorting */
+        if(ishidden)
+            cpy = &(cpy[1]);
+
         /* If the list contain at least one element*/
         if (list->prev->target)
         {
             /* Shift while the element is not placed right and that end of list is not reached */
-            while(list->prev->target && (strcasecmp(token, list->prev->target) <= 0)) 
+            while(list->prev->target && (strcasecmp(cpy, list->prev->target) <= 0)) 
             {
                 if ((list->prev == NULL) || !list->prev->isdir)
                     break;
@@ -51,7 +58,7 @@ int TargLappend(char * token, int isdir, TargList * list)
         /* If on edge case (first or last elm in the list) just append the element*/
         if (!list->next)
         {
-            if (strcasecmp(token, list->target) <= 0)
+            if (strcasecmp(cpy, list->target) <= 0)
             {
                 list->prev->next = elm;
                 elm->prev = list->prev;
@@ -78,7 +85,12 @@ int TargLappend(char * token, int isdir, TargList * list)
     else
     {
         elm->isdir = 0;
-        while((strcasecmp(token, list->next->target) > 0)) 
+
+        if(ishidden)
+            cpy = &(cpy[1]);
+
+        
+        while(list->next && (strcasecmp(cpy, list->next->target) > 0)) 
         {
             if ((list->next == NULL) || list->next->isdir)
                 break;
@@ -98,14 +110,6 @@ int TargLappend(char * token, int isdir, TargList * list)
             elm->prev = list;
         }
     }
-    return 0;
-}
-
-
-int TargInitDefault(TargList * list)
-{
-    //TODO
-    list->target = "";
     return 0;
 }
 
@@ -132,7 +136,8 @@ void TargLlog(TargList * list)
         while (list != NULL)
         {
             printf("target %i: %s\n", count, list->target);
-            printf("===> dir : %i\n\n", list->isdir);
+            printf("===> dir : %i\n", list->isdir);
+            printf("===> hidden : %i\n\n", list->ishidden);
             count++;
             list = list->next;
         }

@@ -7,11 +7,7 @@
 #include "targ_parser.h"
 #include "error.h"
 
-//TODO: Maybe need to set errno to appropriate error code
-//TODO: Need to adapt the reason to why the file cannot be opened (not here)
-//TODO: Create a RETURN CODE variable and edit it if an error is thrown
-//      Throw the last error that occured
-//      Rework the code to match ls(2) descrp and errno err codes
+
 int throw_error(char wrng_opt, char * wrng_targ, char * reason, int err)
 {
     switch (err)
