@@ -15,7 +15,7 @@ typedef struct TargList {
  * If not it will free all the structrure and exit throwing an error
  * If everything is fine it will create a new list element and add it to target list
  */
-int TargLappend(char * token, int isdir, int ishidden, TargList * list);
+int TargLinsert(char * token, int isdir, int ishidden, TargList * list);
 
 /* Freeing mechanism that will free a TargList object when invoked */
 void TargLfree(TargList * list);

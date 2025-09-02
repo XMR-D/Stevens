@@ -6,7 +6,7 @@
 #include "log.h"
 #include "targ_parser.h"
 
-int TargLappend(char * token, int isdir, int ishidden, TargList * list)
+int TargLinsert(char * token, int isdir, int ishidden, TargList * list)
 {
     /* Create new list element with appropriate properties */
     struct TargList * elm = malloc(sizeof(TargList));

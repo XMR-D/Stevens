@@ -45,12 +45,11 @@ int my_ls(int argc, char * argv[])
 	}
 
 	if (!targ_list->next)
-		TargLappend(".", 1, 0, targ_list);
+		TargLinsert(".", 1, 0, targ_list);
 
 
 
 	SUCCESS("STEP 1 : TOKENIZATION FINISHED\n");
-
 
 	
 	WARN("freeing structures...");

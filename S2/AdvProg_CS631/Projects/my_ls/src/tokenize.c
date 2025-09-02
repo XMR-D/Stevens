@@ -72,7 +72,7 @@ int process_token(char * token, TargList * head, TargList * tail)
             ishidden++;
         }
 
-        if (TargLappend(token, isdir, ishidden, head))
+        if (TargLinsert(token, isdir, ishidden, head))
             return WRNG_TARG_ERR;
         else 
             return 0;
