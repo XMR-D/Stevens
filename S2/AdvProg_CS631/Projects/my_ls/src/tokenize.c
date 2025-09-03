@@ -8,6 +8,8 @@
 #include "log.h"
 #include "opt_parser.h"
 #include "targ_parser.h"
+#include "utility.h"
+
 #include "tokenize.h"
 
 /* opt_delim is put to 1 when '--' is met, meaning next tokens are targets */
@@ -18,6 +20,7 @@ int help = 0;
 
 extern TargList * tl_tail;
 extern TargList * targ_list;
+extern int targ_found;
 
 int process_token(char * token, TargList * head, TargList * tail)
 {
@@ -53,6 +56,8 @@ int process_token(char * token, TargList * head, TargList * tail)
         int ishidden = 0;
         int isinvalid = 0;
 
+        targ_found++;
+
         /* target is a directory, hence start at the tail of the list*/
         if (stat(token, &sb) == -1)
         {
@@ -66,8 +71,12 @@ int process_token(char * token, TargList * head, TargList * tail)
             isdir++;
         }
 
-        /* Not . or .. and start with . so it's an hidden file */
-        if ((strlen(token) > 2) && token[0] == '.' && token[1] != '\0')
+        /* 
+            Not . or .. and start with . so it's an hidden file 
+            DEBUG THIS : (WHAT ABOUT PATHS SUCH AS ../../../TOTO/LEL ?)
+            MAKE TOOL FUNCTIONS IN OTHER SOURCE FILE AND USE IT HERE
+        */
+        if (IsHidden(token))
         {
             ishidden++;
         }

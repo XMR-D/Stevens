@@ -6,6 +6,8 @@
 #include "log.h"
 #include "targ_parser.h"
 
+extern int targ_count;
+
 int TargLinsert(char * token, int isdir, int ishidden, TargList * list)
 {
     /* Create new list element with appropriate properties */
@@ -32,6 +34,7 @@ int TargLinsert(char * token, int isdir, int ishidden, TargList * list)
     {
         list->next = elm;
         elm->prev = list;
+        targ_count++;
         return 0;
     }
 
@@ -110,6 +113,7 @@ int TargLinsert(char * token, int isdir, int ishidden, TargList * list)
             elm->prev = list;
         }
     }
+    targ_count++;
     return 0;
 }
 

@@ -1,6 +1,6 @@
 Priority: 1
 //TODO : Step 2 implementation
-
+//       See implementation details on listing.c
 
 Priority : 2
 //TODO: Maybe need to set errno to appropriate error code
@@ -8,5 +8,13 @@ Priority : 2
 //TODO: Create a RETURN CODE variable and edit it if an error is thrown
 //      Throw the last error that occured
 //      Rework the code to match ls(2) descrp and errno err codes
+//      BE MORE UNIX COMPLIANT
 
+Priority : 3
+//TODO: Implement the help option function
 
+Priority : 3
+//TODO : Run some leakage test
+
+Priority: 4
+//TODO: Code Cleaning and Coding_style compliance review

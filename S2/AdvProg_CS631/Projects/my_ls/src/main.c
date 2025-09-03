@@ -8,8 +8,12 @@
 #include "targ_parser.h"
 #include "tokenize.h"
 
-/* All global variables definition */
+/* Global variable representing options structure */
 UsrOptions * usr_opt;
+/* Global variable representing if a target as been tested */
+int targ_found;
+/* Global variable representing the numbers of targets */
+int targ_count = 0;
 
 int my_ls(int argc, char * argv[])
 {
@@ -44,13 +48,12 @@ int my_ls(int argc, char * argv[])
 		return ret;
 	}
 
-	if (!targ_list->next)
+	if (!targ_list->next && (targ_found == 0))
 		TargLinsert(".", 1, 0, targ_list);
 
-
-
+	TargLlog(targ_list);
+	printf("target number : %i\n", targ_count);
 	SUCCESS("STEP 1 : TOKENIZATION FINISHED\n");
-
 	
 	WARN("freeing structures...");
 	free(usr_opt);

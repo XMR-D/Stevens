@@ -23,12 +23,22 @@
 
 FileListAppend(int metric, int order, .....) */
 
+/* Structure that will contain the files to print for a given target*/
 typedef struct FileList {
     struct stat * st;
     struct FileList * next;
     struct FileList * prev;
 } FileList;
 
-FileListAppend(FileList * head);
+/* Structure that will contain all the new targets we need to relaunch ls on found during listing*/
+typedef struct RecList {
+    char * target;
+    struct RecList * next;
+} RecList;
+
+int ListFile(char * dir);
+
+int TargetLProcess(TargList * targ_list);
+
 
 #endif /* !LISTING_H */
