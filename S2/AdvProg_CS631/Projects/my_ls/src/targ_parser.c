@@ -2,13 +2,23 @@
 #include <stdio.h>
 #include <strings.h> 
 
+
 #include "error.h"
 #include "log.h"
+#include "opt_parser.h"
+
 #include "targ_parser.h"
 
 extern int targ_count;
+extern UsrOptions usr_opt;
 
-int TargLinsert(char * token, int isdir, int ishidden, TargList * list)
+/*
+int TargLcompare(TargList * elm1, TargList * elm2)
+{
+    //TODO : COMPARE AND RETURN THE PROPER VALUE GIVEN THE SORTING OPTIONS
+}*/
+
+int TargLinsert(TargList * list, char * token, int isdir, int ishidden)
 {
     /* Create new list element with appropriate properties */
     struct TargList * elm = malloc(sizeof(TargList));

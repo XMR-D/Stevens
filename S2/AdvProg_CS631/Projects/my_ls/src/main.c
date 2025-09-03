@@ -49,9 +49,10 @@ int my_ls(int argc, char * argv[])
 	}
 
 	if (!targ_list->next && (targ_found == 0))
-		TargLinsert(".", 1, 0, targ_list);
+		TargLinsert(targ_list, ".", 1, 0);
 
 	TargLlog(targ_list);
+	OptionLog(usr_opt);
 	printf("target number : %i\n", targ_count);
 	SUCCESS("STEP 1 : TOKENIZATION FINISHED\n");
 	
