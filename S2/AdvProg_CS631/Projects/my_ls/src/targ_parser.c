@@ -17,7 +17,7 @@ extern int targ_count;
 extern UsrOptions * usr_opt;
 
 
-int TargLcompare(TargList * elm1, TargList * elm2)
+static int TargLcompare(TargList * elm1, TargList * elm2)
 {
     /* No sorting is needeed */
     if (usr_opt->f)
@@ -71,14 +71,70 @@ int TargLcompare(TargList * elm1, TargList * elm2)
     return ret;
 }
 
+static int insert_empty_list(TargList *list, TargList *elm, int isdir) {
+    if ((!isdir && !list->next) || (isdir && !list->prev)) {
+        list->next = elm;
+        elm->prev = list;
+        targ_count++;
+        return 0;
+    }
+    return 1;
+}
 
-int TargLinsert(TargList * list, char * token, int isdir, int ishidden)
-{
-    /* Create new list element with appropriate properties */
-    struct TargList * elm = malloc(sizeof(TargList));
-    
-    if (!elm) 
-    {
+static int insert_directory(TargList *list, TargList *elm) {
+    elm->isdir = 1;
+
+    if (list->prev->target && !usr_opt->f) {
+        while (list->prev->target && (TargLcompare(elm, list->prev) <= 0)) {
+            if ((list->prev == NULL) || !list->prev->isdir) break;
+            list = list->prev;
+        }
+    }
+
+    if (!list->next) {
+        if (TargLcompare(elm, list) <= 0) {
+            list->prev->next = elm;
+            elm->prev = list->prev;
+            list->prev = elm;
+            elm->next = list;
+        } else {
+            list->next = elm;
+            elm->prev = list;
+        }
+    } else {
+        list->prev->next = elm;
+        elm->prev = list->prev;
+        list->prev = elm;
+        elm->next = list;
+    }
+    return 0;
+}
+
+static int insert_file(TargList *list, TargList *elm) {
+    elm->isdir = 0;
+
+    if (!usr_opt->f) {
+        while (list->next && (TargLcompare(elm, list->next) > 0)) {
+            if ((list->next == NULL) || list->next->isdir) break;
+            list = list->next;
+        }
+    }
+
+    if (list->next) {
+        list->next->prev = elm;
+        elm->next = list->next;
+        list->next = elm;
+        elm->prev = list;
+    } else {
+        list->next = elm;
+        elm->prev = list;
+    }
+    return 0;
+}
+
+int TargLinsert(TargList *list, char *token, int isdir, int ishidden) {
+    TargList *elm = malloc(sizeof(TargList));
+    if (!elm) {
         TargLfree(list);
         return MEM_ERR;
     }
@@ -90,99 +146,26 @@ int TargLinsert(TargList * list, char * token, int isdir, int ishidden)
     elm->prev = list;
 
     struct stat sb;
-
-    if (stat(token, &sb) == -1)
-    {
+    if (stat(token, &sb) == -1) {
         throw_error('\0', token, "Failed to open", WRNG_TARG_ERR);
         return WRNG_TARG_ERR;
-    }
-    else
-    {
+    } else {
         elm->st_size = sb.st_size;
         elm->st_atim = sb.st_atim.tv_sec;
         elm->st_mtim = sb.st_mtim.tv_sec;
         elm->st_ctim = sb.st_ctim.tv_sec;
     }
 
-    /* List is empty, just append the element depending on if it's a target or not */
-    if ((!isdir && !list->next) || (isdir && !list->prev))
-    {
-        list->next = elm;
-        elm->prev = list;
-        targ_count++;
+    if (insert_empty_list(list, elm, isdir) == 0) {
         return 0;
     }
 
-    /* target is a dir so reversed lexicographical sort starting from tail then append */
-    if (isdir)
-    {
-        elm->isdir = 1;
-
-        /* If the list contain at least one element*/
-        if (list->prev->target && !usr_opt->f)
-        {
-            /* Shift while the element is not placed right and that end of list is not reached */
-            while(list->prev->target && (TargLcompare(elm, list->prev) <= 0)) 
-            {
-                if ((list->prev == NULL) || !list->prev->isdir)
-                    break;
-                list = list->prev;
-            }
-        }
-        /* If on edge case (first or last elm in the list) just append the element*/
-        if (!list->next)
-        {
-            if (TargLcompare(elm, list) <= 0)
-            {
-                list->prev->next = elm;
-                elm->prev = list->prev;
-                list->prev = elm;
-                elm->next = list;
-            }
-            else
-            {
-                list->next = elm;
-                elm->prev = list;
-            }
-            
-        }
-        /* else insert it between two existing elements*/
-        else 
-        {
-            list->prev->next = elm;
-            elm->prev = list->prev;
-            list->prev = elm;
-            elm->next = list;
-        }
+    if (isdir) {
+        insert_directory(list, elm);
+    } else {
+        insert_file(list, elm);
     }
-    /* target is a file so lexicographical sort starting from head then append */
-    else
-    {
-        elm->isdir = 0;
 
-        if(!usr_opt->f)
-        {
-            while(list->next && (TargLcompare(elm, list->next) > 0)) 
-            {
-                if ((list->next == NULL) || list->next->isdir)
-                    break;
-                list = list->next;
-            }
-        }
-
-        if (list->next)
-        {
-            list->next->prev = elm;
-            elm->next = list->next;
-            list->next = elm;
-            elm->prev = list;
-        }
-        else 
-        {
-            list->next = elm;
-            elm->prev = list;
-        }
-    }
     targ_count++;
     return 0;
 }

@@ -1,5 +1,5 @@
 Priority: 1
-//TODO : DEBUG INSERTING SORT FOR TARGETS
+//TODO : DEBUG INSERTING SORT FOR TARGETS + ADD COMMENTS
 
 Priority: 1
 //TODO : Step 2 implementation
@@ -21,3 +21,4 @@ Priority : 3
 
 Priority: 4
 //TODO: Code Cleaning and Coding_style compliance review
+        FIX INDENTATION / ADD STATIC FIELDS / COMPLY WITH PROFESSOR Coding_style
