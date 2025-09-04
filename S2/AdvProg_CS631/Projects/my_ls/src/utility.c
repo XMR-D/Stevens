@@ -10,6 +10,9 @@ int IsHidden(char * pathname)
     int recover = 0;
     int ret;
 
+    if (strcmp(pathname, "..") || strcmp(pathname, "."))
+        return 0;
+
     if (pathname[len-1] == '/') 
     {
         pathname[len-1] = '\0';
@@ -25,7 +28,7 @@ int IsHidden(char * pathname)
 
     if (!strcmp(end, ".."))
         ret = 0;
-    else if (end[0] == '.')
+    if (end[0] == '.')
         ret = 1;
     else
         ret = 0;
@@ -35,3 +38,14 @@ int IsHidden(char * pathname)
 
     return ret;
 }
+
+int CompareMetrics(int metric1, int metric2)
+{
+    if (metric1 > metric2)
+        return 1;
+    if (metric1 < metric2)
+        return -1;
+    else
+        return 0;
+}
+

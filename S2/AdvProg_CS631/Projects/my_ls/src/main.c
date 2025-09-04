@@ -39,7 +39,7 @@ int my_ls(int argc, char * argv[])
 	}
 	tl_tail = targ_list;
 
-	int ret = tokenize(argc, ++argv, targ_list, tl_tail);
+	int ret = tokenize(argc, argv, targ_list, tl_tail);
 	if (ret)
 	{
 		free(usr_opt);

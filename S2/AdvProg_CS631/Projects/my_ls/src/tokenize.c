@@ -2,7 +2,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h> 
+#include <string.h>
+#include <unistd.h>
 
 #include "error.h"
 #include "log.h"
@@ -22,41 +23,17 @@ extern TargList * tl_tail;
 extern TargList * targ_list;
 extern int targ_found;
 
-int process_options(char * token)
-{
-    /* If '--' then exit no more options so set that delim has been found*/
-    if (!strcmp(token, "--")) {
-        opt_delim++;
-        return 0;
-    }
-
-    /* target is an option */
-    if (token[0] == '-')
-    {
-        if (OptSet(token))
-            return WRNG_OPT_ERR;
-        else
-            return 0;
-    }
-
-    /* token is an help request */
-    if (!strcmp(token, "--help") && !opt_delim)
-    {
-        help++;
-        return 0;
-    }
-    /* token is a target*/
-    else
-        return 0;
-
-}
-
 int process_targets(char * token, TargList * head, TargList * tail)
 {
 
     struct stat sb;
     int isdir = 0;
     int ishidden = 0;
+
+    if (!strcmp(token, "--")) {
+        opt_delim++;
+        return 0;
+    }
 
     if (token[0] == '-' && !opt_delim)
         return 0;
@@ -90,23 +67,16 @@ int tokenize(int argc, char * input[], TargList * head, TargList * tail)
     WARN("Tokenizer start.");
     int err = 0;
 
-    char ** saved = input;
+    int opt;
 
-    for (int i = 1; i < argc && !help && !opt_delim; i++)
+    while((opt = getopt(argc, input, "AacdFfhiklnqRrSstuw")) != -1)
     {
-        err = process_options(*input);
-
+        err = OptSet((char) opt);
         if (err)
             return err;
-
-        if (help)
-            return 0;
-
-        input++;
     }
 
-    input = saved;
-    opt_delim = 0;
+    input++;
 
     for (int i = 1; i < argc; i++)
     {

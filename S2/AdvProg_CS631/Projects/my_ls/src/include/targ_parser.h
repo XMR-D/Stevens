@@ -1,11 +1,19 @@
 #ifndef TARG_PARSER_H
 #define TARG_PARSER_H
 
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#include <time.h>
 
 typedef struct TargList {
     char * target;
     unsigned char isdir: 1;
     unsigned char ishidden: 1;
+    off_t st_size;    /* Size of the file */
+    time_t  st_atim;  /* Time of last access */
+    time_t  st_mtim;  /* Time of last modification */
+    time_t  st_ctim;  /* Time of last status change */
     struct TargList * next;
     struct TargList * prev;
 } TargList;

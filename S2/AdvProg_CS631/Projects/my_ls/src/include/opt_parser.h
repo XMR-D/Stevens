@@ -26,7 +26,7 @@ typedef struct UsrOptions {
     unsigned char r: 1;  /* Reverse the order of the sort */
     unsigned char t: 1;  /* Sort by time modified (most recent first) */
     unsigned char u: 1;  /* Use time of last access for sorting/printing */
-    
+
     /* Format Options */
     unsigned char F: 1;  /* Append indicators (/=*|%@) to entries based on file type */
     unsigned char i: 1;  /* Print file's inode number for each file */
@@ -52,7 +52,7 @@ typedef struct UsrOptions {
  * If any error is encountered, it will be immediatly thrown 
  * and all structures will be freed.
  */
-int OptSet(char * token);
+int OptSet(char token);
 
 /* Simple UsrOptions struct logging function for debug */
 void OptionLog(UsrOptions * opt);
