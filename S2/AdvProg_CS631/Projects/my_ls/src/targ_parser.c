@@ -50,34 +50,34 @@ static int TargLcompare(TargList * elm1, TargList * elm2, int isdir)
     {
         /* Compare two list elements depending on the option */
         if (usr_opt->S)
-            ret = CompareMetrics(elm2->st_size, elm1->st_size);
+            ret = CompareMetrics(elm2->sb.st_size, elm1->sb.st_size);
 
         else if (usr_opt->t)
-            ret = CompareTimeMetrics(elm2->st_mtim, elm1->st_mtim);
+            ret = CompareTimeMetrics(elm2->sb.st_mtim, elm1->sb.st_mtim);
 
         else if (usr_opt->c)
-            ret = CompareTimeMetrics(elm2->st_ctim, elm1->st_ctim);
+            ret = CompareTimeMetrics(elm2->sb.st_ctim, elm1->sb.st_ctim);
 
         else if (usr_opt->u)
-            ret = CompareTimeMetrics(elm2->st_atim, elm1->st_atim);
+            ret = CompareTimeMetrics(elm2->sb.st_atim, elm1->sb.st_atim);
 
         if (ret == 0)
             return strcasecmp(str1, str2);
     }
     else
     {
-        /* Compare two list elements depending on the option */
+        /* The element is a file and need to be compared, to keep list ordering invert the result */
         if (usr_opt->S)
-            ret = CompareMetrics(elm1->st_size, elm2->st_size) * -1;
+            ret = CompareMetrics(elm1->sb.st_size, elm2->sb.st_size) * -1;
 
         else if (usr_opt->t)
-            ret = CompareTimeMetrics(elm1->st_mtim, elm2->st_mtim) * -1;
+            ret = CompareTimeMetrics(elm1->sb.st_mtim, elm2->sb.st_mtim) * -1;
 
         else if (usr_opt->c)
-            ret = CompareTimeMetrics(elm1->st_ctim, elm2->st_ctim) * -1;
+            ret = CompareTimeMetrics(elm1->sb.st_ctim, elm2->sb.st_ctim) * -1;
 
         else if (usr_opt->u)
-            ret = CompareTimeMetrics(elm1->st_atim, elm2->st_atim) * -1;
+            ret = CompareTimeMetrics(elm1->sb.st_atim, elm2->sb.st_atim) * -1;
         else
             return strcasecmp(str1, str2);
 
@@ -206,12 +206,7 @@ int TargLinsert(TargList *list, char *token, int isdir, int ishidden) {
         return WRNG_TARG_ERR;
     } 
     else 
-    {
-        elm->st_size = sb.st_size;
-        elm->st_atim = sb.st_atim;
-        elm->st_mtim = sb.st_mtim;
-        elm->st_ctim = sb.st_ctim;
-    }
+        elm->sb = sb;
 
     if (insert_empty_list(list, elm, isdir) == 0) 
         return 0;

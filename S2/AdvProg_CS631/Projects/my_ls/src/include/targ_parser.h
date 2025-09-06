@@ -7,13 +7,11 @@
 #include <time.h>
 
 typedef struct TargList {
-    char * target;
-    unsigned char isdir: 1;
-    unsigned char ishidden: 1;
-    off_t st_size;    /* Size of the target */
-    struct timespec   st_atim;  /* Time of last access */
-    struct timespec   st_mtim;  /* Time of last modification */
-    struct timespec   st_ctim;  /* Time of last status change */
+    char * target;                  /* Name of the target */
+    unsigned char isdir: 1;         /* Is the target a directory ?*/
+    unsigned char ishidden: 1;      /* Is the target a hidden file ?*/
+    struct stat sb;                 /* Information about the target */
+    
     struct TargList * next;
     struct TargList * prev;
 } TargList;
