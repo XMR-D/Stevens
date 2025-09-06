@@ -11,9 +11,9 @@ typedef struct TargList {
     unsigned char isdir: 1;
     unsigned char ishidden: 1;
     off_t st_size;    /* Size of the target */
-    time_t  st_atim;  /* Time of last access */
-    time_t  st_mtim;  /* Time of last modification */
-    time_t  st_ctim;  /* Time of last status change */
+    struct timespec   st_atim;  /* Time of last access */
+    struct timespec   st_mtim;  /* Time of last modification */
+    struct timespec   st_ctim;  /* Time of last status change */
     struct TargList * next;
     struct TargList * prev;
 } TargList;

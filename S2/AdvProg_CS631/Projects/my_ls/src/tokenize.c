@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <sys/stat.h>
 
 #include <stdio.h>
@@ -19,9 +21,13 @@ int opt_delim = 0;
 /* small interrupt signal to optimize in case of help query (such as --help) */
 int help = 0;
 
+/* Signal to revert the sort during insertion */
+int RevSort = 1;
+
 extern TargList * tl_tail;
 extern TargList * targ_list;
 extern int targ_found;
+extern UsrOptions * usr_opt;
 
 int process_targets(char * token, TargList * head, TargList * tail)
 {
@@ -77,6 +83,11 @@ int tokenize(int argc, char * input[], TargList * head, TargList * tail)
     }
 
     input++;
+
+    /* If -r is specified reverse the sort of targets */
+    if (usr_opt->r)
+        RevSort = -1;
+
 
     for (int i = 1; i < argc; i++)
     {

@@ -1,6 +1,9 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "utility.h"
 
@@ -49,3 +52,22 @@ int CompareMetrics(int metric1, int metric2)
         return 0;
 }
 
+int CompareTimeMetrics(struct timespec t1, struct timespec t2)
+{
+    if (t1.tv_sec != t2.tv_sec)
+    {
+        if (t1.tv_sec > t2.tv_sec)
+            return 1;
+        else
+            return -1;
+    }
+    else
+    {
+        if (t1.tv_nsec > t2.tv_nsec)
+            return 1;
+        if (t1.tv_nsec < t2.tv_nsec)
+            return -1;
+        else
+            return 0;
+    }
+}
