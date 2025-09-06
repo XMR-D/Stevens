@@ -10,7 +10,7 @@ typedef struct TargList {
     char * target;
     unsigned char isdir: 1;
     unsigned char ishidden: 1;
-    off_t st_size;    /* Size of the file */
+    off_t st_size;    /* Size of the target */
     time_t  st_atim;  /* Time of last access */
     time_t  st_mtim;  /* Time of last modification */
     time_t  st_ctim;  /* Time of last status change */
@@ -19,7 +19,7 @@ typedef struct TargList {
 } TargList;
 
 /* 
- * TargAdd will check if the file exist and if access is granted 
+ * TargLinsert will check if the file exist and if access is granted 
  * If not it will free all the structrure and exit throwing an error
  * If everything is fine it will create a new list element and add it to target list
  */

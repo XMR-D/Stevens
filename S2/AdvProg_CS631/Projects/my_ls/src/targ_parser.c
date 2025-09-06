@@ -16,18 +16,14 @@
 extern int targ_count;
 extern UsrOptions * usr_opt;
 
-
-static int TargLcompare(TargList * elm1, TargList * elm2)
+static int TargLcompare(TargList * elm1, TargList * elm2, int isdir)
 {
-    /* No sorting is needeed */
-    if (usr_opt->f)
-        return 0;
-
     int ret = 0;
-    int skip = 0;
 
     char * str1 = elm1->target;
     char * str2 = elm2->target;
+
+    /* Handle hidden files for alphabetical sorting */
     if (elm1->ishidden)
     {
         char * end = strrchr(str1, '/');
@@ -45,34 +41,53 @@ static int TargLcompare(TargList * elm1, TargList * elm2)
             end += 1;
             str2 = end;
         }
-    }          
+    }
 
-    if (usr_opt->S)
-        ret = CompareMetrics(elm1->st_size, elm2->st_size);
+    if (isdir)
+    {
+        /* Compare two list elements depending on the option */
+        if (usr_opt->S)
+            ret = CompareMetrics(elm2->st_size, elm1->st_size);
 
-    else if (usr_opt->t)
-        ret = CompareMetrics(elm1->st_mtim, elm2->st_mtim);
+        else if (usr_opt->t)
+            ret = CompareMetrics(elm2->st_mtim, elm1->st_mtim);
 
-    else if (usr_opt->c)
-        ret = CompareMetrics(elm1->st_ctim, elm2->st_ctim);
+        else if (usr_opt->c)
+            ret = CompareMetrics(elm2->st_ctim, elm1->st_ctim);
 
-    else if (usr_opt->u)
-        ret = CompareMetrics(elm1->st_atim, elm2->st_atim);
+        else if (usr_opt->u)
+            ret = CompareMetrics(elm2->st_atim, elm1->st_atim);
 
+        if (ret == 0)
+            return strcasecmp(str1, str2);
+    }
     else
     {
-        ret = strcasecmp(str1, str2);
-        skip++;
-    }
-    
-    if (!skip && ret == 0)
-        ret = strcasecmp(str1, str2);
+        /* Compare two list elements depending on the option */
+        if (usr_opt->S)
+            ret = CompareMetrics(elm1->st_size, elm2->st_size) * -1;
 
+        else if (usr_opt->t)
+            ret = CompareMetrics(elm1->st_mtim, elm2->st_mtim) * -1;
+
+        else if (usr_opt->c)
+            ret = CompareMetrics(elm1->st_ctim, elm2->st_ctim) * -1;
+
+        else if (usr_opt->u)
+            ret = CompareMetrics(elm1->st_atim, elm2->st_atim) * -1;
+        else
+            return strcasecmp(str1, str2);
+
+        if (ret == 0)
+            return strcasecmp(str1, str2) * -1;
+    }
     return ret;
 }
 
-static int insert_empty_list(TargList *list, TargList *elm, int isdir) {
-    if ((!isdir && !list->next) || (isdir && !list->prev)) {
+static int insert_empty_list(TargList *list, TargList *elm, int isdir) 
+{
+    if ((!isdir && !list->next) || (isdir && !list->prev)) 
+    {
         list->next = elm;
         elm->prev = list;
         targ_count++;
@@ -81,51 +96,87 @@ static int insert_empty_list(TargList *list, TargList *elm, int isdir) {
     return 1;
 }
 
-static int insert_directory(TargList *list, TargList *elm) {
+static int insert_directory(TargList *list, TargList *elm) 
+{
     elm->isdir = 1;
 
-    if (list->prev->target && !usr_opt->f) {
-        while (list->prev->target && (TargLcompare(elm, list->prev) <= 0)) {
-            if ((list->prev == NULL) || !list->prev->isdir) break;
-            list = list->prev;
-        }
+    if (usr_opt->f)
+    {
+        list->next = elm;
+        elm->prev = list;
+        return 0;
     }
 
+    while (list->isdir && (TargLcompare(list, elm, elm->isdir) > 0)) 
+    {
+        if (!list->prev->isdir) 
+            break;
+        list = list->prev;
+    }
+      
     if (!list->next) {
-        if (TargLcompare(elm, list) <= 0) {
+        if (list->isdir && (TargLcompare(list, elm, elm->isdir) > 0))
+        {
             list->prev->next = elm;
             elm->prev = list->prev;
             list->prev = elm;
             elm->next = list;
-        } else {
+
+        } 
+        else 
+        {
             list->next = elm;
             elm->prev = list;
         }
-    } else {
-        list->prev->next = elm;
-        elm->prev = list->prev;
-        list->prev = elm;
-        elm->next = list;
+    } 
+    else 
+    {
+        if ((TargLcompare(list, elm, elm->isdir) > 0))
+        {
+            list->prev->next = elm;
+            elm->prev = list->prev;
+            list->prev = elm;
+            elm->next = list;
+        }
+        else
+        {
+            list->next->prev = elm;
+            elm->next = list->next;
+            list->next = elm;
+            elm->prev = list;
+        }
+
     }
     return 0;
 }
 
-static int insert_file(TargList *list, TargList *elm) {
+static int insert_file(TargList *list, TargList *elm) 
+{
     elm->isdir = 0;
 
-    if (!usr_opt->f) {
-        while (list->next && (TargLcompare(elm, list->next) > 0)) {
-            if ((list->next == NULL) || list->next->isdir) break;
+    if (usr_opt->f)
+    {
+        while (list->next && !list->next->isdir)
             list = list->next;
+    }
+    else
+    {
+        while (list->next && !list->next->isdir && (TargLcompare(list->next, elm, elm->isdir) <= 0)) 
+        {
+            if ((list->next == NULL) || list->next->isdir) break;
+                list = list->next;
         }
     }
 
-    if (list->next) {
+    if (list->next) 
+    {
         list->next->prev = elm;
         elm->next = list->next;
         list->next = elm;
         elm->prev = list;
-    } else {
+    } 
+    else 
+    {
         list->next = elm;
         elm->prev = list;
     }
@@ -194,11 +245,11 @@ void TargLlog(TargList * list)
         while (list != NULL)
         {
             printf("target %i: %s\n", count, list->target);
-            printf("===> dir : %i\n", list->isdir);
-            printf("===> hidden : %i\n", list->ishidden);
-            printf("===> size : %li\n", list->st_size);
-            printf("===> last access ts : %li\n", list->st_atim);
-            printf("===> last modification ts : %li\n", list->st_mtim);
+            //printf("===> dir : %i\n", list->isdir);
+            //printf("===> hidden : %i\n", list->ishidden);
+            //printf("===> size : %li\n", list->st_size);
+            //printf("===> last access ts : %li\n", list->st_atim);
+            //printf("===> last modification ts : %li\n", list->st_mtim);
             printf("===> last status change ts : %li\n\n", list->st_ctim);
             count++;
             list = list->next;
