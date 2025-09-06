@@ -43,6 +43,10 @@ int OptSet(char opt)
         if (usr_opt->f)
             break;
         usr_opt->f++;
+        usr_opt->t = 0;
+        usr_opt->S = 0;
+        usr_opt->c = 0;
+        usr_opt->u = 0;
         break;
     case 'r':
         if (usr_opt->r)
@@ -62,16 +66,15 @@ int OptSet(char opt)
     case 'c':
         if (usr_opt->c)
             break;
-        if (usr_opt->u)
-            usr_opt->u--;
         usr_opt->c++;
+        usr_opt->u = 0;
+
         break;
     case 'u':
         if (usr_opt->u)
             break;
-        if (usr_opt->c)
-            usr_opt->c--;
         usr_opt->u++;
+        usr_opt->c = 0;
         break;
     
     /* Format Option detected */
