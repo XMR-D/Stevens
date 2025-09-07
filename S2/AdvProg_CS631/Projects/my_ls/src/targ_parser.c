@@ -26,13 +26,15 @@ static int TargLcompare(TargList * elm1, TargList * elm2, int isdir)
     char * str1 = elm1->target;
     char * str2 = elm2->target;
 
+    
     /* Handle hidden files for alphabetical sorting */
     if (elm1->ishidden)
     {
         char * end = strrchr(str1, '/');
         if (end != NULL)
         {
-            end += 1;
+            /* Skip "/." */
+            end += 2;
             str1 = end;
         }
     }
@@ -41,7 +43,8 @@ static int TargLcompare(TargList * elm1, TargList * elm2, int isdir)
         char * end = strrchr(str2, '/');
         if (end != NULL)
         {
-            end += 1;
+            /* Skip "/." */
+            end += 2;
             str2 = end;
         }
     }
@@ -82,7 +85,7 @@ static int TargLcompare(TargList * elm1, TargList * elm2, int isdir)
             return strcasecmp(str1, str2);
 
         if (ret == 0)
-            return strcasecmp(str1, str2) * -1;
+            return strcasecmp(str1, str2);
     }
     return ret;
 }

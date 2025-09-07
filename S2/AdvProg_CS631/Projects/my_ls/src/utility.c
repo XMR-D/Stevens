@@ -13,7 +13,7 @@ int IsHidden(char * pathname)
     int recover = 0;
     int ret;
 
-    if (strcmp(pathname, "..") || strcmp(pathname, "."))
+    if (strcmp(pathname, "..") == 0 || strcmp(pathname, ".") == 0)
         return 0;
 
     if (pathname[len-1] == '/') 
@@ -27,7 +27,7 @@ int IsHidden(char * pathname)
     if (end == NULL)
         end = pathname;
     else
-        end += 1;
+        end++;
 
     if (!strcmp(end, ".."))
         ret = 0;

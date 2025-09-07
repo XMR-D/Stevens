@@ -1,11 +1,20 @@
-Priority: 1
-//TODO : Fix bug on hidden files, normally the last bug
+## Priority: 1
+//TODO : Need to ask the teacher about special treatment on strings before sorting 
 
-Priority: 1
+WHY :
+$ ls test/.a test/.c test/babar/.e 
+test/.a  test/babar/.e  test/.c 
+
+AND NOT :
+$ ls test/.a test/.c test/babar/.e 
+test/.a  test/.c test/babar/.e
+
+
+## Priority: 1
 //TODO : Step 2 implementation
 //       See implementation details on listing.c
 
-Priority : 2
+## Priority : 2
 //TODO: Maybe need to set errno to appropriate error code
 //TODO: Need to adapt the reason to why the file cannot be opened (not here)
 //TODO: Create a RETURN CODE variable and edit it if an error is thrown
@@ -13,12 +22,12 @@ Priority : 2
 //      Rework the code to match ls(2) descrp and errno err codes
 //      BE MORE UNIX COMPLIANT
 
-Priority : 3
+## Priority : 3
 //TODO: Implement the help option function
 
-Priority : 3
+## Priority : 3
 //TODO : Run some leakage test
 
-Priority: 4
+## Priority: 4
 //TODO: Code Cleaning and Coding_style compliance review
         FIX INDENTATION / ADD STATIC FIELDS / COMPLY WITH PROFESSOR Coding_style
