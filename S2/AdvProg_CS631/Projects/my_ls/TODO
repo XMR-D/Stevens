@@ -1,5 +1,5 @@
 ## Priority: 1
-//TODO : Need to ask the teacher about special treatment on strings before sorting 
+//TODO : Fix the sorting (for both TargL and FileList) when encontering composed paths like :
 
 WHY :
 $ ls test/.a test/.c test/babar/.e 
@@ -9,10 +9,11 @@ AND NOT :
 $ ls test/.a test/.c test/babar/.e 
 test/.a  test/.c test/babar/.e
 
-
 ## Priority: 1
-//TODO : Sorting debuging on step 2
+//TODO : Implement Last Step (classic printing and Long format printing)
 
+## Priority : 3
+//TODO: Run return code tests
 
 ## Priority : 3
 //TODO: Implement the help option function

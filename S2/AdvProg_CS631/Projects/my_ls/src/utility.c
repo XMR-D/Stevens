@@ -74,6 +74,9 @@ char * FullName(char * dirname, char * filename)
     int f_len = strlen(filename);
     int d_len = strlen(dirname);
 
+    if (dirname[d_len-1] == '/')
+        dirname[d_len-1] = '\0';
+
     char * filecpy = calloc(sizeof(char), f_len + 1);
     char * dircpy = calloc(sizeof(char), d_len + 1);
 
