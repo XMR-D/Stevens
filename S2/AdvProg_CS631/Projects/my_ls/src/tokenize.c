@@ -44,12 +44,14 @@ int process_targets(char * token, TargList * head, TargList * tail)
 
     targ_found++;
 
-    /* target is a directory, hence start at the tail of the list*/
+    /* If the file for some reason does not open throw the error BUT continue to the next one*/
     if (stat(token, &sb) == -1)
     {
         throw_error('\0', token, WRNG_TARG_ERR);
         return 0;
     }
+
+    /* target is a directory, hence start at the tail of the list*/
     if (S_ISDIR(sb.st_mode))
     {
         head = tail;
@@ -60,7 +62,7 @@ int process_targets(char * token, TargList * head, TargList * tail)
         ishidden++;
     }
     if (TargLinsert(head, token, isdir, ishidden))
-        return WRNG_TARG_ERR;
+        return errno;
     else 
         return 0;
 

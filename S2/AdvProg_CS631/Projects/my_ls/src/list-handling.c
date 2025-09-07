@@ -126,7 +126,7 @@ int FileListInsert(char * filename, FileList * filelist, RecList * reclist)
 
     /* 
      * If the file is hidden and the -a option is specified print it
-     * Else skip it, if the file is not hidden print it anyways
+     * Else skip it. if the file is not hidden print it anyways
      */
     if (IsHidden(filename))
     {

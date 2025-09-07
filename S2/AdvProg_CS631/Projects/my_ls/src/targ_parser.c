@@ -192,7 +192,7 @@ int TargLinsert(TargList *list, char *token, int isdir, int ishidden)
     TargList *elm = malloc(sizeof(TargList));
     if (!elm) {
         TargLfree(list);
-        return MEM_ERR;
+        return errno;
     }
 
     elm->target = token;

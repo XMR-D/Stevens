@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +29,7 @@ int my_ls(int argc, char * argv[])
 		if (!usr_opt) 
 		{
 			throw_error('\0', NULL, MEM_ERR);
-			return MEM_ERR;
+			return errno;
 		}
 	}
 
@@ -36,7 +37,7 @@ int my_ls(int argc, char * argv[])
 	if (!targ_list) 
 	{
 		throw_error('\0', NULL, MEM_ERR);
-		return MEM_ERR;
+		return errno;
 	}
 	tl_tail = targ_list;
 
