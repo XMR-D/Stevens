@@ -1,5 +1,5 @@
-#define _POSIX_C_SOURCE 200809L
-
+#include <errno.h>
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -11,22 +11,22 @@
 #include "error.h"
 
 
-int throw_error(char wrng_opt, char * wrng_targ, char * reason, int err)
+int throw_error(char wrng_opt, char * wrng_targ, int err)
 {
     switch (err)
     {
         case MEM_ERR:
             fprintf(stderr, "ls: memory error encountered.\n");
-            return MEM_ERR;
+            return errno;
         case WRNG_OPT_ERR:
             fprintf(stderr, "ls: invalid option -- '%c'\nTry 'ls --help' for more information.\n", wrng_opt);
-            return WRNG_OPT_ERR;
+            return errno;
         case WRNG_TARG_ERR:
-            fprintf(stderr, "ls: cannot access '%s': %s\n", wrng_targ, reason);
-            return WRNG_TARG_ERR;
+            fprintf(stderr, "ls: cannot access '%s': %s\n", wrng_targ, strerror(errno));
+            return errno;
         default :
             /* SHOULD NOT BE EXECUTED AT ANYTIME*/
-            fprintf(stderr, "ls: something went really wrong..... this should never ever be triggered, it's like opening the pandora box. Never ever use ls like that again !!\n");
-            return 666;
+            return errno;
+
     }
 }

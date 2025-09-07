@@ -1,5 +1,3 @@
-#define _POSIX_C_SOURCE 200809L
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,4 +68,26 @@ int CompareTimeMetrics(struct timespec t1, struct timespec t2)
         else
             return 0;
     }
+}
+char * FullName(char * dirname, char * filename)
+{
+    int f_len = strlen(filename);
+    int d_len = strlen(dirname);
+
+    char * filecpy = calloc(sizeof(char), f_len + 1);
+    char * dircpy = calloc(sizeof(char), d_len + 1);
+
+    strcpy(dircpy, dirname);
+    strcpy(filecpy, filename);
+
+    char * fullname = calloc(sizeof(char), f_len + d_len + 2);
+
+    strcat(fullname, dirname);
+    strcat(fullname, "/");
+    strcat(fullname, filename);
+
+    free(filecpy);
+    free(dircpy);
+
+    return fullname;
 }

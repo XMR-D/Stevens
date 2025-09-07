@@ -3,40 +3,11 @@
 
 #include <sys/stat.h>
 
-/* Create a structure that will handle files found by the listing,
-   Put files in the list depending on the metric option (-t -u -S) 
-   and the sort unsort option (-f)
-   Revert the list if reverse order (-r) is needed
-   Once the list finished, go to the long format printer (-l) if needed
-   Or the casual file printer if long format printer not specify.
+#include "targ_parser.h"
 
-   BEFORE GOING TO ANY PRINTER TAKE INTO ACCOUNT THE ENV VARIABLE 
-   OR THE SIZE FORMAT OPTIONS IF SPECIFIED
+#include "list-handling.h"
 
-   BEFORE GOING TO PRINT, RECURSIVELY GO AND CALL MY_LS ON EACH DIR AND SYMLINKS
-
-   All options are in usr_opt
-
-   All targets are in targlist
-
-   The structure here should be lightweight 
-
-FileListAppend(int metric, int order, .....) */
-
-/* Structure that will contain the files to print for a given target*/
-typedef struct FileList {
-    struct stat * st;
-    struct FileList * next;
-    struct FileList * prev;
-} FileList;
-
-/* Structure that will contain all the new targets we need to relaunch ls on found during listing*/
-typedef struct RecList {
-    char * target;
-    struct RecList * next;
-} RecList;
-
-int ListFile(char * dir);
+int ListFile(char * dir, FileList * filelist, RecList * reclist);
 
 int TargetLProcess(TargList * targ_list);
 

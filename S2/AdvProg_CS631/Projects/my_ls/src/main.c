@@ -1,10 +1,9 @@
-#define _POSIX_C_SOURCE 200809L
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "error.h"
+#include "listing.h"
 #include "log.h"
 #include "opt_parser.h"
 #include "targ_parser.h"
@@ -28,7 +27,7 @@ int my_ls(int argc, char * argv[])
 		usr_opt = calloc(1, sizeof(UsrOptions));
 		if (!usr_opt) 
 		{
-			throw_error('\0', NULL, NULL, MEM_ERR);
+			throw_error('\0', NULL, MEM_ERR);
 			return MEM_ERR;
 		}
 	}
@@ -36,7 +35,7 @@ int my_ls(int argc, char * argv[])
 	TargList * targ_list = calloc(1, sizeof(TargList));
 	if (!targ_list) 
 	{
-		throw_error('\0', NULL, NULL, MEM_ERR);
+		throw_error('\0', NULL, MEM_ERR);
 		return MEM_ERR;
 	}
 	tl_tail = targ_list;
@@ -53,14 +52,18 @@ int my_ls(int argc, char * argv[])
 	if (!targ_list->next && (targ_found == 0))
 		TargLinsert(targ_list, ".", 1, 0);
 
-	TargLlog(targ_list);
-	OptionLog(usr_opt);
-	printf("target number : %i\n", targ_count);
-	SUCCESS("STEP 1 : TOKENIZATION FINISHED\n");
+
+	SUCCESS("STEP 1 : TOKENIZATION FINISHED");
+	WARN("Listing files from targets found....");
+
+	TargetLProcess(targ_list);
+
 	
 	WARN("freeing structures...");
+
 	free(usr_opt);
 	TargLfree(targ_list);
+
 	SUCCESS("ls finished successfully.");
 	return 0;
 }

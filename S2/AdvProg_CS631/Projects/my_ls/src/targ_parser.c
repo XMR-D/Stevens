@@ -1,7 +1,6 @@
-#define _POSIX_C_SOURCE 200809L
-
 #include <sys/stat.h>
 
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <strings.h> 
@@ -188,7 +187,8 @@ static int insert_file(TargList *list, TargList *elm)
     return 0;
 }
 
-int TargLinsert(TargList *list, char *token, int isdir, int ishidden) {
+int TargLinsert(TargList *list, char *token, int isdir, int ishidden) 
+{
     TargList *elm = malloc(sizeof(TargList));
     if (!elm) {
         TargLfree(list);
@@ -205,8 +205,8 @@ int TargLinsert(TargList *list, char *token, int isdir, int ishidden) {
 
     if (stat(token, &sb) == -1) 
     {
-        throw_error('\0', token, "Failed to open", WRNG_TARG_ERR);
-        return WRNG_TARG_ERR;
+        throw_error('\0', token, WRNG_TARG_ERR);
+        return errno;
     } 
     else 
         elm->sb = sb;
@@ -234,7 +234,6 @@ void TargLfree(TargList * list)
         next = list->next;
     }
     free(list);
-
 }
 
 void TargLlog(TargList * list)

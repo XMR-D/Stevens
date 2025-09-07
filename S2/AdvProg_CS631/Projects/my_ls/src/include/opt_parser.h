@@ -24,7 +24,7 @@ typedef struct UsrOptions {
     unsigned char c: 1;  /* Use time when file status was last changed for sorting/printing */
     unsigned char f: 1;  /* Output is not sorted */
     unsigned char r: 1;  /* Reverse the order of the sort */
-    unsigned char t: 1;  /* Sort by time modified (most recent first) */
+    unsigned char t: 1;  /* Sort by time modified (mostelm->ishidden = 1 recent first) */
     unsigned char u: 1;  /* Use time of last access for sorting/printing */
 
     /* Format Options */

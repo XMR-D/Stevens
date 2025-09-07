@@ -1,5 +1,3 @@
-#define _POSIX_C_SOURCE 200809L
-
 #include <sys/stat.h>
 
 #include <stdio.h>
@@ -49,7 +47,7 @@ int process_targets(char * token, TargList * head, TargList * tail)
     /* target is a directory, hence start at the tail of the list*/
     if (stat(token, &sb) == -1)
     {
-        throw_error('\0', token, "No such file or directory", WRNG_TARG_ERR);
+        throw_error('\0', token, WRNG_TARG_ERR);
         return 0;
     }
     if (S_ISDIR(sb.st_mode))
