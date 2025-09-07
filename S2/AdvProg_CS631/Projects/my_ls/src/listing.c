@@ -19,7 +19,7 @@ extern int target_count;
 int header_print;
 
 /* List files from dir and create a filelist and reclist for last step (STEP 3 PRINTING) */
-int ListFile(char * dir, FileList * filelist, RecList * reclist)
+int ListFile(char * dir, FileList * filelist, FileList * reclist)
 {
     DIR * dp;
     if((dp = opendir(dir)) == NULL)
@@ -55,16 +55,31 @@ int TargetLProcess(TargList * targ_list)
             printf("%s :\n", list->target);
 
             FileList * files = calloc(sizeof(FileList), 1);
-            RecList * new_targets = calloc(sizeof(RecList), 1);
+            if (!files)
+            {
+                throw_error('\0', "", MEM_ERR);
+                return errno;
+            }
+
+            FileList * new_targets = calloc(sizeof(FileList), 1);
+            if (!new_targets)
+            {
+                free(files);
+                throw_error('\0', "", MEM_ERR);
+                return errno;
+            }
 
             if(ListFile(list->target, files, new_targets))
             {
-                RecListFree(new_targets);
+                FileListFree(new_targets);
                 FileListFree(files);
                 return errno;
             }
+            printf("Files found :\n");
             FileListLog(files);
-            RecListLog(new_targets);
+            
+            printf("Files to rec on :\n");
+            FileListLog(new_targets);
             
             /* 
                 HERE WE SHOULD HAVE FILES LIST AND IF -R OPT IS SPECIFIED A RECURSION LIST
@@ -73,9 +88,7 @@ int TargetLProcess(TargList * targ_list)
             */
 
             FileListFree(files);
-            RecListFree(new_targets);
-
-
+            FileListFree(new_targets);
         }
         else
         {

@@ -166,10 +166,7 @@ static int insert_file(TargList *list, TargList *elm)
     else
     {
         while (list->next && !list->next->isdir && (RevSort * TargLcompare(list->next, elm, elm->isdir) <= 0)) 
-        {
-            if ((list->next == NULL) || list->next->isdir) break;
-                list = list->next;
-        }
+            list = list->next;
     }
 
     if (list->next) 
@@ -190,7 +187,8 @@ static int insert_file(TargList *list, TargList *elm)
 int TargLinsert(TargList *list, char *token, int isdir, int ishidden) 
 {
     TargList *elm = malloc(sizeof(TargList));
-    if (!elm) {
+    if (!elm) 
+    {
         TargLfree(list);
         return errno;
     }

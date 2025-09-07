@@ -5,23 +5,14 @@
 typedef struct FileList {
     char * fname;
     int ishidden: 1;
+
     struct stat sb;
     struct FileList * next;
 } FileList;
 
-/* Structure that will contain all the new targets we need to relaunch ls on found during listing*/
-typedef struct RecList {
-    char * dname;
-    struct RecList * next;
-} RecList;
-
-void RecListFree(RecList * list);
-int RecListInsert(char * dirname, RecList * list);
-void RecListLog(RecList * list);
-
 
 void FileListFree(FileList * list);
-int FileListInsert(char * filename, FileList * filelist, RecList * reclist);
+int FileListInsert(char * filename, FileList * filelist, FileList * reclist);
 void FileListLog(FileList * list);
 
 

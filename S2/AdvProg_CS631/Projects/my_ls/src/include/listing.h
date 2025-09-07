@@ -7,7 +7,7 @@
 
 #include "list-handling.h"
 
-int ListFile(char * dir, FileList * filelist, RecList * reclist);
+int ListFile(char * dir, FileList * filelist, FileList * reclist);
 
 int TargetLProcess(TargList * targ_list);
 

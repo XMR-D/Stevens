@@ -14,64 +14,6 @@
 extern int RevSort;
 extern UsrOptions * usr_opt;
 
-/*  REC LIST FUNCTIONS */
-void RecListFree(RecList * list)
-{
-    if (list != NULL)
-    {
-        RecList *curr = list;
-        RecList *next;
-        
-        while (curr != NULL)
-        {
-            next = curr->next;
-            free(curr);         
-            curr = next;        
-        }
-    }
-}
-
-int RecListInsert(char * dirname, RecList * reclist)
-{
-    RecList *elm = calloc(sizeof(RecList), 1);
-    if (!elm) 
-    {
-        RecListFree(reclist);
-        return MEM_ERR;
-    }
-
-    elm->dname = dirname;
-
-    if (reclist->dname == NULL && reclist->next)
-        reclist = reclist->next;
-    
-    while(reclist->next != NULL)
-        reclist = reclist->next;
-    reclist->next = elm;
-    
-    return 0;
-}
-
-
-
-/*  FILE LIST FUNCTIONS*/
-void FileListFree(FileList * list)
-{
-    if (list != NULL)
-    {
-        FileList *curr = list;
-        FileList *next;
-        
-        while (curr != NULL)
-        {
-            next = curr->next;
-            free(curr->fname);
-            free(curr);         
-            curr = next;        
-        }
-    }
-}
-
 static int FileListCompare(FileList * elm1, FileList * elm2)
 {
     int ret = 0;
@@ -103,13 +45,13 @@ static int FileListCompare(FileList * elm1, FileList * elm2)
 
     /* The element is a file and need to be compared, to keep list ordering invert the result */
     if (usr_opt->S)
-        ret = CompareMetrics(elm1->sb.st_size, elm2->sb.st_size);
+        ret = CompareMetrics(elm1->sb.st_size, elm2->sb.st_size) * -1;
     else if (usr_opt->t)
-        ret = CompareTimeMetrics(elm1->sb.st_mtim, elm2->sb.st_mtim);
+        ret = CompareTimeMetrics(elm1->sb.st_mtim, elm2->sb.st_mtim) * -1;
     else if (usr_opt->c)
-        ret = CompareTimeMetrics(elm1->sb.st_ctim, elm2->sb.st_ctim);
+        ret = CompareTimeMetrics(elm1->sb.st_ctim, elm2->sb.st_ctim) * -1;
     else if (usr_opt->u)
-        ret = CompareTimeMetrics(elm1->sb.st_atim, elm2->sb.st_atim);
+        ret = CompareTimeMetrics(elm1->sb.st_atim, elm2->sb.st_atim) * -1;
     else
         return strcasecmp(str1, str2);
 
@@ -120,7 +62,53 @@ static int FileListCompare(FileList * elm1, FileList * elm2)
 }
 
 
-int FileListInsert(char * filename, FileList * filelist, RecList * reclist)
+void FileListFree(FileList * list)
+{
+    if (list != NULL)
+    {
+        FileList *curr = list;
+        FileList *next;
+        
+        while (curr != NULL)
+        {
+            next = curr->next;
+            free(curr->fname);
+            free(curr);         
+            curr = next;        
+        }
+    }
+}
+
+static int PushToList(char * filename, struct stat * sb, int ishidden, FileList * list)
+{
+    FileList * elm = calloc(sizeof(FileList), 1);
+
+    if (!elm) 
+    {
+        FileListFree(list);
+        throw_error('\0', filename, MEM_ERR);
+        return errno;
+    }
+
+    elm->fname = filename;
+    elm->ishidden = ishidden;
+    elm->sb = *sb;
+
+    while (list->next && (RevSort * FileListCompare(list->next, elm)) < 0)
+        list = list->next;
+
+    if (list->next)
+    {
+        elm->next = list->next;
+        list->next = elm;
+    }
+    else
+        list->next = elm;
+
+    return 0;
+}
+
+int FileListInsert(char * filename, FileList * filelist, FileList * reclist)
 {
     int ishidden = 0;
 
@@ -139,48 +127,19 @@ int FileListInsert(char * filename, FileList * filelist, RecList * reclist)
         }
     }
     
-    /* Prepare string to get full path */
-    
     struct stat sb;
-    FileList *elm;
 
     if (stat(filename, &sb) == -1) 
     {
         throw_error('\0', filename, WRNG_TARG_ERR);
         return errno;
     } 
-    else 
-    {
-        elm = calloc(sizeof(FileList), 1);
-        if (!elm) 
-        {
-            FileListFree(filelist);
-            throw_error('\0', filename, MEM_ERR);
-            return errno;
-        }
 
-        elm->fname = filename;
-        elm->ishidden = ishidden;
-        elm->sb = sb;
-    }
+    if (S_ISDIR(sb.st_mode))
+        PushToList(strdup(filename), &sb, ishidden, reclist);
 
-    if (S_ISDIR(elm->sb.st_mode))
-        RecListInsert(filename, reclist);
-
-    if (filelist->fname == NULL && filelist->next)
-        filelist = filelist->next;
-
-    
-    while (filelist->next && (RevSort * FileListCompare(filelist, elm)) < 0)
-        filelist = filelist->next;
-    if (filelist->next)
-    {
-        elm->next = filelist->next;
-        filelist->next = elm;
-    }
-    else
-        filelist->next = elm;
-    
+    PushToList(filename, &sb, ishidden, filelist);
+ 
     return 0;
 }
 
@@ -200,23 +159,5 @@ void FileListLog(FileList * list)
 
         }
     }
-    printf("(end)\nNumber of files : %i\n", count);
-    
-}
-
-void RecListLog(RecList * list)
-{
-    list = list->next;
-    printf("Files to rec on :\n");
-
-    if (list)
-    {
-        while (list != NULL)
-        {
-
-            printf("%s -> ", list->dname);
-            list = list->next;
-        }
-    }
-    printf("(end) \n\n");
+    printf("(end)\n\n");
 }
