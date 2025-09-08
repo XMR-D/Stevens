@@ -94,3 +94,16 @@ char * FullName(char * dirname, char * filename)
 
     return fullname;
 }
+
+void Padding(char * str1, int longest)
+{
+       
+    int spaces = longest - strlen(str1) + 2;
+
+    while (spaces > 0)
+    {
+        printf(" ");
+        spaces--;
+    }
+    
+}

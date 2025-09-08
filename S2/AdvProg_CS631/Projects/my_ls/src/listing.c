@@ -53,8 +53,7 @@ int TargetLProcess(TargList * targ_list)
     {
         if (list->isdir)
         {
-            printf("\n\n");
-            printf("%s :\n", list->target);
+            printf("\n%s :\n", list->target);
 
             FileList * listing = calloc(sizeof(FileList), 1);
             if (!listing)
@@ -87,7 +86,7 @@ int TargetLProcess(TargList * targ_list)
 
             ClassicPrinter(listing);
 
-            FileListFree(lisitng);
+            FileListFree(listing);
             FileListFree(new_targets);
         }
         else
@@ -98,7 +97,7 @@ int TargetLProcess(TargList * targ_list)
             /* Then if list->next == NULL or list->next->isdir Print the created list (Classic or Long format) and then free it*/
             printf("%s  ", list->target);
         }
-        
+
         list = list->next;
     }
     return 0;

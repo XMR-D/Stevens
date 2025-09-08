@@ -14,7 +14,7 @@
 #include "printing.h"
 
 /* TODO DEBUG THIS LAST STEP + ADD options handling */
-static void PrintListing(FileList * list, int row_nb)
+static void PrintListing(FileList * list, int longest, int row_nb, int col_nb)
 {
     /* Setup the start of the list (first elm) */
     if (!list->fname && list->next)
@@ -22,31 +22,42 @@ static void PrintListing(FileList * list, int row_nb)
 
     FileList * start = list;
     FileList * curr = list;
-    char * name;
+    int step = row_nb;
+
+    char * name = strrchr(curr->fname, '/');
+    printf("%s", ++name);
+
+    Padding(curr->fname, longest);
 
     for (int i = 0; i < row_nb; i++)
     {
-        name = strrchr(list->fname, '/');
-        printf("%s  ", ++name);
-
-        for (int i = 0; i < row_nb; i++)
+        for (int j = 0; j < col_nb; j++)
         {
-            if (curr->next)
-                curr = curr->next;
-            else
+            
+            while (step > 0)
             {
-                printf("\n");
-                start = start->next;
-                break;
+                if (!curr->next)
+                    break;
+
+                curr = curr->next;
+                step--;
             }
-        }
-        if (!curr->next)
-        {
+
+            if (!curr->next)
+                break;
+
+            step = row_nb;
+
+            /* Print the file with the correct padding*/
             name = strrchr(curr->fname, '/');
-            printf("%s  ", ++name);
-            break;
+            printf("%s", ++name);
+            Padding(curr->fname, longest);
+
         }
+ 
+        start = start->next;
         curr = start;
+        printf("\n");
     }
     printf("\n");
 }
@@ -96,9 +107,10 @@ void ClassicPrinter(FileList * list)
     */
 
     int nb_files = 0;
-    int col_nb = GetWinWidth() / GetMaxLen(list, &nb_files);
+    int longest = GetMaxLen(list, &nb_files);
+    int col_nb = GetWinWidth() / longest;
     int row_nb = (nb_files + col_nb - 1) / col_nb;
-    PrintListing(list, row_nb);
+    PrintListing(list, longest, row_nb, col_nb);
 }
 
 void LongFormatPrinter(FileList * list)
