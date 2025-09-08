@@ -23,4 +23,4 @@ test/.a  test/.c test/babar/.e
 
 ## Priority: 4
 //TODO: Code Cleaning and Coding_style compliance review
-        FIX INDENTATION / ADD STATIC FIELDS / COMPLY WITH PROFESSOR Coding_style
+        FIX INDENTATION / ADD STATIC FIELDS ON FUNCTIONS NOT IN HEADER / COMPLY WITH PROFESSOR Coding_style

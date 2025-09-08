@@ -9,6 +9,7 @@
 #include "error.h"
 #include "list-handling.h"
 #include "opt_parser.h"
+#include "printing.h"
 #include "targ_parser.h"
 #include "utility.h"
 
@@ -52,10 +53,11 @@ int TargetLProcess(TargList * targ_list)
     {
         if (list->isdir)
         {
+            printf("\n\n");
             printf("%s :\n", list->target);
 
-            FileList * files = calloc(sizeof(FileList), 1);
-            if (!files)
+            FileList * listing = calloc(sizeof(FileList), 1);
+            if (!listing)
             {
                 throw_error('\0', "", MEM_ERR);
                 return errno;
@@ -64,22 +66,18 @@ int TargetLProcess(TargList * targ_list)
             FileList * new_targets = calloc(sizeof(FileList), 1);
             if (!new_targets)
             {
-                free(files);
+                free(listing);
                 throw_error('\0', "", MEM_ERR);
                 return errno;
             }
 
-            if(ListFile(list->target, files, new_targets))
+            if(ListFile(list->target, listing, new_targets))
             {
                 FileListFree(new_targets);
-                FileListFree(files);
+                FileListFree(listing);
                 return errno;
             }
-            printf("Files found :\n");
-            FileListLog(files);
             
-            printf("Files to rec on :\n");
-            FileListLog(new_targets);
             
             /* 
                 HERE WE SHOULD HAVE FILES LIST AND IF -R OPT IS SPECIFIED A RECURSION LIST
@@ -87,14 +85,20 @@ int TargetLProcess(TargList * targ_list)
                 YES WE NEED TO CONCAT THE ACTUAL TARGET AND THE NEW FOUND TARGET.
             */
 
-            FileListFree(files);
+            ClassicPrinter(listing);
+
+            FileListFree(lisitng);
             FileListFree(new_targets);
         }
         else
         {
+            /* TODO : */
             /* ITS A FILE, PRINT IT IN ACCORDANCE WITH OPTION */
-            printf("%s\n", list->target);
+            /* Maybe create a FileList that contain all the files to print them using SimpleFilePrinting*/
+            /* Then if list->next == NULL or list->next->isdir Print the created list (Classic or Long format) and then free it*/
+            printf("%s  ", list->target);
         }
+        
         list = list->next;
     }
     return 0;

@@ -1,6 +1,8 @@
 #ifndef LIST_HANDLING_H
 #define LIST_HANDLING_H
 
+#include <sys/stat.h>
+
 /* Structure that will contain the files to print for a given target*/
 typedef struct FileList {
     char * fname;

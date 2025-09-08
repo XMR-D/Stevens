@@ -59,7 +59,6 @@ int my_ls(int argc, char * argv[])
 
 	TargetLProcess(targ_list);
 
-	
 	WARN("freeing structures...");
 
 	free(usr_opt);
@@ -75,5 +74,3 @@ int main(int argc, char ** argv)
 	/* First call that will setup Options and Targets */
 	return my_ls(argc, argv);
 }
-
-
