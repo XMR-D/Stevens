@@ -5,7 +5,8 @@
 
 #include "utility.h"
 
-int IsHidden(char * pathname)
+int 
+IsHidden(char * pathname)
 {
     int len = strlen(pathname);
     int recover = 0;
@@ -40,7 +41,8 @@ int IsHidden(char * pathname)
     return ret;
 }
 
-int CompareMetrics(int metric1, int metric2)
+int 
+CompareMetrics(int metric1, int metric2)
 {
     if (metric1 > metric2)
         return 1;
@@ -50,7 +52,8 @@ int CompareMetrics(int metric1, int metric2)
         return 0;
 }
 
-int CompareTimeMetrics(struct timespec t1, struct timespec t2)
+int 
+CompareTimeMetrics(struct timespec t1, struct timespec t2)
 {
     if (t1.tv_sec != t2.tv_sec)
     {
@@ -69,7 +72,8 @@ int CompareTimeMetrics(struct timespec t1, struct timespec t2)
             return 0;
     }
 }
-char * FullName(char * dirname, char * filename)
+char * 
+FullName(char * dirname, char * filename)
 {
     int f_len = strlen(filename);
     int d_len = strlen(dirname);
@@ -95,7 +99,8 @@ char * FullName(char * dirname, char * filename)
     return fullname;
 }
 
-void Padding(char * str1, int longest)
+void 
+Padding(char * str1, int longest)
 {
        
     int spaces = longest - strlen(str1) + 2;

@@ -1,16 +1,14 @@
 ## Priority: 1
-//TODO : Fix the sorting (for both TargL and FileList) when encontering composed paths like :
-
-WHY :
-$ ls test/.a test/.c test/babar/.e 
-test/.a  test/babar/.e  test/.c 
-
-AND NOT :
-$ ls test/.a test/.c test/babar/.e 
-test/.a  test/.c test/babar/.e
+//TODO : Recheck if the strCASEcmp is needeed because sorting seems to behave differently on netbsd
 
 ## Priority: 1
-//TODO : Implement Last Step (classic printing and Long format printing)
+//TODO : Swap the gnu makefile to a netbsd makefile
+
+## Priority: 1
+//PRAY FOR THE CODE TO BEHAVE SIMILARLY ON NETBSD
+
+## Priority: 1
+//TODO : Debug padding and check on bigger files + adapt the code to 
 
 ## Priority : 3
 //TODO: Run return code tests

@@ -8,13 +8,13 @@
 
 #include "error.h"
 #include "list-handling.h"
-#include "opt_parser.h"
+#include "opt-parser.h"
 #include "utility.h"
 
 #include "printing.h"
 
 /* TODO DEBUG THIS LAST STEP + ADD options handling */
-static void PrintListing(FileList * list, int longest, int row_nb, int col_nb)
+static void PrintListingInColumn(FileList * list, int longest, int row_nb, int col_nb)
 {
     /* Setup the start of the list (first elm) */
     if (!list->fname && list->next)
@@ -100,17 +100,20 @@ void ClassicPrinter(FileList * list)
         return;
     /* 
      * Compute rows and columns to print the files
-     * The width of a column is the size of the largest file + 2 for padding
-     * Given by GetMaxLen(list);
-     * Get the width of the terminal to compute how to print the output
-     * Given by GetWinWidth();
+     *
+     * First, we get the number of files and the width of a column (size of the largest file + 2 for padding)
+     * Given by GetMaxLen(list, &nb_files);
+     *
+     * Then we get the width of the terminal Given by GetWinWidth() to compute the number of columns and rows
+     *
+     * Then we call PrintListingInColumn with the listing of the current dir
+     * with the good format options to print it in columns.
     */
-
     int nb_files = 0;
     int longest = GetMaxLen(list, &nb_files);
     int col_nb = GetWinWidth() / longest;
     int row_nb = (nb_files + col_nb - 1) / col_nb;
-    PrintListing(list, longest, row_nb, col_nb);
+    PrintListingInColumn(list, longest, row_nb, col_nb);
 }
 
 void LongFormatPrinter(FileList * list)

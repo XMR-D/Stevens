@@ -1,8 +1,9 @@
 #ifndef TOKENIZE_H
 #define TOKENIZE_H
 
-#include "targ_parser.h"
+#include "targ-parser.h"
 
-int tokenize(int argc, char * input[], TargList * head, TargList * tail);
+int 
+Tokenize(int argc, char * input[], TargList * head, TargList * tail);
 
 #endif  /* !_TOKENIZE_H */

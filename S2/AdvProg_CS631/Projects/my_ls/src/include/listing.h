@@ -3,7 +3,7 @@
 
 #include <sys/stat.h>
 
-#include "targ_parser.h"
+#include "targ-parser.h"
 
 #include "list-handling.h"
 

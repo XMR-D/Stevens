@@ -4,9 +4,10 @@
 
 #include "error.h"
 #include "log.h"
-#include "opt_parser.h"
 
-/* usr_opt pointer that will contain the options for later purpose */
+#include "opt-parser.h"
+
+/* Global variable representing options passed by the user */
 extern UsrOptions * usr_opt;
 
 extern int help;
@@ -138,13 +139,13 @@ int OptSet(char opt)
     return 0;
 }
 
-void OptionLog(UsrOptions * opt)
+void OptionLog(UsrOptions* opt) 
 {
-    printf("Option activated:\n"
-           "A=%i a=%i R=%i d=%i\n"
-           "f=%i r=%i t=%i S=%i c=%i u=%i\n"
-           "F=%i l=%i n=%i q=%i w=%i h=%i s=%i i=%i\n",
-           opt->A, opt->a, opt->R, opt->d,
-           opt->f, opt->r, opt->t, opt->S, opt->c, opt->u,
-           opt->F, opt->l, opt->n, opt->q, opt->w, opt->h, opt->s, opt->i);
+    printf(
+        "Option activated:\n"
+        "A=%i a=%i R=%i d=%i\n"
+        "f=%i r=%i t=%i S=%i c=%i u=%i\n"
+        "F=%i l=%i n=%i q=%i w=%i h=%i s=%i i=%i\n",
+        opt->A, opt->a, opt->R, opt->d, opt->f, opt->r, opt->t, opt->S, opt->c,
+        opt->u, opt->F, opt->l, opt->n, opt->q, opt->w, opt->h, opt->s, opt->i);
 }

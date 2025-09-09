@@ -6,11 +6,11 @@
 #include "error.h"
 #include "listing.h"
 #include "log.h"
-#include "opt_parser.h"
-#include "targ_parser.h"
+#include "opt-parser.h"
+#include "targ-parser.h"
 #include "tokenize.h"
 
-/* Global variable representing options structure */
+/* Global variable representing options passed by the user */
 UsrOptions * usr_opt;
 /* Global variable representing if a target as been tested */
 int targ_found;
@@ -41,7 +41,7 @@ int my_ls(int argc, char * argv[])
 	}
 	tl_tail = targ_list;
 
-	int ret = tokenize(argc, argv, targ_list, tl_tail);
+	int ret = Tokenize(argc, argv, targ_list, tl_tail);
 	if (ret)
 	{
 		free(usr_opt);
