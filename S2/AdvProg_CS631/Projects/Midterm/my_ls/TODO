@@ -1,12 +1,26 @@
-## Priority 1
-//TODO : When switching on netbsd, it seems we have a segfault error when comparing times
-        this happen for every time sorting options => FIX IT
+## Priority: 1
+//TODO: Fix debug_ls -l * segfault
 
 ## Priority: 1
-//TODO : Adapt the code to handle simple files target 
+//TODO: IMPLEMENT RECURSION
+
+## Priority: 2
+//TODO: Add nb_bytes padding depending on options passed
+	Add the date to the long format printer
+	Check the number of files to see if printing "targname :" is needed
+
+## Priority: 2
+//TODO: Handle the ls . -S situation (where files are before an option)
+
+## Priority: 2
+//TODO: Check for hidden files and when to print it, it seems certain options print the hidden files
+	even when not specified too
 
 ## Priority : 3
 //TODO: Run return code tests
+
+## Priority : 3
+//TODO: Implement the help option function
 
 ## Priority : 3
 //TODO : Run some leakage test

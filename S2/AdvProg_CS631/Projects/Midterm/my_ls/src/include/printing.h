@@ -4,7 +4,7 @@
 #include "list-handling.h"
 
 void ClassicPrinter(FileList * list);
-void LongFormatPrinter(FileList * list);
+int LongFormatPrinter(FileList * list);
 
 
 #endif /* !PRINTING_H */

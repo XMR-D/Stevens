@@ -14,7 +14,7 @@ typedef struct FileList {
 
 
 void FileListFree(FileList * list);
-int FileListInsert(char * filename, FileList * filelist, FileList * reclist);
+int FileListInsert(char * dir, char * filename, FileList * filelist, FileList * reclist);
 void FileListLog(FileList * list);
 
 

@@ -5,12 +5,11 @@
 
 #include "error.h"
 #include "listing.h"
-#include "log.h"
-#include "opt-parser.h"
-#include "targ-parser.h"
+#include "opt_parser.h"
+#include "targ_parser.h"
 #include "tokenize.h"
 
-/* Global variable representing options passed by the user */
+/* Global variable representing options structure */
 UsrOptions * usr_opt;
 /* Global variable representing if a target as been tested */
 int targ_found;
@@ -20,8 +19,9 @@ int targ_count = 0;
 int my_ls(int argc, char * argv[])
 {
 
-	WARN("ls launched.");
 	TargList * tl_tail;
+
+	int ret = 0;
 
 	if (!usr_opt)
 	{
@@ -41,31 +41,24 @@ int my_ls(int argc, char * argv[])
 	}
 	tl_tail = targ_list;
 
-	int ret = Tokenize(argc, argv, targ_list, tl_tail);
-	if (ret)
+	ret = tokenize(argc, argv, targ_list, tl_tail);
+	if (ret && ret != 2)
 	{
 		free(usr_opt);
 		TargLfree(targ_list);
-		ERROR("ls finished on error");
 		return ret;
 	}
 
 	if (!targ_list->next && (targ_found == 0))
 		TargLinsert(targ_list, ".", 1, 0);
 
-
-	SUCCESS("STEP 1 : TOKENIZATION FINISHED");
-	WARN("Listing files from targets found....");
-
-	TargetLProcess(targ_list);
-
-	WARN("freeing structures...");
+	if (TargetLProcess(targ_list))
+		return errno;
 
 	free(usr_opt);
 	TargLfree(targ_list);
 
-	SUCCESS("ls finished successfully.");
-	return 0;
+	return ret;
 }
 
 

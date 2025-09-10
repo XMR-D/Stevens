@@ -5,8 +5,7 @@
 
 #include "utility.h"
 
-int 
-IsHidden(char * pathname)
+int IsHidden(char * pathname)
 {
     int len = strlen(pathname);
     int recover = 0;
@@ -41,69 +40,41 @@ IsHidden(char * pathname)
     return ret;
 }
 
-int 
-CompareMetrics(int metric1, int metric2)
+int CompareMetrics(int metric1, int metric2)
 {
     if (metric1 > metric2)
-        return 1;
-    if (metric1 < metric2)
         return -1;
+    if (metric1 < metric2)
+        return 1;
     else
         return 0;
 }
 
-int 
-CompareTimeMetrics(struct timespec t1, struct timespec t2)
+int CompareTimeMetrics(struct timespec t1, struct timespec t2)
 {
     if (t1.tv_sec != t2.tv_sec)
     {
         if (t1.tv_sec > t2.tv_sec)
-            return 1;
-        else
             return -1;
+        else
+            return 1;
     }
     else
     {
         if (t1.tv_nsec > t2.tv_nsec)
-            return 1;
-        if (t1.tv_nsec < t2.tv_nsec)
             return -1;
+        if (t1.tv_nsec < t2.tv_nsec)
+            return 1;
         else
             return 0;
     }
 }
-char * 
-FullName(char * dirname, char * filename)
+
+
+void Padding(char * str1, int longest)
 {
-    int f_len = strlen(filename);
-    int d_len = strlen(dirname);
-
-    if (dirname[d_len-1] == '/')
-        dirname[d_len-1] = '\0';
-
-    char * filecpy = calloc(sizeof(char), f_len + 1);
-    char * dircpy = calloc(sizeof(char), d_len + 1);
-
-    strcpy(dircpy, dirname);
-    strcpy(filecpy, filename);
-
-    char * fullname = calloc(sizeof(char), f_len + d_len + 2);
-
-    strcat(fullname, dirname);
-    strcat(fullname, "/");
-    strcat(fullname, filename);
-
-    free(filecpy);
-    free(dircpy);
-
-    return fullname;
-}
-
-void 
-Padding(char * str1, int longest)
-{
-       
-    int spaces = longest - strlen(str1) + 2;
+     
+    int spaces = longest - strlen(str1);
 
     while (spaces > 0)
     {
@@ -111,4 +82,17 @@ Padding(char * str1, int longest)
         spaces--;
     }
     
+}
+
+int NbDigit(int val)
+{
+    int nb_digit = 0;
+
+    while (val > 0)
+    {
+        nb_digit++;
+	val /= 10;
+    }
+
+    return nb_digit;
 }
