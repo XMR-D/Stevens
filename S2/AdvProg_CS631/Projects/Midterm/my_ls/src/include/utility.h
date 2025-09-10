@@ -7,5 +7,6 @@ int CompareTimeMetrics(struct timespec t1, struct timespec t2);
 char * FullName(char * dirname, char * filename);
 void Padding(char * str1, int longest);
 int NbDigit(int val);
+int GetBlockSize(void);
 
 #endif /* !UTILITY_H */

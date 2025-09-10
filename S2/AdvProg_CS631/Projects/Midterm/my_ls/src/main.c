@@ -8,6 +8,7 @@
 #include "opt_parser.h"
 #include "targ_parser.h"
 #include "tokenize.h"
+#include "utility.h"
 
 /* Global variable representing options structure */
 UsrOptions * usr_opt;
@@ -15,6 +16,12 @@ UsrOptions * usr_opt;
 int targ_found;
 /* Global variable representing the numbers of targets */
 int targ_count = 0;
+
+#ifndef DEFAULT_BLK_SIZE
+#define DEFAULT_BLK_SIZE 512
+#endif /* !DEFAULT_BLK_SIZE */
+
+int block_size = DEFAULT_BLK_SIZE;
 
 int my_ls(int argc, char * argv[])
 {
@@ -51,6 +58,9 @@ int my_ls(int argc, char * argv[])
 
 	if (!targ_list->next && (targ_found == 0))
 		TargLinsert(targ_list, ".", 1, 0);
+	/* Get environement values and check for validity */
+	if (usr_opt->s)
+	    block_size = GetBlockSize();
 
 	if (TargetLProcess(targ_list))
 		return errno;

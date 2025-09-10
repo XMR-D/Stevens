@@ -5,6 +5,13 @@
 
 #include "utility.h"
 
+#ifndef DEFAULT_BLK_SIZE
+#define DEFAULT_BLK_SIZE 512
+#endif /* !DEFAULT_BLK_SIZE */
+
+#define MIN_BLK_SIZE 512
+#define MAX_BLK_SIZE 1073741824 /* 1G size */
+
 int IsHidden(char * pathname)
 {
     int len = strlen(pathname);
@@ -95,4 +102,60 @@ int NbDigit(int val)
     }
 
     return nb_digit;
+}
+
+static long IsValidInt(const char * var)
+{
+    char *ep;
+    long var_value;
+
+    if (var == NULL)
+        return -1;
+    
+    var_value = strtol((const char *) var, &ep, 10);
+
+    /* var is not a number */
+    if (ep == var)
+        return -1;
+
+    return var_value;
+}
+
+int GetBlockSize(void)
+{
+    const char * val = getenv("BLOCKSIZE");
+
+    int value = IsValidInt(val);
+
+    if (val == NULL || value == -1)
+    {
+	if (val)
+	    printf("ls: %s: unknown blocksize\n", val);
+	else
+	    printf("ls: failed to read BLOCKSIZE env variable\n");
+	
+	printf("ls: maximum blocksize is 1G\n");
+
+	if (val)
+	    printf("ls: %s: minimum blocksize is 512\n", val);
+	else
+	    printf("ls: minimum blocksize is 512\n");	
+	
+        return DEFAULT_BLK_SIZE;
+    }
+    else
+    {
+        if (value < MIN_BLK_SIZE)
+	{
+	    printf("ls: %s: minimum blocksize is 512\n", val);
+	    return DEFAULT_BLK_SIZE;
+	}
+	else if (value > MAX_BLK_SIZE)
+	{
+	    printf("ls: maximum blocksize is 1G\n");
+	    return DEFAULT_BLK_SIZE;
+	}
+	else
+	    return value;
+    }
 }

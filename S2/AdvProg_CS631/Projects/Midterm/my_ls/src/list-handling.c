@@ -126,16 +126,19 @@ static void ComputePaddingNeeded(FileList * elm)
     }
     
     if (uid_int_len > max_uid_int_len)
-	    max_uid_int_len = uid_int_len;
+        max_uid_int_len = uid_int_len;
 
     if (gid_int_len > max_gid_int_len)
-	    max_gid_int_len = gid_int_len;
+	max_gid_int_len = gid_int_len;
 
     if (nb_byte_len > max_nb_byte_len)
-	    max_nb_byte_len = nb_byte_len;
+	max_nb_byte_len = nb_byte_len;
 
     if (nb_link_len > max_link_nb)
-	    max_link_nb = nb_link_len;
+	max_link_nb = nb_link_len;
+
+    if (usr_opt->s)
+	total_bytes += elm->sb.st_size;
 
 }
 
