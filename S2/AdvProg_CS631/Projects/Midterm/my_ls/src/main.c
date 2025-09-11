@@ -1,0 +1,76 @@
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "error.h"
+#include "listing.h"
+#include "log.h"
+#include "opt-parser.h"
+#include "targ-parser.h"
+#include "tokenize.h"
+
+/* Global variable representing options passed by the user */
+UsrOptions * usr_opt;
+/* Global variable representing if a target as been tested */
+int targ_found;
+/* Global variable representing the numbers of targets */
+int targ_count = 0;
+
+int my_ls(int argc, char * argv[])
+{
+
+	WARN("ls launched.");
+	TargList * tl_tail;
+
+	if (!usr_opt)
+	{
+		usr_opt = calloc(1, sizeof(UsrOptions));
+		if (!usr_opt) 
+		{
+			throw_error('\0', NULL, MEM_ERR);
+			return errno;
+		}
+	}
+
+	TargList * targ_list = calloc(1, sizeof(TargList));
+	if (!targ_list) 
+	{
+		throw_error('\0', NULL, MEM_ERR);
+		return errno;
+	}
+	tl_tail = targ_list;
+
+	int ret = Tokenize(argc, argv, targ_list, tl_tail);
+	if (ret)
+	{
+		free(usr_opt);
+		TargLfree(targ_list);
+		ERROR("ls finished on error");
+		return ret;
+	}
+
+	if (!targ_list->next && (targ_found == 0))
+		TargLinsert(targ_list, ".", 1, 0);
+
+
+	SUCCESS("STEP 1 : TOKENIZATION FINISHED");
+	WARN("Listing files from targets found....");
+
+	TargetLProcess(targ_list);
+
+	WARN("freeing structures...");
+
+	free(usr_opt);
+	TargLfree(targ_list);
+
+	SUCCESS("ls finished successfully.");
+	return 0;
+}
+
+
+int main(int argc, char ** argv)
+{	
+	/* First call that will setup Options and Targets */
+	return my_ls(argc, argv);
+}

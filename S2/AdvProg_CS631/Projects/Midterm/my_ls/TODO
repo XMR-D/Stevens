@@ -1,0 +1,16 @@
+## Priority 1
+//TODO : When switching on netbsd, it seems we have a segfault error when comparing times
+        this happen for every time sorting options => FIX IT
+
+## Priority: 1
+//TODO : Adapt the code to handle simple files target 
+
+## Priority : 3
+//TODO: Run return code tests
+
+## Priority : 3
+//TODO : Run some leakage test
+
+## Priority: 4
+//TODO: Code Cleaning and Coding_style compliance review
+        FIX INDENTATION / ADD STATIC FIELDS ON FUNCTIONS NOT IN HEADER / COMPLY WITH PROFESSOR Coding_style
