@@ -2,6 +2,7 @@
 #include <sys/stat.h>
 
 #include <errno.h>
+#include <math.h>
 #include <pwd.h>
 #include <grp.h>
 #include <stdio.h>
@@ -39,9 +40,18 @@ extern int block_size;
  */
 #define MAX_DATE_LEN 13
 
+#ifndef SIZES
+#define BSIZE 1
+#define KBSIZE 1024
+#define MBSIZE 1048576
+#define GBSIZE 1073741824
+#define TBSIZE 1099511627776
+#define SIZES
+#endif /* ! SIZES */
+
 /* If padding_order = 0 the padding is after the value, else it's before */
 static int 
-PrintNumVal(int padding_order, long int val, long int max_len)
+PrintIntVal(int padding_order, long int val, long int max_len)
 {
     char * val_str = calloc(sizeof(char), NbDigit(val) + 1);
     if (!val_str)
@@ -64,8 +74,7 @@ PrintNumVal(int padding_order, long int val, long int max_len)
     return 0;
 }
 
-/* TODO DEBUG THIS LAST STEP + ADD options handling */
-static void PrintListing(FileList * list, int longest, int row_nb, int col_nb)
+static int PrintListing(FileList * list, int longest, int row_nb, int col_nb)
 {
     /* Setup the start of the list (first elm) */
     if (!list->fname && list->next)
@@ -83,13 +92,15 @@ static void PrintListing(FileList * list, int longest, int row_nb, int col_nb)
     if (!curr->next)
     {
     	printf("%s\n", curr->fname);
-	return;
+	return 0;
     }
     
     if (usr_opt->s)
     {
 	if (!usr_opt->h)
-	   PrintNumVal(1, ComputeBlock(curr->sb.st_blocks), max_nb_block_len);
+	   if (PrintIntVal(1, ComputeBlock(curr->sb.st_blocks), 
+				   max_nb_block_len))
+		   return errno;
 
 	printf(" ");
     }
@@ -109,7 +120,9 @@ static void PrintListing(FileList * list, int longest, int row_nb, int col_nb)
 	    if (usr_opt->s)
 	    {
 	    	if (!usr_opt->h)
-	    	     PrintNumVal(1, ComputeBlock(curr->sb.st_blocks), max_nb_block_len);
+	    		if (PrintIntVal(1, ComputeBlock(curr->sb.st_blocks), 
+						max_nb_block_len))
+				return errno;
 
 	        printf(" ");
 	    }
@@ -143,7 +156,9 @@ static void PrintListing(FileList * list, int longest, int row_nb, int col_nb)
 		if (usr_opt->s)
 	    	{
 	    	    if (!usr_opt->h)
-	    	        PrintNumVal(1, ComputeBlock(curr->sb.st_blocks), max_nb_block_len);
+	    	        if (PrintIntVal(1, ComputeBlock(curr->sb.st_blocks), 
+						max_nb_block_len))
+				return errno;
 
 	            printf(" ");
 	    	}
@@ -161,7 +176,9 @@ static void PrintListing(FileList * list, int longest, int row_nb, int col_nb)
 		if (usr_opt->s)
 	    	{
 	    	    if (!usr_opt->h)
-	    	        PrintNumVal(1, ComputeBlock(curr->sb.st_blocks), max_nb_block_len);
+	    	         if (PrintIntVal(1, ComputeBlock(curr->sb.st_blocks), 
+						 max_nb_block_len))
+				 return errno;
 
 	            printf(" ");
 	    	}
@@ -178,6 +195,7 @@ static void PrintListing(FileList * list, int longest, int row_nb, int col_nb)
         curr = start;
         printf("\n");
     }
+    return 0;
 }
 
 
@@ -211,11 +229,11 @@ static int GetMaxLen(FileList * list, int * nb_files)
 }
 
 
-void ClassicPrinter(FileList * list)
+int ClassicPrinter(FileList * list)
 {
     /* If the list is empty (no files to print) return */
     if (!list->next)
-        return;
+        return 0;
     /* 
      * Compute rows and columns to print the files
      * The width of a column is the size of the largest file + 2 for padding
@@ -228,7 +246,11 @@ void ClassicPrinter(FileList * list)
     int longest = GetMaxLen(list, &nb_files);
     int col_nb = GetWinWidth() / longest;
     int row_nb = (nb_files + col_nb - 1) / col_nb;
-    PrintListing(list, longest, row_nb, col_nb);
+
+    if (PrintListing(list, longest, row_nb, col_nb))
+        return errno;
+
+    return 0;
 }
 
 static void PrintFileType(FileList * elm)
@@ -293,14 +315,18 @@ static void PrintFileMode(FileList * elm)
 
 }
 
-static void PrintOwner(FileList * elm)
+static int 
+PrintOwner(FileList * elm)
 {
     if (!usr_opt->n)
     {
         struct passwd * pwd = getpwuid(elm->sb.st_uid);
 	
 	if (pwd == NULL)
-	    PrintNumVal(0, elm->sb.st_uid, max_uid_int_len);
+	{
+	    if (PrintIntVal(0, elm->sb.st_uid, max_uid_int_len))
+	        return errno;
+	}
 	else
 	{
 	    printf("%s", pwd->pw_name);
@@ -308,20 +334,28 @@ static void PrintOwner(FileList * elm)
 	}
     }
     else
-	PrintNumVal(0, elm->sb.st_uid, max_uid_int_len);
+    {
+	if (PrintIntVal(0, elm->sb.st_uid, max_uid_int_len))
+	    return errno;
+    }
     
-    printf("  "); 
+    printf("  ");
+    return 0;
     
 }
 
-static void PrintGroup(FileList * elm)
+static int 
+PrintGroup(FileList * elm)
 {
     if (!usr_opt->n)
     {
         struct group * grp = getgrgid(elm->sb.st_gid);
 	
 	if (grp == NULL)
-	   PrintNumVal(0, elm->sb.st_gid, max_gid_int_len);
+	{
+	   if(PrintIntVal(0, elm->sb.st_gid, max_gid_int_len))
+	       return errno;
+	}
 	
 	else
 	{
@@ -329,24 +363,65 @@ static void PrintGroup(FileList * elm)
 	    Padding(grp->gr_name, max_gid_len);
 	}
     }
-    else 
-	PrintNumVal(0, elm->sb.st_gid, max_gid_int_len);
+    else
+    {
+	if (PrintIntVal(0, elm->sb.st_gid, max_gid_int_len))
+	    return errno;
+    }
     
     printf(" ");
+    return 0;
 }
 
 
-static void PrintDate(FileList * elm)
+static void 
+PrintDate(FileList * elm)
 {
      char out_str[MAX_DATE_LEN] = {'\0'};
      struct tm *info = localtime(&(elm->sb.st_mtime));
 
      strftime(out_str, sizeof(out_str), "%b %e %H:%M", info);
      printf("%s", out_str);
-
 }
 
-int LongFormatPrinter(FileList * list)
+static void 
+PrintBytes(double nb_bytes)
+{
+    char pbuf[5] = {0};
+
+    char unit = '\0';
+
+    if (nb_bytes == 0)
+    {
+        printf("   0B");
+	return;
+    }
+    
+
+    if (nb_bytes < (long double) KBSIZE)
+        unit = 'B';
+    else if (nb_bytes >= (long double) KBSIZE)
+        unit = 'K';
+    else if (nb_bytes >= (long double) MBSIZE)
+        unit = 'M';
+    else if (nb_bytes >= (long double) GBSIZE)
+        unit = 'G';
+    else if (nb_bytes >= (long double) TBSIZE)
+        unit = 'T';
+    
+
+    if (nb_bytes >= 10.f)
+    	snprintf(pbuf, 5, "%i%c", (int) round(nb_bytes), unit);	
+    else
+	snprintf(pbuf, 5, "%.1f%c", nb_bytes, unit);
+
+    Padding(pbuf, 4);
+    printf("%s", pbuf);
+    
+}
+
+int 
+LongFormatPrinter(FileList * list)
 {
     /* Skip head element */
     list = list->next;
@@ -357,8 +432,16 @@ int LongFormatPrinter(FileList * list)
 	if (usr_opt->s)
 	{
 	    if (!usr_opt->h)
-	    	PrintNumVal(1, ComputeBlock(list->sb.st_blocks), max_nb_block_len);
-
+	    {
+	    	if(PrintIntVal(1, ComputeBlock(list->sb.st_blocks), max_nb_block_len))
+		    return errno;
+	    }
+	    else
+	    {
+		double bytes = ComputeBytes(list->sb.st_blocks * 512);
+		PrintBytes(bytes);
+	    }
+	    
 	    printf(" ");
 	}
 	
@@ -366,7 +449,7 @@ int LongFormatPrinter(FileList * list)
 	printf("  ");
 
 	/* number of links */
-	if (PrintNumVal(1, list->sb.st_nlink, max_link_nb_len))
+	if (PrintIntVal(1, list->sb.st_nlink, max_link_nb_len))
 	    return errno;
 
 	printf(" ");
@@ -375,7 +458,7 @@ int LongFormatPrinter(FileList * list)
 
 	/* Number of bytes */
 	printf(" ");
-	if (PrintNumVal(1, list->sb.st_size, max_nb_byte_len))
+	if (PrintIntVal(1, list->sb.st_size, max_nb_byte_len))
 	    return errno;
 
 	printf(" ");
@@ -393,6 +476,8 @@ int LongFormatPrinter(FileList * list)
     max_uid_int_len = 0;
     max_gid_int_len = 0;
     max_nb_byte_len = 0;
+
+    total_bytes = 0;
 
     return 0;
 }

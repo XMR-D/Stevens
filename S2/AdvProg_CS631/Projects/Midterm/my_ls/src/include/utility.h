@@ -9,5 +9,6 @@ void Padding(char * str1, int longest);
 int NbDigit(int val);
 int GetBlockSize(void);
 int ComputeBlock(int nb_blocks);
+long double ComputeBytes(long double nb_bytes);
 
 #endif /* !UTILITY_H */

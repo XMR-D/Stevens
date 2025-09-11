@@ -3,7 +3,7 @@
 
 #include "list-handling.h"
 
-void ClassicPrinter(FileList * list);
+int ClassicPrinter(FileList * list);
 int LongFormatPrinter(FileList * list);
 
 

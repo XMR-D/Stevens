@@ -6,12 +6,21 @@
 #include "opt_parser.h"
 #include "utility.h"
 
+#ifndef SIZES
+#define BSIZE 1
+#define KBSIZE 1024
+#define MBSIZE 1048576
+#define GBSIZE 1073741824
+#define TBSIZE 1099511627776
+#define SIZES
+
+#endif /* ! SIZES */
 #ifndef DEFAULT_BLK_SIZE
 #define DEFAULT_BLK_SIZE 512
 #endif /* !DEFAULT_BLK_SIZE */
 
-#define MIN_BLK_SIZE 512
-#define MAX_BLK_SIZE 1073741824 /* 1G size */
+#define MIN_BLK_SIZE DEFAULT_BLK_SIZE
+#define MAX_BLK_SIZE GBSIZE
 
 extern int block_size;
 extern UsrOptions * usr_opt;
@@ -92,7 +101,6 @@ void Padding(char * str1, int longest)
         printf(" ");
         spaces--;
     }
-    
 }
 
 int NbDigit(int val)
@@ -125,6 +133,12 @@ static long IsValidInt(const char * var)
     return var_value;
 }
 
+/* 
+ * Retreive the BLOCKSIZE environment variable 
+ * Check if the variable is correct
+ * On errors return the default size (512B) with proper error message
+ * On success return the blocksize extract from the variable
+ */
 int GetBlockSize(void)
 {
     const char * val = getenv("BLOCKSIZE");
@@ -166,7 +180,11 @@ int GetBlockSize(void)
     }
 }
 
-//TODO: Use it in the code now (to print the block in front of each file if needeed and to compute the padding)
+/* 
+ * From a number of given blocks of 512B, Convert it in unit of
+ * BLOCKSIZE, if BLOCKSIZE was not defined for any reasons
+ * It falls back to 512B blocks unit
+ */
 int ComputeBlock(int nb_blocks)
 {
     if (nb_blocks == 0)
@@ -177,8 +195,37 @@ int ComputeBlock(int nb_blocks)
     if (usr_opt->k)
     {
 	    /* Divide by 1024 to get KB, override any user given block size */
-	    return (nb_bytes + 1024 - 1) / 1024;
+	    return (nb_bytes + KBSIZE - 1) / KBSIZE;
     }    
 
     return (nb_bytes + block_size - 1) / block_size;
+}
+
+
+/*
+ * From nb_bytes bytes, print and return the number of bytes
+ * in the most apropriate unit.
+ */
+long double ComputeBytes(long double nb_bytes)
+{
+    long int unit = 0;
+
+   if (nb_bytes == 0)
+       return 0; 
+    
+    if (nb_bytes != 0)
+    {
+        if (nb_bytes < (long double) KBSIZE)
+	    unit = KBSIZE;
+	else if (nb_bytes >= (long double) KBSIZE)
+	    unit = KBSIZE;
+	else if (nb_bytes >= (long double) MBSIZE)
+	    unit = MBSIZE;
+	else if (nb_bytes >= (long double) GBSIZE)
+	    unit = GBSIZE;
+	else if (nb_bytes >= (long double) TBSIZE)
+	    unit = TBSIZE;
+    }
+
+    return nb_bytes / unit;
 }
