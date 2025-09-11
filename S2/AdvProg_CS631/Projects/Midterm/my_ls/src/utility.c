@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "opt_parser.h"
 #include "utility.h"
 
 #ifndef DEFAULT_BLK_SIZE
@@ -11,6 +12,9 @@
 
 #define MIN_BLK_SIZE 512
 #define MAX_BLK_SIZE 1073741824 /* 1G size */
+
+extern int block_size;
+extern UsrOptions * usr_opt;
 
 int IsHidden(char * pathname)
 {
@@ -124,10 +128,12 @@ static long IsValidInt(const char * var)
 int GetBlockSize(void)
 {
     const char * val = getenv("BLOCKSIZE");
+    if (val == NULL)
+        return DEFAULT_BLK_SIZE;
 
     int value = IsValidInt(val);
 
-    if (val == NULL || value == -1)
+    if (value == -1)
     {
 	if (val)
 	    printf("ls: %s: unknown blocksize\n", val);
@@ -158,4 +164,21 @@ int GetBlockSize(void)
 	else
 	    return value;
     }
+}
+
+//TODO: Use it in the code now (to print the block in front of each file if needeed and to compute the padding)
+int ComputeBlock(int nb_blocks)
+{
+    if (nb_blocks == 0)
+        return 0;
+
+    int nb_bytes = nb_blocks * 512;
+       
+    if (usr_opt->k)
+    {
+	    /* Divide by 1024 to get KB, override any user given block size */
+	    return (nb_bytes + 1024 - 1) / 1024;
+    }    
+
+    return (nb_bytes + block_size - 1) / block_size;
 }

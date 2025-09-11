@@ -35,7 +35,7 @@ int my_ls(int argc, char * argv[])
 		usr_opt = calloc(1, sizeof(UsrOptions));
 		if (!usr_opt) 
 		{
-			throw_error('\0', NULL, MEM_ERR);
+			throw_error(NULL, MEM_ERR);
 			return errno;
 		}
 	}
@@ -43,12 +43,13 @@ int my_ls(int argc, char * argv[])
 	TargList * targ_list = calloc(1, sizeof(TargList));
 	if (!targ_list) 
 	{
-		throw_error('\0', NULL, MEM_ERR);
+		throw_error(NULL, MEM_ERR);
 		return errno;
 	}
 	tl_tail = targ_list;
 
 	ret = tokenize(argc, argv, targ_list, tl_tail);
+	
 	if (ret && ret != 2)
 	{
 		free(usr_opt);
@@ -56,7 +57,7 @@ int my_ls(int argc, char * argv[])
 		return ret;
 	}
 
-	if (!targ_list->next && (targ_found == 0))
+	if (!targ_list->next && (targ_found == 0) && ret == 0)
 		TargLinsert(targ_list, ".", 1, 0);
 	/* Get environement values and check for validity */
 	if (usr_opt->s)

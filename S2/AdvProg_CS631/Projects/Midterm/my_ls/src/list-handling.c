@@ -23,12 +23,14 @@ extern UsrOptions * usr_opt;
  *
  * NEED TO CHANGE THAT TO A STRUCT
  */
-int max_link_nb = 0;
+int max_link_nb_len = 0;
 int max_uid_len = 0;
 int max_gid_len = 0;
 int max_uid_int_len = 0;
 int max_gid_int_len = 0;
 int max_nb_byte_len = 0;
+int max_nb_block_len = 0;
+
 int total_bytes = 0;
 
 static int FileListCompare(FileList * elm1, FileList * elm2)
@@ -111,6 +113,7 @@ static void ComputePaddingNeeded(FileList * elm)
 
     int nb_byte_len = NbDigit(elm->sb.st_size);
     int nb_link_len = NbDigit(elm->sb.st_nlink);
+    int nb_block_len = NbDigit(ComputeBlock(elm->sb.st_blocks));
 
     if (pwd != NULL)
     {
@@ -134,8 +137,11 @@ static void ComputePaddingNeeded(FileList * elm)
     if (nb_byte_len > max_nb_byte_len)
 	max_nb_byte_len = nb_byte_len;
 
-    if (nb_link_len > max_link_nb)
-	max_link_nb = nb_link_len;
+    if (nb_link_len > max_link_nb_len)
+	max_link_nb_len = nb_link_len;
+
+    if (nb_block_len > max_nb_block_len)
+        max_nb_block_len = nb_block_len;
 
     if (usr_opt->s)
 	total_bytes += elm->sb.st_size;
@@ -149,7 +155,7 @@ static int PushToList(char * filename, struct stat * sb, int ishidden, FileList 
     if (!elm) 
     {
         FileListFree(list);
-        throw_error('\0', filename, MEM_ERR);
+        throw_error(filename, MEM_ERR);
         return errno;
     }
 
@@ -196,7 +202,7 @@ int FileListInsert(char * dirname, char * filename, FileList * filelist, FileLis
 
     if (stat(fullpath, &sb) == -1) 
     {
-        throw_error('\0', fullpath, WRNG_TARG_ERR);
+        throw_error(fullpath, WRNG_TARG_ERR);
 	free(fullpath);
         return errno;
     } 

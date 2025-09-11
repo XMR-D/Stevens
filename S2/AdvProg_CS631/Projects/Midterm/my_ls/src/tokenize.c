@@ -48,7 +48,7 @@ int process_targets(char * token, TargList * head, TargList * tail)
     /* If the file for some reason does not open throw the error BUT continue to the next one*/
     if (stat(token, &sb) == -1)
     {
-        throw_error('\0', token, WRNG_TARG_ERR);
+        throw_error(token, WRNG_TARG_ERR);
         return errno;
     }
 
@@ -81,7 +81,10 @@ int tokenize(int argc, char * input[], TargList * head, TargList * tail)
 	/* If an option is invalid stop exec and return the error */
 	opt_err = OptSet((char) opt);
         if (opt_err)
+	{
+	    throw_error(NULL, WRNG_OPT_ERR);
             return opt_err;
+	}
     }
 
     input++;

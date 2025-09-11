@@ -202,7 +202,7 @@ int TargLinsert(TargList *list, char *token, int isdir, int ishidden)
 
     if (stat(token, &sb) == -1) 
     {
-        throw_error('\0', token, WRNG_TARG_ERR);
+        throw_error(token, WRNG_TARG_ERR);
         return errno;
     } 
     else 

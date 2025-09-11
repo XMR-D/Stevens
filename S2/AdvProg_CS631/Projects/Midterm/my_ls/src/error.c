@@ -11,7 +11,7 @@
 #include "error.h"
 
 
-int throw_error(char wrng_opt, char * wrng_targ, int err)
+int throw_error(char * wrng_targ, int err)
 {
     switch (err)
     {
@@ -19,7 +19,7 @@ int throw_error(char wrng_opt, char * wrng_targ, int err)
             fprintf(stderr, "ls: memory error encountered.\n");
             return errno;
         case WRNG_OPT_ERR:
-            fprintf(stderr, "ls: invalid option -- '%c'\nTry 'ls --help' for more information.\n", wrng_opt);
+            fprintf(stderr, "usage: ls [AacdFfhiklnqRrSstuw] [file...]\n");
             return errno;
         case WRNG_TARG_ERR:
             fprintf(stderr, "ls: cannot access '%s': %s\n", wrng_targ, strerror(errno));

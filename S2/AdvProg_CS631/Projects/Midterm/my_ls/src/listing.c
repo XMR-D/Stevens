@@ -26,7 +26,7 @@ int ListFile(char * dir, FileList * filelist, FileList * reclist)
     DIR * dp;
     if((dp = opendir(dir)) == NULL)
     {
-        throw_error('\0', dir, WRNG_TARG_ERR);
+        throw_error(dir, WRNG_TARG_ERR);
         return errno;
     }
 
@@ -65,7 +65,7 @@ int TargetLProcess(TargList * targ_list)
             FileList * dir_listing = calloc(sizeof(FileList), 1);
             if (!dir_listing)
             {
-                throw_error('\0', "", MEM_ERR);
+                throw_error(NULL, MEM_ERR);
                 return errno;
             }
 
@@ -73,7 +73,7 @@ int TargetLProcess(TargList * targ_list)
             if (!new_targets)
             {
                 free(dir_listing);
-                throw_error('\0', "", MEM_ERR);
+                throw_error(NULL, MEM_ERR);
                 return errno;
             }
 

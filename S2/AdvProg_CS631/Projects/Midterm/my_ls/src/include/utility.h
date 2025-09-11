@@ -8,5 +8,6 @@ char * FullName(char * dirname, char * filename);
 void Padding(char * str1, int longest);
 int NbDigit(int val);
 int GetBlockSize(void);
+int ComputeBlock(int nb_blocks);
 
 #endif /* !UTILITY_H */

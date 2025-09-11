@@ -18,13 +18,16 @@
 
 extern UsrOptions * usr_opt;
 
-extern int max_link_nb;
+extern int max_link_nb_len;
 extern int max_uid_len;
 extern int max_gid_len;
 extern int max_uid_int_len;
 extern int max_gid_int_len;
 extern int max_nb_byte_len;
+extern int max_nb_block_len;
+
 extern int total_bytes;
+extern int block_size;
 
 /* 
  * This macro represent the maximum possible len for a
@@ -35,6 +38,31 @@ extern int total_bytes;
  * outside his bounds year 9999->1000000
  */
 #define MAX_DATE_LEN 13
+
+/* If padding_order = 0 the padding is after the value, else it's before */
+static int 
+PrintNumVal(int padding_order, long int val, long int max_len)
+{
+    char * val_str = calloc(sizeof(char), NbDigit(val) + 1);
+    if (!val_str)
+    {
+        throw_error("", MEM_ERR);
+	return errno;
+    }
+
+    sprintf(val_str, "%ld", val);
+
+    if (padding_order)
+    	Padding(val_str, max_len);
+    
+    printf("%s", val_str);
+
+    if (padding_order == 0)
+	Padding(val_str, max_len);
+    
+    free(val_str);
+    return 0;
+}
 
 /* TODO DEBUG THIS LAST STEP + ADD options handling */
 static void PrintListing(FileList * list, int longest, int row_nb, int col_nb)
@@ -58,7 +86,14 @@ static void PrintListing(FileList * list, int longest, int row_nb, int col_nb)
 	return;
     }
     
-    
+    if (usr_opt->s)
+    {
+	if (!usr_opt->h)
+	   PrintNumVal(1, ComputeBlock(curr->sb.st_blocks), max_nb_block_len);
+
+	printf(" ");
+    }
+
     printf("%s", curr->fname);
     Padding(curr->fname, longest);
     printf(" ");
@@ -71,6 +106,14 @@ static void PrintListing(FileList * list, int longest, int row_nb, int col_nb)
     {
 	if (new_row)
 	{
+	    if (usr_opt->s)
+	    {
+	    	if (!usr_opt->h)
+	    	     PrintNumVal(1, ComputeBlock(curr->sb.st_blocks), max_nb_block_len);
+
+	        printf(" ");
+	    }
+	    
 	    printf("%s", curr->fname);
 	    Padding(curr->fname, longest);
 	    printf(" ");
@@ -97,6 +140,14 @@ static void PrintListing(FileList * list, int longest, int row_nb, int col_nb)
 	     */	    
             if (!curr->next && step == 0)
 	    {
+		if (usr_opt->s)
+	    	{
+	    	    if (!usr_opt->h)
+	    	        PrintNumVal(1, ComputeBlock(curr->sb.st_blocks), max_nb_block_len);
+
+	            printf(" ");
+	    	}
+
 		printf("%s", curr->fname);
 		break;
 	    }
@@ -107,6 +158,13 @@ static void PrintListing(FileList * list, int longest, int row_nb, int col_nb)
 	     */
             if (curr->next)
 	    {
+		if (usr_opt->s)
+	    	{
+	    	    if (!usr_opt->h)
+	    	        PrintNumVal(1, ComputeBlock(curr->sb.st_blocks), max_nb_block_len);
+
+	            printf(" ");
+	    	}
 		step = row_nb;
                 printf("%s", curr->fname);
                 Padding(curr->fname, longest);
@@ -120,7 +178,6 @@ static void PrintListing(FileList * list, int longest, int row_nb, int col_nb)
         curr = start;
         printf("\n");
     }
-    printf("\n");
 }
 
 
@@ -236,32 +293,6 @@ static void PrintFileMode(FileList * elm)
 
 }
 
-/* If padding_order = 0 the padding is after the value, else it's before */
-static int 
-PrintNumVal(int padding_order, long int val, long int max_len)
-{
-    char * val_str = calloc(sizeof(char), NbDigit(val) + 1);
-    if (!val_str)
-    {
-        throw_error('\0', "", MEM_ERR);
-	return errno;
-    }
-
-    sprintf(val_str, "%ld", val);
-
-    if (padding_order)
-    	Padding(val_str, max_len);
-    
-    printf("%s", val_str);
-
-    if (padding_order == 0)
-	Padding(val_str, max_len);
-    
-    free(val_str);
-    return 0;
-}
-
-
 static void PrintOwner(FileList * elm)
 {
     if (!usr_opt->n)
@@ -300,7 +331,7 @@ static void PrintGroup(FileList * elm)
     }
     else 
 	PrintNumVal(0, elm->sb.st_gid, max_gid_int_len);
-
+    
     printf(" ");
 }
 
@@ -323,12 +354,19 @@ int LongFormatPrinter(FileList * list)
     while (list)
     {
 	/*TODO: here add inode number, again with padding */
+	if (usr_opt->s)
+	{
+	    if (!usr_opt->h)
+	    	PrintNumVal(1, ComputeBlock(list->sb.st_blocks), max_nb_block_len);
+
+	    printf(" ");
+	}
 	
 	PrintFileMode(list);
 	printf("  ");
 
 	/* number of links */
-	if (PrintNumVal(1, list->sb.st_nlink, max_link_nb))
+	if (PrintNumVal(1, list->sb.st_nlink, max_link_nb_len))
 	    return errno;
 
 	printf(" ");
@@ -358,3 +396,4 @@ int LongFormatPrinter(FileList * list)
 
     return 0;
 }
+
