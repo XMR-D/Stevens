@@ -205,7 +205,7 @@ static int PrintListing(FileList * list, int longest, int row_nb, int col_nb)
     
     /* Print the first element */
     Handle_s_Option(curr, 0);
-    printf("%s  ", curr->fname);
+    printf("%s", curr->fname);
     Padding(curr->fname, longest);
  
    /* 
@@ -220,7 +220,7 @@ static int PrintListing(FileList * list, int longest, int row_nb, int col_nb)
             if (Handle_s_Option(curr, 0))
 	         return errno;
 
-	    printf("%s  ", curr->fname);
+	    printf("%s", curr->fname);
 	    Padding(curr->fname, longest);
 	    new_row--;
 	}
@@ -248,7 +248,7 @@ static int PrintListing(FileList * list, int longest, int row_nb, int col_nb)
 		if (Handle_s_Option(curr, 0))
 		    return errno;
 
-		printf("%s  ", curr->fname);
+		printf("%s", curr->fname);
 		break;
 	    }
 
@@ -265,10 +265,7 @@ static int PrintListing(FileList * list, int longest, int row_nb, int col_nb)
                 printf("%s", curr->fname);
 		
 		if (CheckPaddingWithStep(curr, step))
-		{
 		    Padding(curr->fname, longest);
-		    printf("  ");
-		}
 	    }
 
         }
@@ -328,7 +325,15 @@ int ClassicPrinter(FileList * list)
     int nb_files = 0;
     int longest = GetMaxLen(list, &nb_files);
 
-    int col_nb = GetWinWidth() / (longest + 2);
+    int col_nb = 0;
+    
+    if (usr_opt->s)
+        col_nb = GetWinWidth() / (longest + 4 + 2);
+    else
+        col_nb = GetWinWidth() / longest + 2;
+
+    if (col_nb == 0)
+	col_nb = 1;
 
     int row_nb = (nb_files + col_nb - 1) / col_nb;
 
