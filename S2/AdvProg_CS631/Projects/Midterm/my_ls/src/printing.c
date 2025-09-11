@@ -27,7 +27,8 @@ extern int max_gid_int_len;
 extern int max_nb_byte_len;
 extern int max_nb_block_len;
 
-extern int total_bytes;
+extern long double total_blocks;
+extern long double total_bytes;
 extern int block_size;
 
 /* 
@@ -41,13 +42,54 @@ extern int block_size;
 #define MAX_DATE_LEN 13
 
 #ifndef SIZES
+#define SIZES
 #define BSIZE 1
 #define KBSIZE 1024
 #define MBSIZE 1048576
 #define GBSIZE 1073741824
 #define TBSIZE 1099511627776
-#define SIZES
 #endif /* ! SIZES */
+
+static void
+PrintTotalBytes()
+{
+    char unit = '\0';
+    long double total_p = 0;
+   
+    /* 
+     * If -h is specified then we need to print the total of bytes
+     * else it's the total of blocks
+     */ 
+    if (usr_opt->h)
+    	total_p = total_bytes;
+    else
+	total_p = total_blocks;
+
+    if (total_p != 0)
+    {
+        if (total_p < (long double) KBSIZE)
+	    unit = 'B';
+	else if (total_p >= (long double) KBSIZE)
+	    unit = 'K';
+	else if (total_p >= (long double) MBSIZE)
+	    unit = 'M';
+	else if (total_p >= (long double) GBSIZE)
+	    unit = 'G';
+	else if (total_p >= (long double) TBSIZE)
+	    unit = 'T';
+    }
+
+    if (usr_opt->h)
+    {
+	long double bytes_to_print = ComputeBytes(total_p);
+	if (bytes_to_print >= 10.0f)
+	    printf("total %i%c\n", (int) round(bytes_to_print), unit);
+	else
+            printf("total %.1Lf%c\n", bytes_to_print, unit);
+    }
+    else
+    	printf("total %i\n", ComputeBlock((int) total_p));
+}
 
 /* If padding_order = 0 the padding is after the value, else it's before */
 static int 
@@ -74,6 +116,72 @@ PrintIntVal(int padding_order, long int val, long int max_len)
     return 0;
 }
 
+static void 
+PrintBytes(double nb_bytes, long int raw_nb_bytes, int do_round)
+{
+    char pbuf[5] = {0};
+
+    char unit = '\0';
+
+    if (nb_bytes == 0)
+    {
+        printf("  0B");
+	return;
+    } 
+
+    if (raw_nb_bytes < KBSIZE)
+        unit = 'B';
+    else if (raw_nb_bytes >= KBSIZE)
+        unit = 'K';
+    else if (raw_nb_bytes >= MBSIZE)
+        unit = 'M';
+    else if (raw_nb_bytes >= GBSIZE)
+        unit = 'G';
+    else if (raw_nb_bytes >= TBSIZE)
+        unit = 'T';
+    
+
+    if (nb_bytes >= 10.f)
+    {
+	if (do_round)
+    	    snprintf(pbuf, 5, "%i%c", (int) round(nb_bytes), unit);
+	else
+    	    snprintf(pbuf, 5, "%i%c", (int) nb_bytes, unit);
+	    
+    }	
+    else
+	snprintf(pbuf, 5, "%.1f%c", nb_bytes, unit);
+
+    Padding(pbuf, 4);
+    printf("%s", pbuf);
+    
+}
+
+int Handle_s_Option(FileList * elm, int fromblocks)
+{
+    if (usr_opt->s)
+    {
+         if (!usr_opt->h)
+         {
+             if(PrintIntVal(1, ComputeBlock(elm->sb.st_blocks), max_nb_block_len))
+	         return errno;
+	 }
+	 else
+	 {
+	     long double raw_bytes = 0;
+ 	     if (fromblocks)
+	         raw_bytes = elm->sb.st_blocks * 512;
+	     else
+		 raw_bytes = elm->sb.st_size;
+
+	     double computed_bytes = ComputeBytes(raw_bytes);
+	     PrintBytes(computed_bytes, raw_bytes, 0);
+	 } 
+	 printf(" ");
+    }
+    return 0;
+}
+
 static int PrintListing(FileList * list, int longest, int row_nb, int col_nb)
 {
     /* Setup the start of the list (first elm) */
@@ -91,52 +199,36 @@ static int PrintListing(FileList * list, int longest, int row_nb, int col_nb)
      */
     if (!curr->next)
     {
-    	printf("%s\n", curr->fname);
+    	printf("%s", curr->fname);
 	return 0;
     }
     
-    if (usr_opt->s)
-    {
-	if (!usr_opt->h)
-	   if (PrintIntVal(1, ComputeBlock(curr->sb.st_blocks), 
-				   max_nb_block_len))
-		   return errno;
-
-	printf(" ");
-    }
-
-    printf("%s", curr->fname);
+    /* Print the first element */
+    Handle_s_Option(curr, 0);
+    printf("%s  ", curr->fname);
     Padding(curr->fname, longest);
-    printf(" ");
-
-    /* 
-     * for each row, and for each col print one element
-     */
+ 
+   /* 
+    * for each row, and for each col print one element
+    */
 
     for (int i = 0; i < row_nb; i++)
     {
 	if (new_row)
-	{
-	    if (usr_opt->s)
-	    {
-	    	if (!usr_opt->h)
-	    		if (PrintIntVal(1, ComputeBlock(curr->sb.st_blocks), 
-						max_nb_block_len))
-				return errno;
+	{	    
+	 
+            if (Handle_s_Option(curr, 0))
+	         return errno;
 
-	        printf(" ");
-	    }
-	    
-	    printf("%s", curr->fname);
+	    printf("%s  ", curr->fname);
 	    Padding(curr->fname, longest);
-	    printf(" ");
 	    new_row--;
 	}
 
         for (int j = 0; j < col_nb; j++)
         {
            
-	    /* Shift to next element to print in the linked list */	
+	    /* Shift to next element in the linked list to print it */	
             while (step > 0)
             {
                 if (!curr->next)
@@ -153,17 +245,10 @@ static int PrintListing(FileList * list, int longest, int row_nb, int col_nb)
 	     */	    
             if (!curr->next && step == 0)
 	    {
-		if (usr_opt->s)
-	    	{
-	    	    if (!usr_opt->h)
-	    	        if (PrintIntVal(1, ComputeBlock(curr->sb.st_blocks), 
-						max_nb_block_len))
-				return errno;
+		if (Handle_s_Option(curr, 0))
+		    return errno;
 
-	            printf(" ");
-	    	}
-
-		printf("%s", curr->fname);
+		printf("%s  ", curr->fname);
 		break;
 	    }
 
@@ -173,32 +258,30 @@ static int PrintListing(FileList * list, int longest, int row_nb, int col_nb)
 	     */
             if (curr->next)
 	    {
-		if (usr_opt->s)
-	    	{
-	    	    if (!usr_opt->h)
-	    	         if (PrintIntVal(1, ComputeBlock(curr->sb.st_blocks), 
-						 max_nb_block_len))
-				 return errno;
+	        if (Handle_s_Option(curr, 0))
+		    return errno;
 
-	            printf(" ");
-	    	}
 		step = row_nb;
                 printf("%s", curr->fname);
-                Padding(curr->fname, longest);
-		printf(" ");
+		
+		if (CheckPaddingWithStep(curr, step))
+		{
+		    Padding(curr->fname, longest);
+		    printf("  ");
+		}
 	    }
 
         }
+	printf("\n");
 	new_row++;
 	step = row_nb; 
         start = start->next;
         curr = start;
-        printf("\n");
     }
     return 0;
 }
 
-
+/*TODO: Move to utility.c */
 static int GetWinWidth(void)
 {
     struct winsize w;
@@ -237,15 +320,18 @@ int ClassicPrinter(FileList * list)
     /* 
      * Compute rows and columns to print the files
      * The width of a column is the size of the largest file + 2 for padding
-     * Given by GetMaxLen(list);
+     * Given by GetMaxLen(list, &nb_files);
      * Get the width of the terminal to compute how to print the output
      * Given by GetWinWidth();
     */
 
     int nb_files = 0;
     int longest = GetMaxLen(list, &nb_files);
-    int col_nb = GetWinWidth() / longest;
+
+    int col_nb = GetWinWidth() / (longest + 2);
+
     int row_nb = (nb_files + col_nb - 1) / col_nb;
+
 
     if (PrintListing(list, longest, row_nb, col_nb))
         return errno;
@@ -384,67 +470,20 @@ PrintDate(FileList * elm)
      printf("%s", out_str);
 }
 
-static void 
-PrintBytes(double nb_bytes)
-{
-    char pbuf[5] = {0};
-
-    char unit = '\0';
-
-    if (nb_bytes == 0)
-    {
-        printf("   0B");
-	return;
-    }
-    
-
-    if (nb_bytes < (long double) KBSIZE)
-        unit = 'B';
-    else if (nb_bytes >= (long double) KBSIZE)
-        unit = 'K';
-    else if (nb_bytes >= (long double) MBSIZE)
-        unit = 'M';
-    else if (nb_bytes >= (long double) GBSIZE)
-        unit = 'G';
-    else if (nb_bytes >= (long double) TBSIZE)
-        unit = 'T';
-    
-
-    if (nb_bytes >= 10.f)
-    	snprintf(pbuf, 5, "%i%c", (int) round(nb_bytes), unit);	
-    else
-	snprintf(pbuf, 5, "%.1f%c", nb_bytes, unit);
-
-    Padding(pbuf, 4);
-    printf("%s", pbuf);
-    
-}
-
 int 
 LongFormatPrinter(FileList * list)
 {
     /* Skip head element */
     list = list->next;
 
+    if (usr_opt->s)
+        PrintTotalBytes();
+
     while (list)
     {
-	/*TODO: here add inode number, again with padding */
-	if (usr_opt->s)
-	{
-	    if (!usr_opt->h)
-	    {
-	    	if(PrintIntVal(1, ComputeBlock(list->sb.st_blocks), max_nb_block_len))
-		    return errno;
-	    }
-	    else
-	    {
-		double bytes = ComputeBytes(list->sb.st_blocks * 512);
-		PrintBytes(bytes);
-	    }
-	    
-	    printf(" ");
-	}
-	
+	if (Handle_s_Option(list, 1))
+	    return errno;
+
 	PrintFileMode(list);
 	printf("  ");
 
@@ -458,7 +497,10 @@ LongFormatPrinter(FileList * list)
 
 	/* Number of bytes */
 	printf(" ");
-	if (PrintIntVal(1, list->sb.st_size, max_nb_byte_len))
+	if (usr_opt->s && usr_opt->h)
+	    PrintBytes(ComputeBytes(list->sb.st_size), list->sb.st_size, 0);
+
+	else if (PrintIntVal(1, list->sb.st_size, max_nb_byte_len))
 	    return errno;
 
 	printf(" ");
@@ -477,6 +519,7 @@ LongFormatPrinter(FileList * list)
     max_gid_int_len = 0;
     max_nb_byte_len = 0;
 
+    total_blocks = 0;
     total_bytes = 0;
 
     return 0;

@@ -53,6 +53,7 @@ int TargetLProcess(TargList * targ_list)
     {
         if (targ_list->isdir)
         {
+	    //TODO: ADD HERE THE CHECK ON NUM OF FILES
             printf("\n%s :\n", targ_list->target);
 	    
 	    /* 
@@ -135,8 +136,11 @@ int TargetLProcess(TargList * targ_list)
 	    }
             FileListFree(file_listing);
         }
+
 	if (targ_list == NULL)
             return 0;
+	else
+	   printf("\n");
     }
     return 0;
 }

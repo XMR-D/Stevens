@@ -216,7 +216,7 @@ long double ComputeBytes(long double nb_bytes)
     if (nb_bytes != 0)
     {
         if (nb_bytes < (long double) KBSIZE)
-	    unit = KBSIZE;
+	    unit = BSIZE;
 	else if (nb_bytes >= (long double) KBSIZE)
 	    unit = KBSIZE;
 	else if (nb_bytes >= (long double) MBSIZE)
@@ -228,4 +228,23 @@ long double ComputeBytes(long double nb_bytes)
     }
 
     return nb_bytes / unit;
+}
+
+/* 
+ * Function to decide when to print the padding for 
+ * Classical printer
+ */ 
+int CheckPaddingWithStep(FileList * list, int step)
+{
+    if (list)
+    {
+        while (step)
+	{
+	    if (list->next == NULL)
+	        return 0;
+	    list = list->next;
+	    step--;
+	}
+    }
+    return 1;
 }

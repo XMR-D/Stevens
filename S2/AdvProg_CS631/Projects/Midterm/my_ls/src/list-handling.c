@@ -31,7 +31,8 @@ int max_gid_int_len = 0;
 int max_nb_byte_len = 0;
 int max_nb_block_len = 0;
 
-int total_bytes = 0;
+long double total_bytes = 0;
+long double total_blocks = 0;
 
 static int FileListCompare(FileList * elm1, FileList * elm2)
 {
@@ -104,6 +105,7 @@ void FileListFree(FileList * list)
     }
 }
 
+/* TODO MOVE TO UTILITY.C + USE A STRUCT */
 static void ComputePaddingNeeded(FileList * elm)
 {
     struct passwd * pwd = getpwuid(elm->sb.st_uid);
@@ -144,11 +146,15 @@ static void ComputePaddingNeeded(FileList * elm)
         max_nb_block_len = nb_block_len;
 
     if (usr_opt->s)
-	total_bytes += elm->sb.st_size;
-
+    {
+	if (usr_opt->h)
+	    total_bytes += elm->sb.st_size;
+	else
+	    total_blocks += elm->sb.st_blocks;
+    }
 }
 
-static int PushToList(char * filename, struct stat * sb, int ishidden, FileList * list)
+static int PushToList(char * filename, struct stat * sb, int ishidden, int padding, FileList * list)
 {
     FileList * elm = calloc(sizeof(FileList), 1);
 
@@ -163,7 +169,8 @@ static int PushToList(char * filename, struct stat * sb, int ishidden, FileList 
     elm->ishidden = ishidden;
     elm->sb = *sb;
 
-    ComputePaddingNeeded(elm);
+    if (padding)
+    	ComputePaddingNeeded(elm);
 
     while (list->next && (RevSort * FileListCompare(list->next, elm)) < 0)
         list = list->next;
@@ -198,6 +205,7 @@ int FileListInsert(char * dirname, char * filename, FileList * filelist, FileLis
     char * fullpath = malloc(dir_len + file_len + 2);
     if (fullpath == NULL)
     	return errno;
+
     snprintf(fullpath, dir_len + file_len + 2, "%s/%s", dirname, filename);
 
     if (stat(fullpath, &sb) == -1) 
@@ -209,11 +217,11 @@ int FileListInsert(char * dirname, char * filename, FileList * filelist, FileLis
 
     if (S_ISDIR(sb.st_mode))
     {
-        if (PushToList(strdup(filename), &sb, ishidden, reclist) != 0)
+        if (PushToList(strdup(filename), &sb, ishidden, 0, reclist) != 0)
 	    return errno;
     }
 
-    if (PushToList(strdup(filename), &sb, ishidden, filelist) != 0)
+    if (PushToList(strdup(filename), &sb, ishidden, 1, filelist) != 0)
         return errno;
 
     free(fullpath);
