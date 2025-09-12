@@ -85,16 +85,11 @@ int TargetLProcess(TargList * targ_list)
                 return errno;
             }
             
-	    if (!usr_opt->l)
-                ClassicPrinter(dir_listing);
-	    else
+	    if (LongFormatPrinter(dir_listing))
 	    {
-	        if (LongFormatPrinter(dir_listing))
-		{
-		    FileListFree(dir_listing);
-		    FileListFree(new_targets);
-		    return errno;
-		}
+                FileListFree(dir_listing);
+		FileListFree(new_targets);
+		return errno;
 	    }
 
             FileListFree(dir_listing);
@@ -124,16 +119,12 @@ int TargetLProcess(TargList * targ_list)
                 targ_list = targ_list->next;
             }
 
-            if (!usr_opt->l)
- 		ClassicPrinter(file_listing);
-	    else
+	    if (LongFormatPrinter(file_listing))
 	    {
-		if (LongFormatPrinter(file_listing))
-		{
-		    FileListFree(file_listing);
-		    return errno;
-		}
+		FileListFree(file_listing);
+		return errno;
 	    }
+
             FileListFree(file_listing);
         }
 
