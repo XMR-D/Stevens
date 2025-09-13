@@ -45,14 +45,17 @@ int process_targets(char * token, TargList * head, TargList * tail)
 
     targ_found++;
 
-    /* If the file for some reason does not open throw the error BUT continue to the next one*/
     if (stat(token, &sb) == -1)
     {
         throw_error(token, WRNG_TARG_ERR);
         return errno;
     }
 
-    /* target is a directory, hence start at the tail of the list*/
+    /* 
+     * the target is a directory, hence start at the tail of the list
+     * and do a reverse traversal, so that files and dirs are
+     * sorted separatly
+     */
     if (S_ISDIR(sb.st_mode))
     {
         head = tail;
@@ -104,7 +107,8 @@ int tokenize(int argc, char * input[], TargList * head, TargList * tail)
 
 	/* 
 	 * If an error has been encountered set the return code
-	 * but don't stop the execution to see if a target is valid
+	 * but don't stop the execution to see if the next target
+	 * works.
 	 */
 	if (targ_err)
 	    targ_err = errno;

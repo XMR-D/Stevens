@@ -1,7 +1,7 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-/* Input handling error codes */
+/* Input handling error identifiers */
 #define MEM_ERR           1
 #define WRNG_OPT_ERR      2
 #define WRNG_TARG_ERR     3

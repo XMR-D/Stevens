@@ -26,6 +26,7 @@ extern int max_uid_int_len;
 extern int max_gid_int_len;
 extern int max_nb_byte_len;
 extern int max_nb_block_len;
+extern int max_inode_nb_len;
 
 extern long double total_blocks;
 extern long double total_bytes;
@@ -49,6 +50,70 @@ extern int block_size;
 #define GBSIZE 1073741824
 #define TBSIZE 1099511627776
 #endif /* ! SIZES */
+
+
+static void
+PrintFileName(FileList * elm)
+{
+    char * filename = elm->fname;
+
+    /* Force printing of non-printable characters as '?' */
+    if (usr_opt->q)
+    {
+        while (*filename != '\0')
+	{
+	    if (*filename < 32 || *filename >= 127)
+		putc('?', stdout);
+	    else
+		putc(*filename, stdout);
+
+	    filename++;
+	}
+    }
+
+    /* Force raw printing of non-printable characters */
+    else if (usr_opt->w)
+        fwrite(elm->fname, sizeof(char), strlen(elm->fname), stdout);
+    /* Else, print the file name normally */
+    else
+	printf("%s", elm->fname);
+    
+    /* Add a character representing the file type after the file name */
+    if (usr_opt->F)
+    {
+	char filetype;
+	char * res = calloc(sizeof(char), 11);
+	strmode(elm->sb.st_mode, res);
+	
+	filetype = *res;
+
+	switch (filetype)
+	{
+	    case 'd':
+		printf("/");
+	        break;
+	    case 'l':
+		printf("@");
+		break;
+	    case 's':
+		printf("=");
+		break;
+	    case 'w':
+		printf("%c", '%');
+		break;
+	    case 'p':
+		printf("|");
+		break;
+	    case '-':
+		if (elm->sb.st_mode & S_IXUSR)
+			printf("*");
+		break;
+	    default:
+		break;
+	}
+	free(res);
+    }
+}
 
 static void
 PrintTotalBytes()
@@ -95,7 +160,7 @@ PrintTotalBytes()
 static int 
 PrintIntVal(int padding_order, long int val, long int max_len)
 {
-    char * val_str = calloc(sizeof(char), NbDigit(val) + 1);
+    char * val_str = calloc(sizeof(char), NbDigitFromInt(val) + 1);
     if (!val_str)
     {
         throw_error("", MEM_ERR);
@@ -157,7 +222,18 @@ PrintBytes(double nb_bytes, long int raw_nb_bytes, int do_round)
     
 }
 
-int Handle_s_Option(FileList * elm, int fromblocks)
+static int Handle_i_Option(FileList * elm)
+{
+    if (usr_opt->i)
+    {
+        if (PrintIntVal(1, elm->sb.st_ino, max_inode_nb_len))
+		return errno;
+    	printf(" ");
+    }
+    return 0;
+}
+
+static int Handle_s_Option(FileList * elm, int fromblocks)
 {
     if (usr_opt->s)
     {
@@ -180,68 +256,6 @@ int Handle_s_Option(FileList * elm, int fromblocks)
 	 printf(" ");
     }
     return 0;
-}
-
-static void PrintFileType(FileList * elm)
-{
-    if (S_ISWHT(elm->sb.st_mode))
-        printf("w");
-
-    else if (S_ISREG(elm->sb.st_mode))
-    {
-	//TODO CHANGE THESES TO CORRETLY PRINT A and a
-	if (elm->sb.st_flags & SF_ARCHIVED)
-	    printf("a");
-	if (elm->sb.st_flags & SF_ARCHIVED)
-	    printf("A");
-	else
-	    printf("-");
-    }
-    else if (S_ISDIR(elm->sb.st_mode))
-        printf("d");
-    else if (S_ISCHR(elm->sb.st_mode))
-        printf("c");
-    else if (S_ISBLK(elm->sb.st_mode))
-        printf("b");
-    else if (S_ISFIFO(elm->sb.st_mode))
-        printf("p");
-    else if (S_ISLNK(elm->sb.st_mode))
-        printf("l");
-    else if (S_ISSOCK(elm->sb.st_mode))
-	printf("s");
-    
-    return;
-}
-
-static void PrintPermission(FileList *elm, int field, char * permission)
-{
-     //TODO : ADD STICKY BIT AND Set user ID mode
-     if (elm->sb.st_mode & field)
-         printf("%s", permission);
-     else
-	 printf("-");
-}
-
-static void PrintFileMode(FileList * elm)
-{
-    /* file type */
-    PrintFileType(elm);
-    
-    /* owner permissions */
-    PrintPermission(elm, S_IRUSR, "r");	
-    PrintPermission(elm, S_IWUSR, "w");	
-    PrintPermission(elm, S_IXUSR, "x");	
-    
-    /* group permissions */
-    PrintPermission(elm, S_IRGRP, "r");	
-    PrintPermission(elm, S_IWGRP, "w");	
-    PrintPermission(elm, S_IXGRP, "x");
-
-    /* other permissions */    
-    PrintPermission(elm, S_IROTH, "r");	
-    PrintPermission(elm, S_IWOTH, "w");	
-    PrintPermission(elm, S_IXOTH, "x");
-
 }
 
 static int 
@@ -324,13 +338,19 @@ LongFormatPrinter(FileList * list)
 
     while (list)
     {
+	if (Handle_i_Option(list))
+	    return errno;
+
 	if (Handle_s_Option(list, 1))
 	    return errno;
 
-	PrintFileMode(list);
-	printf("  ");
+	/* Print the file mode */
+	char * res = calloc(sizeof(char), 11);
+	strmode(list->sb.st_mode, res);
+	printf("%s ", res);
+	free(res);
 
-	/* number of links */
+	/* Print the number of links */
 	if (PrintIntVal(1, list->sb.st_nlink, max_link_nb_len))
 	    return errno;
 
@@ -338,7 +358,7 @@ LongFormatPrinter(FileList * list)
 	PrintOwner(list);
 	PrintGroup(list);
 
-	/* Number of bytes */
+	/* If specified by the option print the number of bytes */
 	printf(" ");
 	if (usr_opt->s && usr_opt->h)
 	    PrintBytes(ComputeBytes(list->sb.st_size), list->sb.st_size, 0);
@@ -348,10 +368,15 @@ LongFormatPrinter(FileList * list)
 
 	printf(" ");
 
+	/* Print the date */
 	PrintDate(list);
 	printf(" ");
-	printf("%s\n", list->fname);
-        
+
+	/* Print the file name */
+	PrintFileName(list);
+        printf("\n");
+
+	/* then do the same on the next element */
 	list = list->next;
     }
     

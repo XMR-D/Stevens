@@ -13,28 +13,29 @@
 #include "targ_parser.h"
 #include "utility.h"
 
-
 #include "listing.h"
 
 extern UsrOptions * usr_opt;
-extern int target_count;
-int header_print;
+extern int targ_count;
 
 /* List files from dir and create a filelist and reclist for last step (STEP 3 PRINTING) */
 int ListFile(char * dir, FileList * filelist, FileList * reclist)
 {
     DIR * dp;
+    struct dirent * dirp;
+
+
     if((dp = opendir(dir)) == NULL)
     {
         throw_error(dir, WRNG_TARG_ERR);
         return errno;
     }
 
-    struct dirent * dirp;
 
     while((dirp = readdir(dp)) != NULL)
     {
-        if ((strcmp(dirp->d_name, "..") == 0 || strcmp(dirp->d_name, ".") == 0) && !(usr_opt->a))
+        if ((strncmp(dirp->d_name, "..", 2) == 0 || strncmp(dirp->d_name, ".", 1) == 0) 
+			&& !usr_opt->a)
             continue;
 	
         if (FileListInsert(dir, dirp->d_name, filelist, reclist) != 0)
@@ -53,8 +54,12 @@ int TargetLProcess(TargList * targ_list)
     {
         if (targ_list->isdir)
         {
-	    //TODO: ADD HERE THE CHECK ON NUM OF FILES
-            printf("\n%s :\n", targ_list->target);
+	    /* 
+	     * Fore more output clarity, if we have more than one target
+	     * print the name of the target then the listing
+	     */
+	    if (targ_count > 1)
+            	printf("\n%s :\n", targ_list->target);
 	    
 	    /* 
 	     * We have a directory to read through and list

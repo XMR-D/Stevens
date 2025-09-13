@@ -19,9 +19,9 @@ extern UsrOptions * usr_opt;
 
 /* 
  * This set of global variable is used to compute the padding 
- * When printing in long format
+ * When printing,
  *
- * NEED TO CHANGE THAT TO A STRUCT
+ * TODO: NEED TO CHANGE THAT TO A STRUCT
  */
 int max_link_nb_len = 0;
 int max_uid_len = 0;
@@ -30,6 +30,8 @@ int max_uid_int_len = 0;
 int max_gid_int_len = 0;
 int max_nb_byte_len = 0;
 int max_nb_block_len = 0;
+
+int max_inode_nb_len = 0;
 
 long double total_bytes = 0;
 long double total_blocks = 0;
@@ -110,12 +112,14 @@ static void ComputePaddingNeeded(FileList * elm)
 {
     struct passwd * pwd = getpwuid(elm->sb.st_uid);
     struct group * grp = getgrgid(elm->sb.st_gid);
-    int uid_int_len = NbDigit(elm->sb.st_uid);
-    int gid_int_len = NbDigit(elm->sb.st_gid);
 
-    int nb_byte_len = NbDigit(elm->sb.st_size);
-    int nb_link_len = NbDigit(elm->sb.st_nlink);
-    int nb_block_len = NbDigit(ComputeBlock(elm->sb.st_blocks));
+    int uid_int_len = NbDigitFromInt(elm->sb.st_uid);
+    int gid_int_len = NbDigitFromInt(elm->sb.st_gid);
+
+    int nb_byte_len = NbDigitFromInt(elm->sb.st_size);
+    int nb_link_len = NbDigitFromInt(elm->sb.st_nlink);
+    int nb_block_len = NbDigitFromInt(ComputeBlock(elm->sb.st_blocks));
+    int inode_nb_len = NbDigitFromInt(elm->sb.st_ino);
 
     if (pwd != NULL)
     {
@@ -144,6 +148,9 @@ static void ComputePaddingNeeded(FileList * elm)
 
     if (nb_block_len > max_nb_block_len)
         max_nb_block_len = nb_block_len;
+
+    if (inode_nb_len > max_inode_nb_len)
+	max_inode_nb_len = inode_nb_len;
 
     if (usr_opt->s)
     {

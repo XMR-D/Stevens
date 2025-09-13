@@ -1,21 +1,15 @@
 ## Priority: 1
-//TODO: Fix MB bug when printing -h human sizes
-	Fix number of spaces between files when printing on classical format printer
-		=> number of spaces is given by something like : ((term_width - (longest)*nb_col) / nb_files-1)
-	Then classical printer to adapt to number of block format
-
-## Priority: 1
 //TODO: IMPLEMENT Following options
-	-i
-	-d
-	-q
-	-w
-	-F
-	-R
+	-d  (scope changes for symlinks and directories)
+	-q  (print name wrapper)
+	-w  (print name wrapper)
+	-F  (print name wrapper)
+	-R  (recursion)
+
+(HORRAY!!! TESTING TIME !)
 
 ## Priority: 2
-//TODO: Add nb_bytes padding depending on options passed
-	Check the number of files to see if printing "targname :" is needed
+//TODO: Check the number of files to see if printing "targname :" is needed
 
 ## Priority: 2
 //TODO: Handle the ls . -S situation (where files are before an option)

@@ -26,9 +26,9 @@ int block_size = DEFAULT_BLK_SIZE;
 int my_ls(int argc, char * argv[])
 {
 
+	int ret = 0;
 	TargList * tl_tail;
 
-	int ret = 0;
 
 	if (!usr_opt)
 	{

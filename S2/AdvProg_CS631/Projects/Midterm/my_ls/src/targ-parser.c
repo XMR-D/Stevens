@@ -50,8 +50,12 @@ static int TargLcompare(TargList * elm1, TargList * elm2, int isdir)
 
     if (isdir)
     {
-        /* Compare two list elements depending on the option */
-        /* The element is a dir and is compared, to keep list ordering invert the result */
+        /* 
+	 * Compare two list elements depending on the leftmost sorting option 
+	 * The element we want to insert is a dir, we need to invert
+	 * the result because the traversal is left to right
+	 * that's why we multiply by -1.
+	 */
         if (usr_opt->S)
             ret = CompareMetrics(elm2->sb.st_size, elm1->sb.st_size) * -1;
 
@@ -69,7 +73,10 @@ static int TargLcompare(TargList * elm1, TargList * elm2, int isdir)
     }
     else
     {
-        /* The element is a file and is compared, DON'T invert it */
+        /* 
+	 * The element we want to insert is a file, we don't need to invert 
+	 * the result as the traversal is right to left
+	 */
         if (usr_opt->S)
             ret = CompareMetrics(elm1->sb.st_size, elm2->sb.st_size);
 
@@ -88,7 +95,7 @@ static int TargLcompare(TargList * elm1, TargList * elm2, int isdir)
     return ret;
 }
 
-static int insert_empty_list(TargList *list, TargList *elm, int isdir) 
+static int InsertEmptyList(TargList *list, TargList *elm, int isdir) 
 {
     if ((!isdir && !list->next) || (isdir && !list->prev)) 
     {
@@ -100,7 +107,7 @@ static int insert_empty_list(TargList *list, TargList *elm, int isdir)
     return 1;
 }
 
-static int insert_directory(TargList *list, TargList *elm) 
+static int InsertDirectory(TargList *list, TargList *elm) 
 {
     elm->isdir = 1;
 
@@ -153,7 +160,7 @@ static int insert_directory(TargList *list, TargList *elm)
     return 0;
 }
 
-static int insert_file(TargList *list, TargList *elm) 
+static int InsertFile(TargList *list, TargList *elm) 
 {
     elm->isdir = 0;
 
@@ -164,7 +171,8 @@ static int insert_file(TargList *list, TargList *elm)
     }
     else
     {
-        while (list->next && !list->next->isdir && (RevSort * TargLcompare(list->next, elm, elm->isdir) <= 0)) 
+        while (list->next && !list->next->isdir && 
+			(RevSort * TargLcompare(list->next, elm, elm->isdir) <= 0)) 
             list = list->next;
     }
 
@@ -185,7 +193,9 @@ static int insert_file(TargList *list, TargList *elm)
 
 int TargLinsert(TargList *list, char *token, int isdir, int ishidden) 
 {
-    TargList *elm = malloc(sizeof(TargList));
+    
+    struct stat sb;
+    TargList *elm = calloc(sizeof(TargList), 1);
     if (!elm) 
     {
         TargLfree(list);
@@ -198,7 +208,6 @@ int TargLinsert(TargList *list, char *token, int isdir, int ishidden)
     elm->next = NULL;
     elm->prev = list;
 
-    struct stat sb;
 
     if (stat(token, &sb) == -1) 
     {
@@ -208,13 +217,13 @@ int TargLinsert(TargList *list, char *token, int isdir, int ishidden)
     else 
         elm->sb = sb;
 
-    if (insert_empty_list(list, elm, isdir) == 0) 
+    if (InsertEmptyList(list, elm, isdir) == 0) 
         return 0;
 
-    if (isdir) 
-        insert_directory(list, elm);
+    if (isdir && !usr_opt->d) 
+        InsertDirectory(list, elm);
     else
-        insert_file(list, elm);
+        InsertFile(list, elm);
 
     targ_count++;
     return 0;

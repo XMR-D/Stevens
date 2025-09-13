@@ -30,6 +30,7 @@ int IsHidden(char * pathname)
     int len = strlen(pathname);
     int recover = 0;
     int ret;
+    char * end;
 
     if (strcmp(pathname, "..") == 0 || strcmp(pathname, ".") == 0)
         return 0;
@@ -40,7 +41,7 @@ int IsHidden(char * pathname)
         recover++;
     }
 
-    char * end = strrchr(pathname, '/');
+    end = strrchr(pathname, '/');
 
     if (end == NULL)
         end = pathname;
@@ -103,7 +104,7 @@ void Padding(char * str1, int longest)
     }
 }
 
-int NbDigit(int val)
+int NbDigitFromInt(int val)
 {
     int nb_digit = 0;
 
@@ -116,19 +117,83 @@ int NbDigit(int val)
     return nb_digit;
 }
 
+/* 
+ * Function to handle BLOCKSIZE given in this format
+ * 1b
+ * 125k
+ * 12m
+ * ...
+ *
+ * It will ensure that the var is valid as well as returning a multiplicator
+ * that will be used in further computations
+ *
+ * basically doing the job of strtol that will consider that
+ * 10523kl52 is a valid integer
+ */
+static long int CheckForMult(const char * var)
+{
+    long int mult = 1;
+
+    /* skip everything until first char that is alphabetic */
+    while (*var >= 48 && *var <= 57 )
+        var++;
+
+    /* It's a number so return mult of 1*/
+    if (var == NULL)
+        return mult;
+
+    /* We found a potential trailing alphabetic char */
+    switch(*var)
+    {
+	case 'k':
+	    mult = KBSIZE;
+	    break;
+	case 'm':
+	    mult = MBSIZE;
+	    break;
+	case 't':
+	    mult = TBSIZE;
+	    break;
+	default:
+	    mult = -1;
+	    break;
+    }
+
+    /* If the trailing alphabetic char is invalid return -1 */
+    if (mult == -1)
+        return mult;
+
+    /* Else check that we do not have any chars after the trailing alpha char*/
+    var++;
+
+    if (*var != '\0')
+        return -1;
+    else
+	return mult;
+  }
+
 static long IsValidInt(const char * var)
 {
     char *ep;
     long var_value;
+    long int multiplier;
 
     if (var == NULL)
         return -1;
-    
+ 
     var_value = strtol((const char *) var, &ep, 10);
 
     /* var is not a number */
     if (ep == var)
         return -1;
+
+    multiplier = CheckForMult(var);
+
+    if (multiplier < 0)
+	    return -1;
+    else
+        var_value *= multiplier;
+
 
     return var_value;
 }
@@ -142,10 +207,12 @@ static long IsValidInt(const char * var)
 int GetBlockSize(void)
 {
     const char * val = getenv("BLOCKSIZE");
+    int value;
+
     if (val == NULL)
         return DEFAULT_BLK_SIZE;
 
-    int value = IsValidInt(val);
+    value = IsValidInt(val);
 
     if (value == -1)
     {
@@ -187,10 +254,12 @@ int GetBlockSize(void)
  */
 int ComputeBlock(int nb_blocks)
 {
+    int nb_bytes;
+
     if (nb_blocks == 0)
         return 0;
 
-    int nb_bytes = nb_blocks * 512;
+    nb_bytes = nb_blocks * 512;
        
     if (usr_opt->k)
     {
@@ -210,7 +279,7 @@ long double ComputeBytes(long double nb_bytes)
 {
     long int unit = 0;
 
-   if (nb_bytes == 0)
+    if (nb_bytes == 0)
        return 0; 
     
     if (nb_bytes != 0)
