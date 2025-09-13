@@ -17,6 +17,25 @@
 
 extern UsrOptions * usr_opt;
 extern int targ_count;
+PrintInfos * pinfos;
+
+void
+ResetPinfos(PrintInfos * infos)
+{
+    infos->max_link_nb_len = 0;
+    infos->max_uid_len = 0;
+    infos->max_gid_len = 0;
+    infos->max_uid_int_len = 0;
+    infos->max_gid_int_len = 0;
+    infos->max_nb_byte_len = 0;
+    infos->max_nb_block_len = 0;
+
+    infos->max_inode_nb_len = 0;
+
+    infos->total_bytes = 0;
+    infos->total_blocks = 0;
+  
+}
 
 /* List files from dir and create a filelist and reclist for last step (STEP 3 PRINTING) */
 int ListFile(char * dir, FileList * filelist, FileList * reclist)
@@ -49,6 +68,13 @@ int ListFile(char * dir, FileList * filelist, FileList * reclist)
 int TargetLProcess(TargList * targ_list)
 {
     targ_list = targ_list->next;
+    
+    pinfos = calloc(sizeof(PrintInfos), 1);
+    if (!pinfos)
+    {
+	throw_error("", MEM_ERR);
+	return errno;
+    }
 
     while(targ_list)
     {
@@ -133,10 +159,15 @@ int TargetLProcess(TargList * targ_list)
             FileListFree(file_listing);
         }
 
+
 	if (targ_list == NULL)
+	{
+	    free(pinfos);
             return 0;
+	}
 	else
 	   printf("\n");
     }
+    free(pinfos);
     return 0;
 }

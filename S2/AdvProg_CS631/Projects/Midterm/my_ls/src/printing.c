@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include "error.h"
+#include "listing.h"
 #include "list-handling.h"
 #include "opt_parser.h"
 #include "utility.h"
@@ -19,17 +20,8 @@
 
 extern UsrOptions * usr_opt;
 
-extern int max_link_nb_len;
-extern int max_uid_len;
-extern int max_gid_len;
-extern int max_uid_int_len;
-extern int max_gid_int_len;
-extern int max_nb_byte_len;
-extern int max_nb_block_len;
-extern int max_inode_nb_len;
+extern PrintInfos * pinfos;
 
-extern long double total_blocks;
-extern long double total_bytes;
 extern int block_size;
 
 /* 
@@ -126,9 +118,9 @@ PrintTotalBytes()
      * else it's the total of blocks
      */ 
     if (usr_opt->h)
-    	total_p = total_bytes;
+    	total_p = pinfos->total_bytes;
     else
-	total_p = total_blocks;
+	total_p = pinfos->total_blocks;
 
     if (total_p != 0)
     {
@@ -226,7 +218,7 @@ static int Handle_i_Option(FileList * elm)
 {
     if (usr_opt->i)
     {
-        if (PrintIntVal(1, elm->sb.st_ino, max_inode_nb_len))
+        if (PrintIntVal(1, elm->sb.st_ino, pinfos->max_inode_nb_len))
 		return errno;
     	printf(" ");
     }
@@ -239,7 +231,7 @@ static int Handle_s_Option(FileList * elm, int fromblocks)
     {
          if (!usr_opt->h)
          {
-             if(PrintIntVal(1, ComputeBlock(elm->sb.st_blocks), max_nb_block_len))
+             if(PrintIntVal(1, ComputeBlock(elm->sb.st_blocks), pinfos->max_nb_block_len))
 	         return errno;
 	 }
 	 else
@@ -267,18 +259,18 @@ PrintOwner(FileList * elm)
 	
 	if (pwd == NULL)
 	{
-	    if (PrintIntVal(0, elm->sb.st_uid, max_uid_int_len))
+	    if (PrintIntVal(0, elm->sb.st_uid, pinfos->max_uid_int_len))
 	        return errno;
 	}
 	else
 	{
 	    printf("%s", pwd->pw_name);
-	    Padding(pwd->pw_name, max_uid_len);
+	    Padding(pwd->pw_name, pinfos->max_uid_len);
 	}
     }
     else
     {
-	if (PrintIntVal(0, elm->sb.st_uid, max_uid_int_len))
+	if (PrintIntVal(0, elm->sb.st_uid, pinfos->max_uid_int_len))
 	    return errno;
     }
     
@@ -296,19 +288,19 @@ PrintGroup(FileList * elm)
 	
 	if (grp == NULL)
 	{
-	   if(PrintIntVal(0, elm->sb.st_gid, max_gid_int_len))
+	   if(PrintIntVal(0, elm->sb.st_gid, pinfos->max_gid_int_len))
 	       return errno;
 	}
 	
 	else
 	{
 	    printf("%s", grp->gr_name);
-	    Padding(grp->gr_name, max_gid_len);
+	    Padding(grp->gr_name, pinfos->max_gid_len);
 	}
     }
     else
     {
-	if (PrintIntVal(0, elm->sb.st_gid, max_gid_int_len))
+	if (PrintIntVal(0, elm->sb.st_gid, pinfos->max_gid_int_len))
 	    return errno;
     }
     
@@ -351,7 +343,7 @@ LongFormatPrinter(FileList * list)
 	free(res);
 
 	/* Print the number of links */
-	if (PrintIntVal(1, list->sb.st_nlink, max_link_nb_len))
+	if (PrintIntVal(1, list->sb.st_nlink, pinfos->max_link_nb_len))
 	    return errno;
 
 	printf(" ");
@@ -363,7 +355,7 @@ LongFormatPrinter(FileList * list)
 	if (usr_opt->s && usr_opt->h)
 	    PrintBytes(ComputeBytes(list->sb.st_size), list->sb.st_size, 0);
 
-	else if (PrintIntVal(1, list->sb.st_size, max_nb_byte_len))
+	else if (PrintIntVal(1, list->sb.st_size, pinfos->max_nb_byte_len))
 	    return errno;
 
 	printf(" ");
@@ -381,15 +373,7 @@ LongFormatPrinter(FileList * list)
     }
     
     /* Reset padding for further prints */
-    max_uid_len = 0;
-    max_gid_len = 0;
-    max_uid_int_len = 0;
-    max_gid_int_len = 0;
-    max_nb_byte_len = 0;
-
-    total_blocks = 0;
-    total_bytes = 0;
-
+    ResetPinfos(pinfos);
     return 0;
 }
 

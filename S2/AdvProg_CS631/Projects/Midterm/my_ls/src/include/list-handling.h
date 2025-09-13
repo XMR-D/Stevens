@@ -12,10 +12,15 @@ typedef struct FileList {
     struct FileList * next;
 } FileList;
 
+void 
+FileListFree(FileList * list);
 
-void FileListFree(FileList * list);
-int FileListInsert(char * dir, char * filename, FileList * filelist, FileList * reclist);
-void FileListLog(FileList * list);
+int 
+FileListInsert(char * dir, char * filename, 
+		FileList * filelist, FileList * reclist);
+
+void 
+FileListLog(FileList * list);
 
 
 #endif /* ! LIST_HANDLING_H*/

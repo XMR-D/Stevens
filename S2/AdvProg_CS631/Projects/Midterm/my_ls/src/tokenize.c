@@ -56,7 +56,7 @@ int process_targets(char * token, TargList * head, TargList * tail)
      * and do a reverse traversal, so that files and dirs are
      * sorted separatly
      */
-    if (S_ISDIR(sb.st_mode))
+    if (S_ISDIR(sb.st_mode) && !usr_opt->d)
     {
         head = tail;
         isdir++;

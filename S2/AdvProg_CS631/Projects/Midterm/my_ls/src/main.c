@@ -58,7 +58,12 @@ int my_ls(int argc, char * argv[])
 	}
 
 	if (!targ_list->next && (targ_found == 0) && ret == 0)
+	{
+	    if (usr_opt->d)
+	        TargLinsert(targ_list, ".", 0, 0);
+	    else
 		TargLinsert(targ_list, ".", 1, 0);
+	}
 	/* Get environement values and check for validity */
 	if (usr_opt->s)
 	    block_size = GetBlockSize();

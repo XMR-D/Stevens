@@ -9,6 +9,7 @@
 
 
 #include "error.h"
+#include "listing.h"
 #include "opt_parser.h"
 #include "utility.h"
 
@@ -17,26 +18,65 @@
 extern int RevSort;
 extern UsrOptions * usr_opt;
 
-/* 
- * This set of global variable is used to compute the padding 
- * When printing,
- *
- * TODO: NEED TO CHANGE THAT TO A STRUCT
- */
-int max_link_nb_len = 0;
-int max_uid_len = 0;
-int max_gid_len = 0;
-int max_uid_int_len = 0;
-int max_gid_int_len = 0;
-int max_nb_byte_len = 0;
-int max_nb_block_len = 0;
+/* PrintInfos structure thta will be used later in printing.c */
+extern PrintInfos * pinfos;
 
-int max_inode_nb_len = 0;
+void 
+ComputePaddingNeeded(FileList * elm)
+{
+    struct passwd * pwd = getpwuid(elm->sb.st_uid);
+    struct group * grp = getgrgid(elm->sb.st_gid);
 
-long double total_bytes = 0;
-long double total_blocks = 0;
+    int uid_int_len = NbDigitFromInt(elm->sb.st_uid);
+    int gid_int_len = NbDigitFromInt(elm->sb.st_gid);
 
-static int FileListCompare(FileList * elm1, FileList * elm2)
+    int nb_byte_len = NbDigitFromInt(elm->sb.st_size);
+    int nb_link_len = NbDigitFromInt(elm->sb.st_nlink);
+    int nb_block_len = NbDigitFromInt(ComputeBlock(elm->sb.st_blocks));
+    int inode_nb_len = NbDigitFromInt(elm->sb.st_ino);
+
+    if (pwd != NULL)
+    {
+	int uidlen = strlen(pwd->pw_name);
+        if (uidlen > pinfos->max_uid_len)
+	    pinfos->max_uid_len = uidlen;
+    }
+    if (grp != NULL)
+    {
+	int gidlen = strlen(grp->gr_name);
+	if (gidlen > pinfos->max_gid_len)
+	    pinfos->max_gid_len = gidlen;
+   }
+    
+    if (uid_int_len > pinfos->max_uid_int_len)
+        pinfos->max_uid_int_len = uid_int_len;
+
+    if (gid_int_len > pinfos->max_gid_int_len)
+	pinfos->max_gid_int_len = gid_int_len;
+
+    if (nb_byte_len > pinfos->max_nb_byte_len)
+	pinfos->max_nb_byte_len = nb_byte_len;
+
+    if (nb_link_len > pinfos->max_link_nb_len)
+	pinfos->max_link_nb_len = nb_link_len;
+
+    if (nb_block_len > pinfos->max_nb_block_len)
+        pinfos->max_nb_block_len = nb_block_len;
+
+    if (inode_nb_len > pinfos->max_inode_nb_len)
+	pinfos->max_inode_nb_len = inode_nb_len;
+
+    if (usr_opt->s)
+    {
+	if (usr_opt->h)
+	    pinfos->total_bytes += elm->sb.st_size;
+	else
+	    pinfos->total_blocks += elm->sb.st_blocks;
+    }
+}
+
+static int 
+FileListCompare(FileList * elm1, FileList * elm2)
 {
     int ret = 0;
 
@@ -87,7 +127,8 @@ static int FileListCompare(FileList * elm1, FileList * elm2)
 }
 
 
-void FileListFree(FileList * list)
+void 
+FileListFree(FileList * list)
 {
     if (list != NULL)
     {
@@ -107,61 +148,9 @@ void FileListFree(FileList * list)
     }
 }
 
-/* TODO MOVE TO UTILITY.C + USE A STRUCT */
-static void ComputePaddingNeeded(FileList * elm)
-{
-    struct passwd * pwd = getpwuid(elm->sb.st_uid);
-    struct group * grp = getgrgid(elm->sb.st_gid);
-
-    int uid_int_len = NbDigitFromInt(elm->sb.st_uid);
-    int gid_int_len = NbDigitFromInt(elm->sb.st_gid);
-
-    int nb_byte_len = NbDigitFromInt(elm->sb.st_size);
-    int nb_link_len = NbDigitFromInt(elm->sb.st_nlink);
-    int nb_block_len = NbDigitFromInt(ComputeBlock(elm->sb.st_blocks));
-    int inode_nb_len = NbDigitFromInt(elm->sb.st_ino);
-
-    if (pwd != NULL)
-    {
-	int uidlen = strlen(pwd->pw_name);
-        if (uidlen > max_uid_len)
-	    max_uid_len = uidlen;
-    }
-    if (grp != NULL)
-    {
-	int gidlen = strlen(grp->gr_name);
-	if (gidlen > max_gid_len)
-	    max_gid_len = gidlen;
-    }
-    
-    if (uid_int_len > max_uid_int_len)
-        max_uid_int_len = uid_int_len;
-
-    if (gid_int_len > max_gid_int_len)
-	max_gid_int_len = gid_int_len;
-
-    if (nb_byte_len > max_nb_byte_len)
-	max_nb_byte_len = nb_byte_len;
-
-    if (nb_link_len > max_link_nb_len)
-	max_link_nb_len = nb_link_len;
-
-    if (nb_block_len > max_nb_block_len)
-        max_nb_block_len = nb_block_len;
-
-    if (inode_nb_len > max_inode_nb_len)
-	max_inode_nb_len = inode_nb_len;
-
-    if (usr_opt->s)
-    {
-	if (usr_opt->h)
-	    total_bytes += elm->sb.st_size;
-	else
-	    total_blocks += elm->sb.st_blocks;
-    }
-}
-
-static int PushToList(char * filename, struct stat * sb, int ishidden, int padding, FileList * list)
+static int 
+PushToList(char * filename, struct stat * sb, 
+		int ishidden, int padding, FileList * list)
 {
     FileList * elm = calloc(sizeof(FileList), 1);
 
@@ -193,7 +182,8 @@ static int PushToList(char * filename, struct stat * sb, int ishidden, int paddi
     return 0;
 }
 
-int FileListInsert(char * dirname, char * filename, FileList * filelist, FileList * reclist)
+int FileListInsert(char * dirname, char * filename, 
+		FileList * filelist, FileList * reclist)
 {
     int ishidden = 0;
 
@@ -222,7 +212,7 @@ int FileListInsert(char * dirname, char * filename, FileList * filelist, FileLis
         return errno;
     } 
 
-    if (S_ISDIR(sb.st_mode))
+    if (S_ISDIR(sb.st_mode) && !usr_opt->d)
     {
         if (PushToList(strdup(filename), &sb, ishidden, 0, reclist) != 0)
 	    return errno;
