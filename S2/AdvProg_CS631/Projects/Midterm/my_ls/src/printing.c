@@ -81,12 +81,12 @@ PrintFileName(FileList * elm)
 
 	switch (filetype)
 	{
-	    case 'd':
-		printf("/");
-	        break;
 	    case 'l':
 		printf("@");
 		break;
+	    case 'd':
+		printf("/");
+	        break;
 	    case 's':
 		printf("=");
 		break;

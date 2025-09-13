@@ -1,6 +1,7 @@
 #include <sys/stat.h>
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <strings.h> 
@@ -17,6 +18,7 @@
 extern int targ_count;
 extern int RevSort;
 extern UsrOptions * usr_opt;
+extern int symredirection;
 
 static int TargLcompare(TargList * elm1, TargList * elm2, int isdir)
 {
@@ -193,8 +195,8 @@ static int InsertFile(TargList *list, TargList *elm)
 
 int TargLinsert(TargList *list, char *token, int isdir, int ishidden) 
 {
-    
     struct stat sb;
+    
     TargList *elm = calloc(sizeof(TargList), 1);
     if (!elm) 
     {
@@ -208,8 +210,7 @@ int TargLinsert(TargList *list, char *token, int isdir, int ishidden)
     elm->next = NULL;
     elm->prev = list;
 
-
-    if (stat(token, &sb) == -1) 
+    if (fstatat(AT_FDCWD, token, &sb, symredirection) == -1) 
     {
         throw_error(token, WRNG_TARG_ERR);
         return errno;

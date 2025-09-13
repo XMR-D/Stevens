@@ -1,6 +1,7 @@
 #include <sys/stat.h> 
 
 #include <errno.h>
+#include <fcntl.h>
 #include <pwd.h>
 #include <grp.h>  
 #include <stdio.h>
@@ -17,6 +18,7 @@
 
 extern int RevSort;
 extern UsrOptions * usr_opt;
+extern int symredirection;
 
 /* PrintInfos structure thta will be used later in printing.c */
 extern PrintInfos * pinfos;
@@ -205,14 +207,14 @@ int FileListInsert(char * dirname, char * filename,
 
     snprintf(fullpath, dir_len + file_len + 2, "%s/%s", dirname, filename);
 
-    if (stat(fullpath, &sb) == -1) 
+    if (fstatat(AT_FDCWD, fullpath, &sb, symredirection) == -1) 
     {
         throw_error(fullpath, WRNG_TARG_ERR);
 	free(fullpath);
         return errno;
     } 
 
-    if (S_ISDIR(sb.st_mode) && !usr_opt->d)
+    if ((S_ISDIR(sb.st_mode) || S_ISLNK(sb.st_mode)) && !usr_opt->d)
     {
         if (PushToList(strdup(filename), &sb, ishidden, 0, reclist) != 0)
 	    return errno;

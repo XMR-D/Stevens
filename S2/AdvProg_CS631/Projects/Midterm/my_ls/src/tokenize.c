@@ -1,6 +1,7 @@
 #include <sys/stat.h>
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +23,9 @@ int help = 0;
 
 /* Signal to revert the sort during insertion */
 int RevSort = 1;
+
+/* Global variable representing the symlink redirection flag */
+int symredirection = 0;
 
 extern TargList * tl_tail;
 extern TargList * targ_list;
@@ -89,6 +93,11 @@ int tokenize(int argc, char * input[], TargList * head, TargList * tail)
             return opt_err;
 	}
     }
+
+    if (usr_opt->d)
+        symredirection = AT_SYMLINK_NOFOLLOW;
+    else
+	symredirection = 0;
 
     input++;
 

@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,10 +13,13 @@
 
 /* Global variable representing options structure */
 UsrOptions * usr_opt;
+
 /* Global variable representing if a target as been tested */
 int targ_found;
+
 /* Global variable representing the numbers of targets */
 int targ_count = 0;
+
 
 #ifndef DEFAULT_BLK_SIZE
 #define DEFAULT_BLK_SIZE 512
@@ -39,7 +43,7 @@ int my_ls(int argc, char * argv[])
 			return errno;
 		}
 	}
-
+	
 	TargList * targ_list = calloc(1, sizeof(TargList));
 	if (!targ_list) 
 	{
