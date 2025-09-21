@@ -32,7 +32,7 @@ void
 ComputePaddingNeeded(FileList * elm);
 
 int 
-TargetLProcess(TargList * targ_list);
+TargetLProcess(TargList * targets);
 
 
 #endif /* !LISTING_H */

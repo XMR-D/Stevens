@@ -68,7 +68,7 @@ ComputePaddingNeeded(FileList * elm)
     if (inode_nb_len > pinfos->max_inode_nb_len)
 	pinfos->max_inode_nb_len = inode_nb_len;
 
-    if (usr_opt->s)
+    if (usr_opt->s || usr_opt->R)
     {
 	if (usr_opt->h)
 	    pinfos->total_bytes += elm->sb.st_size;
@@ -200,12 +200,13 @@ int FileListInsert(char * dirname, char * filename,
 
     int dir_len = strlen(dirname);
     int file_len = strlen(filename);
+    int fullpath_len = dir_len + file_len + 2;
 
     char * fullpath = malloc(dir_len + file_len + 2);
     if (fullpath == NULL)
     	return errno;
 
-    snprintf(fullpath, dir_len + file_len + 2, "%s/%s", dirname, filename);
+    snprintf(fullpath, fullpath_len, "%s/%s", dirname, filename);
 
     if (fstatat(AT_FDCWD, fullpath, &sb, symredirection) == -1) 
     {
@@ -214,7 +215,7 @@ int FileListInsert(char * dirname, char * filename,
         return errno;
     } 
 
-    if ((S_ISDIR(sb.st_mode) || S_ISLNK(sb.st_mode)) && !usr_opt->d)
+    if (S_ISDIR(sb.st_mode) && !usr_opt->d)
     {
         if (PushToList(strdup(filename), &sb, ishidden, 0, reclist) != 0)
 	    return errno;

@@ -325,7 +325,7 @@ LongFormatPrinter(FileList * list)
     /* Skip head element */
     list = list->next;
 
-    if (usr_opt->s)
+    if (usr_opt->s || usr_opt->R)
         PrintTotalBytes();
 
     while (list)

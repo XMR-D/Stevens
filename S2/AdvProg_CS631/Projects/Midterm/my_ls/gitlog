@@ -1,0 +1,293 @@
+commit 1db55eec32779adf6e6e76e5c8dfb2bb1fce4ab4
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Sat Sep 13 17:05:06 2025 +0000
+
+    Feat(-d now with symlink support): adding test case little unit test
+
+commit 711b7ae73c68cf759f7a43cf27c3749d550f83ff
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Sat Sep 13 06:54:11 2025 +0000
+
+    Feat(Adding -d options for directories): + update of the TODO list
+
+commit 136b6be9427c80c35ff81a0a925868f89cf54214
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Sat Sep 13 02:45:51 2025 +0000
+
+    FEAT(Adding -F -q -w options for filename formatting)
+
+commit 9fc669e9e18720570da1f651af98feab9661751e
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Fri Sep 12 03:58:34 2025 +0000
+
+    Rm(Removing Collumn printer to comply with assignement requirement)
+
+commit f001bd015313dedc47d7a35c307dab89d834a131
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Thu Sep 11 20:27:15 2025 +0000
+
+    Precise(TODO: night epiffany on how the number of spaces are computed): addeed notes for future coding session
+
+commit ebae39ac4f3fb098061e9886032898f9c08ab842
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Thu Sep 11 19:47:46 2025 +0000
+
+    Feat(Adding -s -h -k options): Need to fix a format printing bug
+
+commit 67c11eb8f4d72fd94ff6607ac1691cadf7f615c7
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Thu Sep 11 19:46:58 2025 +0000
+
+    Feat(Adding -s -h -k options): Need to fix a format printing bug
+
+commit 2680af7494635f8361ccb88e3cc889e2b9ea52c9
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Thu Sep 11 05:14:21 2025 +0000
+
+    Feat+Test(Adding the -h option + small testing): Need to fix the unit issue, then apply same func on byte size field for long format, and add code into classical printer)
+
+commit 77ed8b9922fdcbe3ce3c58ce95ab42fe66adc836
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Thu Sep 11 02:46:38 2025 +0000
+
+    Removing swap files
+
+commit e1e1c9573bfda347b51ea71c7dd2aa97e6d28bb3
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Thu Sep 11 02:45:02 2025 +0000
+
+    Feat(Block count on both Classic and long format printer)
+
+commit 36f8487c4e3d3e20cf6b85a2923ba1e9f010153e
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Wed Sep 10 23:45:58 2025 +0000
+
+    Fix(Git pulling and merging conflict with small changes)
+
+commit 0e648119103026dea1a8f2647385ae9ae9a8edea
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Wed Sep 10 23:40:50 2025 +0000
+
+    Feat(adding -s -k -h options 1/2): Adding the first functions to retreive env variables and to compute the number of blocks from it with integration of error handling,
+
+commit 5e6bdc1075f473fa0752f60d9bae316d0e3bdc26
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Fri Sep 12 21:11:47 2025 -0400
+
+    Delete S2/AdvProg_CS631/Projects/Midterm/my_ls/debug_ls.core
+
+commit 57a03e1590f2b1c33d3cabfb604d913165e93c4a
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Wed Sep 10 20:22:44 2025 +0000
+
+    cleaning
+
+commit 1656128ce60acd327482687c0e63be022b297d58
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Wed Sep 10 20:22:32 2025 +0000
+
+    cleaning
+
+commit b10702254258aa6d544b8aea0e9186c412be7b03
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Wed Sep 10 19:23:00 2025 +0000
+
+    Removing trash files
+
+commit b45ceb46e8b986e2dca56333f5365a887b50e117
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Wed Sep 10 19:22:08 2025 +0000
+
+    removing some files
+
+commit 82d689aa023c64cff1f817130643265dbea2bac1
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Wed Sep 10 19:19:27 2025 +0000
+
+    FEAT(Switching to Netbsd env + Adding long format + fixing compat bug + adding first format options)
+
+commit 97ed653a45da19023022b5cd4becdc1fee8ef220
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Thu Sep 11 11:44:43 2025 -0400
+
+    Refactoring
+
+commit 3c6a3a312ca0e6c811a2de63eca286b72268b904
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Thu Sep 11 11:43:42 2025 -0400
+
+    Refactoring + adding some backup to the midterm
+
+commit 229778b77ebb5ff585360f51ae6c73e1077e8331
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Mon Sep 8 22:51:14 2025 -0400
+
+    Feat(Coding Style Improving)
+
+commit 7251d7ec66b65a16f4a618d9d110b349b7a1198a
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Mon Sep 8 17:45:10 2025 -0400
+
+    Feat(Last Step 2/3): Need to handle padding for printing + need to add simple file (not listed) handling + fix bug for last file on a column
+
+commit ffa0b82848d386b98f1ece0987d9d12376e4469c
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Mon Sep 8 11:41:05 2025 -0400
+
+    Feat(Last Step 1/3)
+
+commit fc3a87dbba5761dd9039eeb1882cc41505f55d3c
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Sun Sep 7 19:58:58 2025 -0400
+
+    Adding todo list and cleaning up code a little bit
+
+commit 43207ca1157f4bbf349adec66234d845d277a9fb
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Sun Sep 7 19:29:17 2025 -0400
+
+    Feat(Sorting Fix going to Step 3)
+
+commit d16dba3b28a1dd8c86db3dbd22f5e80b4833413f
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Sun Sep 7 13:09:17 2025 -0400
+
+    fix(resolving some errno problems)
+
+commit 2183279ce34167e8247deb9e9b6a636ed7d2c910
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Sun Sep 7 13:00:06 2025 -0400
+
+    Feat(Step2 Complete): Debugging and testing incoming
+
+commit e5baa3b2a72768a86103df10f4106ed117599005
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Sat Sep 6 20:46:54 2025 -0400
+
+    Fix(TargLlist Sorting bug 3/3)
+
+commit accccd14af5d15d8c11376c95d8261bf6d270ba6
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Sat Sep 6 19:31:49 2025 -0400
+
+    Add(Adding a silly test made + Added -Ofast for optimization)
+
+commit 9db9b553a6ce36394005c13f57494e80b8dcefe5
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Sat Sep 6 19:16:58 2025 -0400
+
+    Feat(Cleaning TargList structure)
+
+commit 8ee9d63546e18c65c4e79952bd718666935a7303
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Sat Sep 6 19:00:59 2025 -0400
+
+    Fix(TargList Sorting bug 2/3)
+
+commit 1ee91d53bdc5c643edbde0bdb918b36a97875a7f
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Sat Sep 6 13:06:47 2025 -0400
+
+    Fix(TargLlist Sorting Bug)
+
+commit 638c4d6b18312b7a798da328c5497fd06686c21b
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Thu Sep 4 15:22:35 2025 -0400
+
+    cleaning
+
+commit 3fa3e4719631db6b7250f6c1a1d27ffb9764eb57
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Thu Sep 4 15:20:52 2025 -0400
+
+    Fix(Splitting functions in targ_parser)
+
+commit 0807dc58f4620973b77c1a80ea433512cb1cd938
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Thu Sep 4 15:09:43 2025 -0400
+
+    slight cleaning
+
+commit 3eb7d73c981138931906eb391b46dabbb7332212
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Thu Sep 4 15:08:35 2025 -0400
+
+    Feat(Sorting during list insertion): Adding the sort directly while inserting elements in the list + added the getopt parsing => easier and Instructions compliant)
+
+commit b0d02737871f1a9de23056a976792ec25e73aecb
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Wed Sep 3 19:12:48 2025 -0400
+
+    Removing trash files
+
+commit d74f496a9a20bb00bfc1264e29a37cad55437159
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Wed Sep 3 19:11:28 2025 -0400
+
+    Fix(Preparing to handle sorting options)
+
+commit 8b3ce80c8c398c570b946a34847c625c22d34996
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Wed Sep 3 07:42:48 2025 -0400
+
+    Fix(Hardening ls to comply with path and other exigences)
+
+commit f6462e89efd5975c0c5dddfd0b4114bdbd4a61a5
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Tue Sep 2 10:06:07 2025 -0400
+
+    Feat(Starting Step 2)
+
+commit 7337d7335883dda617815db1c396d3e0300b5bcc
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Mon Sep 1 14:09:26 2025 -0400
+
+    Feat(STEP1 COMPLETE)
+
+commit 11ae60c9dc53e79a64f43c18d9abb162cf1eeb2c
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Wed Aug 27 17:13:20 2025 -0400
+
+    Fix(TargList sorting error 2)
+
+commit 0dd352e8fda54f31b06ff4f2413f43f050a164f3
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Wed Aug 27 16:21:22 2025 -0400
+
+    Fix(TargLlist sorting errors 1)
+
+commit f10fa3936f55e9e401788c2b531ddfba8bafb306
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Mon Aug 25 10:23:34 2025 -0400
+
+    Fix(Structure): Changed code structure to make it modular and recursively callable
+
+commit 47c9de8e8ea2c1deef37a05b0c0a9c729141a423
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Sun Aug 24 13:27:54 2025 -0400
+
+    Feat(Sorting targets): Lexicographical sort of directory and file
+
+commit c7ccdb8c09daf6063ef8d6614326fc9209777160
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Sun Aug 24 13:27:27 2025 -0400
+
+    Feat(Sorting targets): Lexicographical sort of directory and file
+
+commit 3661d4de98aa79d032bd5b37b6a094d7ae31cd59
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Fri Aug 22 17:40:41 2025 -0400
+
+    Feat(opt_parser): adding final options parsing
+
+commit 2b79132072e7f0a5b1052e41756ec14a22b3e07a
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Fri Aug 22 17:40:25 2025 -0400
+
+    Feat(opt_parser): adding final options parsing
+
+commit d41cebb60ae3232d4605e7eb91b3225b3536592b
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Thu Aug 21 14:54:10 2025 -0400
+
+    Pushing files

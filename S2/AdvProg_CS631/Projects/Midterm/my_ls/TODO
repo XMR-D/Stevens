@@ -1,6 +1,7 @@
 ## Priority: 1
 //TODO: IMPLEMENT Following options
 	-R  (recursion)
+	ADD TZ ENV VARIABLE HANDLING
 
 (HORRAY!!! TESTING TIME !)
 
@@ -22,3 +23,4 @@ consider all remaining options as files too)
 ## Priority: 4
 //TODO: Code Cleaning and Coding_style compliance review
         FIX INDENTATION / ADD STATIC FIELDS ON FUNCTIONS NOT IN HEADER / COMPLY WITH PROFESSOR Coding_style
+	Produce a good README 

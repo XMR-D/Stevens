@@ -19,7 +19,7 @@ int throw_error(char * wrng_targ, int err)
             fprintf(stderr, "ls: memory error encountered.\n");
             return errno;
         case WRNG_OPT_ERR:
-            fprintf(stderr, "usage: ls [AacdFfhiklnqRrSstuw] [file...]\n");
+            fprintf(stderr, "usage: ls [-AacdFfhiklnqRrSstuw] [file...]\n");
             return errno;
         case WRNG_TARG_ERR:
             fprintf(stderr, "ls: cannot access '%s': %s\n", wrng_targ, strerror(errno));

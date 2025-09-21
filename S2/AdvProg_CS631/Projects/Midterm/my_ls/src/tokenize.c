@@ -27,6 +27,12 @@ int RevSort = 1;
 /* Global variable representing the symlink redirection flag */
 int symredirection = 0;
 
+/*
+ * small signal to indicate whenever the program is in a recursion
+ * to indicate to ls if fetching option is necessary or not
+ */
+int in_recursion = 0;
+
 extern TargList * tl_tail;
 extern TargList * targ_list;
 extern int targ_found;
@@ -83,7 +89,8 @@ int tokenize(int argc, char * input[], TargList * head, TargList * tail)
 
     int opt;
 
-    while((opt = getopt(argc, input, "AacdFfhiklnqRrSstuw")) != -1)
+    while(!in_recursion && 
+		    (opt = getopt(argc, input, "AacdFfhiklnqRrSstuw")) != -1)
     {
 	/* If an option is invalid stop exec and return the error */
 	opt_err = OptSet((char) opt);
