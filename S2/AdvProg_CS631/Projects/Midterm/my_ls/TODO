@@ -1,14 +1,3 @@
-## Priority: 1
-//TODO: ADD TZ ENV VARIABLE HANDLING
-	ADD CHECK ON ROOT AND DEFAULT OPTIONS
-
-(HORRAY!!! TESTING TIME !)
-
-## Priority: 1
-//TODO: Minor Bugs fixing:
-	- Fix bug when printing files size in mega octect such as ~/../netbsd
-	- Add default options when no options are given
-
 ## Priority: 2
 //TODO: Handle the ls . -S situation (where files are before an option, meaning once a file as been found, 
 consider all remaining options as files too)

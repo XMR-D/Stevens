@@ -317,15 +317,15 @@ long double ComputeBytes(long double nb_bytes)
     
     if (nb_bytes != 0)
     {
-        if (nb_bytes < (long double) KBSIZE)
+        if (nb_bytes < KBSIZE)
 	    unit = BSIZE;
-	else if (nb_bytes >= (long double) KBSIZE)
+	else if (nb_bytes >= KBSIZE && nb_bytes < MBSIZE)
 	    unit = KBSIZE;
-	else if (nb_bytes >= (long double) MBSIZE)
+	else if (nb_bytes >= MBSIZE && nb_bytes < GBSIZE)
 	    unit = MBSIZE;
-	else if (nb_bytes >= (long double) GBSIZE)
+	else if (nb_bytes >= GBSIZE && nb_bytes < TBSIZE)
 	    unit = GBSIZE;
-	else if (nb_bytes >= (long double) TBSIZE)
+	else if (nb_bytes >= TBSIZE)
 	    unit = TBSIZE;
     }
 

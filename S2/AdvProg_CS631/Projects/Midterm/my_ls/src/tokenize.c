@@ -28,7 +28,7 @@ int symredirection = 0;
  * small signal to indicate whenever the program is in a recursion
  * to indicate to ls if fetching option is necessary or not
  */
-int in_recursion = 0;
+int rec_level;
 
 extern TargList * tl_tail;
 extern TargList * targ_list;
@@ -86,7 +86,7 @@ int tokenize(int argc, char * input[], TargList * head, TargList * tail)
 
     int opt;
 
-    while(!in_recursion && 
+    while(rec_level == 0 && 
 		    (opt = getopt(argc, input, "AacdFfhiklnqRrSstuw")) != -1)
     {
 	/* If an option is invalid stop exec and return the error */

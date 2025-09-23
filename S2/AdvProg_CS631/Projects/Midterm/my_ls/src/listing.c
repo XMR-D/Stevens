@@ -2,9 +2,11 @@
 
 #include <dirent.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h>
+#include <unistd.h>
 
 #include "error.h"
 #include "list-handling.h"
@@ -20,9 +22,9 @@
 PrintInfos * pinfos;
 
 extern UsrOptions * usr_opt;
-extern int in_recursion;
 extern int targ_count;
 extern int root;
+extern int rec_level;
 
 void
 ResetPinfos(PrintInfos * infos)
@@ -81,54 +83,76 @@ ListFile(char * dir, FileList * filelist, FileList * reclist)
 }
 
 static int
-Handle_R_option(TargList * targets, FileList *curr)
+Handle_R_option(TargList * targets, FileList *new_targets)
 {
+	
 	int argc;
 	char ** argv;
-	int path_len;
-	char * new_path;
+	FileList * curr;
 
-	/* Skip head */
-	curr = curr->next;
+	new_targets = new_targets->next;
+
+	if (new_targets == NULL)
+		return EXIT_SUCCESS;
+
+	curr = new_targets;
+	
+
+	if (chdir(targets->target))
+	{
+		throw_error(targets->target, WRNG_TARG_ERR);
+		return errno;
+	}
 
 	while (curr != NULL)
 	{
-	    /* Call ls on each new targets one at a time */
+
 	    if (IsHidden(curr->fname) == -1)
 	    {
 		curr = curr->next;
 	        continue;
 	    }
 
-	    /* Prepare new_arguments */
+	    //TODO: - Here save the cwd to print + move accordingly
+	    //	    It will help for debugging the ls -R situation
+	    //	    
+	    //	    - Craft a better saved path, as it will be important 
+	    //	    to move between directories 
+	    
+
 	    argc = 2;
 	    argv = calloc(sizeof(char *), 2);
-
-	    /* Craft path relative to the actual target */
-	    path_len = strlen(curr->fname) + strlen(targets->target) + 2;
-	    new_path = calloc(sizeof(char), path_len);
-	    if (!new_path)
+	    if (argv == NULL)
 	    {
 	        throw_error(NULL, MEM_ERR);
 		return errno;
 	    }
-	    snprintf(new_path, path_len, "%s/%s", targets->target, curr->fname);
- 
-	    /* 
-	     * Specify that we entering a recursion
-	     * thus fetching option is not necessary anymore
-	     */ 
-	    in_recursion = 1;
-
 
 	    argv[0] = "ls";
-	    argv[1] = new_path;
-
+	    argv[1] = curr->fname;	     
+	    
+	    rec_level++;
+	    
 	    if (ls_main(argc, argv))
 		return errno;
 
+	    free(argv);
+
 	    curr = curr->next;
+	    
 	}
+	
+	
+	if (rec_level != 0)
+	{
+		if (chdir(".."))
+		{
+		     throw_error(targets->target, WRNG_TARG_ERR);
+	    	     return errno;
+		}
+		rec_level--;
+	}
+
 	return EXIT_SUCCESS;
 }
 

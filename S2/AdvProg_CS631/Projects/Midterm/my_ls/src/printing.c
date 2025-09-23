@@ -112,11 +112,9 @@ PrintFileName(FileList * elm)
     		int linklen = readlink(elm->fname, 
 				linkpath, sizeof(linkpath) - 1);
 
-    		if (linklen != -1) {
-        		linkpath[linklen] = '\0';  
-       			printf(" -> %s", linkpath);
-    		} else 
-			printf(" -> [invalid]");
+        	linkpath[linklen] = '\0';  
+       		printf(" -> %s", linkpath);
+    		 
 	}	
 	free(res);
     }
@@ -139,15 +137,15 @@ PrintTotalBytes()
 
     if (total_p != 0)
     {
-        if (total_p < (long double) KBSIZE)
+        if (total_p < KBSIZE)
 	    unit = 'B';
-	else if (total_p >= (long double) KBSIZE)
+	else if (total_p >= KBSIZE && total_p < MBSIZE)
 	    unit = 'K';
-	else if (total_p >= (long double) MBSIZE)
+	else if (total_p >= MBSIZE && total_p < GBSIZE)
 	    unit = 'M';
-	else if (total_p >= (long double) GBSIZE)
+	else if (total_p >= GBSIZE && total_p < TBSIZE)
 	    unit = 'G';
-	else if (total_p >= (long double) TBSIZE)
+	else if (total_p >= TBSIZE)
 	    unit = 'T';
     }
 
@@ -203,11 +201,11 @@ PrintBytes(double nb_bytes, long int raw_nb_bytes, int do_round)
 
     if (raw_nb_bytes < KBSIZE)
         unit = 'B';
-    else if (raw_nb_bytes >= KBSIZE)
+    else if (raw_nb_bytes >= KBSIZE && raw_nb_bytes < MBSIZE)
         unit = 'K';
-    else if (raw_nb_bytes >= MBSIZE)
+    else if (raw_nb_bytes >= MBSIZE && raw_nb_bytes < GBSIZE)
         unit = 'M';
-    else if (raw_nb_bytes >= GBSIZE)
+    else if (raw_nb_bytes >= GBSIZE && raw_nb_bytes < TBSIZE)
         unit = 'G';
     else if (raw_nb_bytes >= TBSIZE)
         unit = 'T';
