@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "error.h"
 #include "listing.h"
@@ -24,6 +25,9 @@ int targ_found;
 /* Global variable representing the numbers of targets */
 int targ_count = 0;
 
+/* Global variable indicating if the program is launch as root */
+int root = 0;
+
 int block_size = DEFAULT_BLK_SIZE;
 
 int 
@@ -32,7 +36,6 @@ ls_main(int argc, char * argv[])
 
 	int ret = 0;
 	TargList * tl_tail;
-
 
 	if (!usr_opt)
 	{
@@ -68,6 +71,7 @@ ls_main(int argc, char * argv[])
 	    else
 		TargLinsert(targ_list, ".", 1, 0);
 	}
+	
 	/* Get environement values and check for validity */
 	if (usr_opt->s)
 	    block_size = GetBlockSize();
@@ -89,8 +93,12 @@ ls_main(int argc, char * argv[])
 int 
 wrapper_ls(int argc, char ** argv)
 {
+
 	/* First call that will setup Options and Targets */
-	int ret = ls_main(argc, argv);
+	int ret;
+
+	root = CheckRoot();
+       	ret = ls_main(argc, argv);
 
 	if (usr_opt != NULL)	
 	    free(usr_opt);

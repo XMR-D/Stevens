@@ -13,4 +13,7 @@ int GetBlockSize(void);
 int ComputeBlock(int nb_blocks);
 long double ComputeBytes(long double nb_bytes);
 int CheckPaddingWithStep(FileList * list, int step);
+int CheckRoot(void);
+
+
 #endif /* !UTILITY_H */

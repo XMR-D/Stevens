@@ -18,9 +18,6 @@
 /* opt_delim is put to 1 when '--' is met, meaning next tokens are targets */
 int opt_delim = 0;
 
-/* small interrupt signal to optimize in case of help query (such as --help) */
-int help = 0;
-
 /* Signal to revert the sort during insertion */
 int RevSort = 1;
 
@@ -37,6 +34,7 @@ extern TargList * tl_tail;
 extern TargList * targ_list;
 extern int targ_found;
 extern UsrOptions * usr_opt;
+extern int root;
 
 int process_targets(char * token, TargList * head, TargList * tail)
 {
@@ -55,7 +53,7 @@ int process_targets(char * token, TargList * head, TargList * tail)
 
     targ_found++;
 
-    if (stat(token, &sb) == -1)
+    if (fstatat(AT_FDCWD, token, &sb, symredirection) == -1)
     {
         throw_error(token, WRNG_TARG_ERR);
         return errno;
@@ -63,7 +61,7 @@ int process_targets(char * token, TargList * head, TargList * tail)
 
     /* 
      * the target is a directory, hence start at the tail of the list
-     * and do a reverse traversal, so that files and dirs are
+     * and do a reverse traversal and insertion, so that files and dirs are
      * sorted separatly
      */
     if (S_ISDIR(sb.st_mode) && !usr_opt->d)
@@ -71,10 +69,9 @@ int process_targets(char * token, TargList * head, TargList * tail)
         head = tail;
         isdir++;
     }
-    if (IsHidden(token))
-    {
+    if (IsHidden(token) && !root)
         ishidden++;
-    }
+    
     if (TargLinsert(head, token, isdir, ishidden))
         return errno;
     else 
@@ -101,11 +98,12 @@ int tokenize(int argc, char * input[], TargList * head, TargList * tail)
 	}
     }
 
-    if (usr_opt->d)
+    if (usr_opt->d || usr_opt->F)
         symredirection = AT_SYMLINK_NOFOLLOW;
     else
 	symredirection = 0;
 
+    /* skip the first element which is the binary name*/
     input++;
 
     /* If -r is specified reverse the sort of targets */
@@ -131,6 +129,5 @@ int tokenize(int argc, char * input[], TargList * head, TargList * tail)
 
         input++;
     }
-    /* return the last target error found */
     return targ_err;
 }

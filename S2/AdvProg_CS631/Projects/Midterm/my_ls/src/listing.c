@@ -20,9 +20,9 @@
 PrintInfos * pinfos;
 
 extern UsrOptions * usr_opt;
-extern int targ_count;
 extern int in_recursion;
-
+extern int targ_count;
+extern int root;
 
 void
 ResetPinfos(PrintInfos * infos)
@@ -43,7 +43,8 @@ ResetPinfos(PrintInfos * infos)
 }
 
 /* List files from dir and create a filelist and reclist for last step (STEP 3 PRINTING) */
-int ListFile(char * dir, FileList * filelist, FileList * reclist)
+int 
+ListFile(char * dir, FileList * filelist, FileList * reclist)
 {
     DIR * dp;
     struct dirent * dirp;
@@ -58,10 +59,19 @@ int ListFile(char * dir, FileList * filelist, FileList * reclist)
 
     while((dirp = readdir(dp)) != NULL)
     {
-        if ((strncmp(dirp->d_name, "..", 2) == 0 || strncmp(dirp->d_name, ".", 1) == 0) 
-			&& !usr_opt->a)
-            continue;
-	
+	int ishidden = IsHidden(dirp->d_name);
+
+	/* if the file is . or .. and that a is not specified skip it. */	
+        if (ishidden == -1 && !usr_opt->a)
+	    continue;
+
+	/* 
+	 * if the file is hidden, that we are not root and that the option -a 
+	 * is not specified skip it. 
+	 */
+	if (ishidden == 1 && !root && !usr_opt->a && !usr_opt->A)
+	    continue;
+		
         if (FileListInsert(dir, dirp->d_name, filelist, reclist) != 0)
 	    return errno;
     }
@@ -70,8 +80,64 @@ int ListFile(char * dir, FileList * filelist, FileList * reclist)
     return 0;
 }
 
-int TargetLProcess(TargList * targets)
+static int
+Handle_R_option(TargList * targets, FileList *curr)
 {
+	int argc;
+	char ** argv;
+	int path_len;
+	char * new_path;
+
+	/* Skip head */
+	curr = curr->next;
+
+	while (curr != NULL)
+	{
+	    /* Call ls on each new targets one at a time */
+	    if (IsHidden(curr->fname) == -1)
+	    {
+		curr = curr->next;
+	        continue;
+	    }
+
+	    /* Prepare new_arguments */
+	    argc = 2;
+	    argv = calloc(sizeof(char *), 2);
+
+	    /* Craft path relative to the actual target */
+	    path_len = strlen(curr->fname) + strlen(targets->target) + 2;
+	    new_path = calloc(sizeof(char), path_len);
+	    if (!new_path)
+	    {
+	        throw_error(NULL, MEM_ERR);
+		return errno;
+	    }
+	    snprintf(new_path, path_len, "%s/%s", targets->target, curr->fname);
+ 
+	    /* 
+	     * Specify that we entering a recursion
+	     * thus fetching option is not necessary anymore
+	     */ 
+	    in_recursion = 1;
+
+
+	    argv[0] = "ls";
+	    argv[1] = new_path;
+
+	    if (ls_main(argc, argv))
+		return errno;
+
+	    curr = curr->next;
+	}
+	return EXIT_SUCCESS;
+}
+
+
+int 
+TargetLProcess(TargList * targ_list)
+{
+    TargList * targets = targ_list;
+
     pinfos = calloc(sizeof(PrintInfos), 1);
     if (!pinfos)
     {
@@ -103,70 +169,36 @@ int TargetLProcess(TargList * targets)
             if (!dir_listing)
             {
                 throw_error(NULL, MEM_ERR);
-                return errno;
+                break;
             }
 
             FileList * new_targets = calloc(sizeof(FileList), 1);
             if (!new_targets)
             {
-                free(dir_listing);
                 throw_error(NULL, MEM_ERR);
-                return errno;
+                free(dir_listing);
+                break;
             }
 
-            if(ListFile(targets->target, dir_listing, new_targets))
+            if(ListFile(targets->target, dir_listing, new_targets)
+			    || LongFormatPrinter(dir_listing))
             {
                 FileListFree(dir_listing);
                 FileListFree(new_targets);
-                return errno;
+                break;
             }
             
-	    if (LongFormatPrinter(dir_listing))
-	    {
-                FileListFree(dir_listing);
-		FileListFree(new_targets);
-		return errno;
-	    }
-
             FileListFree(dir_listing);
 
 	    if (usr_opt->R)
-	    {	
-		FileList * curr = new_targets;
-
-		/* Skip head */
-		curr = curr->next;
-
-		while (curr != NULL)
+	    {
+		if (Handle_R_option(targets, new_targets))
 		{
-		    /* Call ls on each new targets so one at a time */
-
-		    /* Prepare new_arguments */
-		    int argc = 2;
-		    char ** argv = calloc(sizeof(char *), 2);
-
-		    /* Craft path relative to the actual target */
-		    int path_len = strlen(curr->fname) + strlen(targets->target) + 2;
-		    char * new_path = calloc(sizeof(char), path_len);
-		    snprintf(new_path, path_len, "%s/%s", targets->target, curr->fname);
-
-		    printf("\n");
-
-		    argv[0] = "ls";
-		    argv[1] = new_path;
-
-		    /* Specify that fetching options is no more necessary*/
-		    in_recursion = 1;
-
-		    if (ls_main(argc, argv))
-		    {
-			FileListFree(new_targets);
-			return errno;
-		    }
-		    curr = curr->next;
+		    FileListFree(new_targets);
+		    break;
 		}
 	    }
-
+	    
 	    FileListFree(new_targets);
 	    targets = targets->next;
         }
@@ -190,7 +222,7 @@ int TargetLProcess(TargList * targets)
 	    if (LongFormatPrinter(file_listing))
 	    {
 		FileListFree(file_listing);
-		return errno;
+		break;
 	    }
 
             FileListFree(file_listing);
@@ -200,11 +232,16 @@ int TargetLProcess(TargList * targets)
 	if (targets == NULL)
 	{
 	    free(pinfos);
-            return 0;
+            return EXIT_SUCCESS;
 	}
 	else
 	   printf("\n");
     }
+
     free(pinfos);
-    return 0;
+
+    if (errno)
+        return errno;
+    else
+    	return EXIT_SUCCESS;
 }

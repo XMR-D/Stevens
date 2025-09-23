@@ -102,7 +102,22 @@ PrintFileName(FileList * elm)
 		break;
 	    default:
 		break;
-	}
+	} 
+	
+	/* If the file is a simlink, print the link path as well */
+	if (S_ISLNK(elm->sb.st_mode)) 
+	{
+		char linkpath[PATH_MAX] = {0};
+
+    		int linklen = readlink(elm->fname, 
+				linkpath, sizeof(linkpath) - 1);
+
+    		if (linklen != -1) {
+        		linkpath[linklen] = '\0';  
+       			printf(" -> %s", linkpath);
+    		} else 
+			printf(" -> [invalid]");
+	}	
 	free(res);
     }
 }
@@ -313,8 +328,10 @@ static void
 PrintDate(FileList * elm)
 {
      char out_str[MAX_DATE_LEN] = {'\0'};
-     struct tm *info = localtime(&(elm->sb.st_mtime));
+     struct tm *info;
 
+     tzset();
+     info = localtime(&(elm->sb.st_mtime));
      strftime(out_str, sizeof(out_str), "%b %e %H:%M", info);
      printf("%s", out_str);
 }
@@ -325,8 +342,7 @@ LongFormatPrinter(FileList * list)
     /* Skip head element */
     list = list->next;
 
-    if (usr_opt->s || usr_opt->R)
-        PrintTotalBytes();
+    PrintTotalBytes();
 
     while (list)
     {
@@ -345,13 +361,14 @@ LongFormatPrinter(FileList * list)
 	/* Print the number of links */
 	if (PrintIntVal(1, list->sb.st_nlink, pinfos->max_link_nb_len))
 	    return errno;
-
 	printf(" ");
+
+
 	PrintOwner(list);
 	PrintGroup(list);
-
-	/* If specified by the option print the number of bytes */
 	printf(" ");
+	
+	/* If s or h is specified print the number of bytes */
 	if (usr_opt->s && usr_opt->h)
 	    PrintBytes(ComputeBytes(list->sb.st_size), list->sb.st_size, 0);
 

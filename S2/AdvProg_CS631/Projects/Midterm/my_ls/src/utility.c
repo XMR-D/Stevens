@@ -1,7 +1,10 @@
+#include <sys/types.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "opt_parser.h"
 #include "utility.h"
@@ -25,6 +28,11 @@
 extern int block_size;
 extern UsrOptions * usr_opt;
 
+/*
+ * return -1 if the path is . or ..
+ * return 0 if the path is a non hidden file
+ * return 1 if the path is a hidden file
+ */
 int IsHidden(char * pathname)
 {
     int len = strlen(pathname);
@@ -32,15 +40,26 @@ int IsHidden(char * pathname)
     int ret;
     char * end;
 
+    /* 
+     * We need checks on the string to be done by strcmp and not strncmp
+     * To properly discriminates hidden files from .. or .
+     * as ..a* or .a* could be considered as .. and . by strncmp
+     */ 
     if (strcmp(pathname, "..") == 0 || strcmp(pathname, ".") == 0)
-        return 0;
+        return -1;
 
+    /* If we have a trailing '/' remove it and replace it later */
     if (pathname[len-1] == '/') 
     {
         pathname[len-1] = '\0';
         recover++;
     }
 
+    /* 
+     * search for the trailing chunk that is the path target 
+     * If found place the cursor one char after it
+     * else just use the start of the pathname
+     */
     end = strrchr(pathname, '/');
 
     if (end == NULL)
@@ -48,13 +67,17 @@ int IsHidden(char * pathname)
     else
         end++;
 
-    if (!strcmp(end, ".."))
-        ret = 0;
+    /* If the end is .. or . then it's not a hidden file */
+    if (!strcmp(end, "..") || !strcmp(end, "."))
+        ret = -1;
+   
+    /* else we have a filename so check it's first char is '.' */	
     if (end[0] == '.')
         ret = 1;
     else
         ret = 0;
 
+    /* If you need to place back a trailing '/' do it */
     if (recover)
         pathname[len-1] = '/';
 
@@ -246,6 +269,16 @@ int GetBlockSize(void)
 	    return value;
     }
 }
+
+
+/* 
+ * Check if ls is called as root
+ */
+int CheckRoot(void)
+{
+    return (getuid() == 0);
+}
+
 
 /* 
  * From a number of given blocks of 512B, Convert it in unit of
