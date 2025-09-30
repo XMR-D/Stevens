@@ -20,7 +20,7 @@
 
 extern UsrOptions * usr_opt;
 
-extern PrintInfos * pinfos;
+extern PrintInfos * PINFOS;
 
 extern int block_size;
 
@@ -29,8 +29,9 @@ extern int block_size;
  * Date formated by ls
  * ex "Dec 31 00:00" is 12 char long + the '\0' = 13
  * it can't be anything else as we do not print year
+ * (unless if it's a more than a year later but again 5 chars will be changed to 4 max)
  * which is the only field that can possibly grow the string
- * outside his bounds year 9999->1000000
+ * outside his bounds year 9999->10000
  */
 #define MAX_DATE_LEN 13
 
@@ -43,6 +44,8 @@ extern int block_size;
 #define TBSIZE 1099511627776
 #endif /* ! SIZES */
 
+/* TODO: IF THE st_mtime is more than a year ago, print only the year !*/
+/*	 Debug/ simplify padding logic */
 
 static void
 PrintFileName(FileList * elm)
@@ -131,9 +134,9 @@ PrintTotalBytes()
      * else it's the total of blocks
      */ 
     if (usr_opt->h)
-    	total_p = pinfos->total_bytes;
+    	total_p = PINFOS->total_bytes;
     else
-	total_p = pinfos->total_blocks;
+	total_p = PINFOS->total_blocks;
 
     if (total_p != 0)
     {
@@ -227,42 +230,6 @@ PrintBytes(double nb_bytes, long int raw_nb_bytes, int do_round)
     
 }
 
-static int Handle_i_Option(FileList * elm)
-{
-    if (usr_opt->i)
-    {
-        if (PrintIntVal(1, elm->sb.st_ino, pinfos->max_inode_nb_len))
-		return errno;
-    	printf(" ");
-    }
-    return 0;
-}
-
-static int Handle_s_Option(FileList * elm, int fromblocks)
-{
-    if (usr_opt->s)
-    {
-         if (!usr_opt->h)
-         {
-             if(PrintIntVal(1, ComputeBlock(elm->sb.st_blocks), pinfos->max_nb_block_len))
-	         return errno;
-	 }
-	 else
-	 {
-	     long double raw_bytes = 0;
- 	     if (fromblocks)
-	         raw_bytes = elm->sb.st_blocks * 512;
-	     else
-		 raw_bytes = elm->sb.st_size;
-
-	     double computed_bytes = ComputeBytes(raw_bytes);
-	     PrintBytes(computed_bytes, raw_bytes, 0);
-	 } 
-	 printf(" ");
-    }
-    return 0;
-}
-
 static int 
 PrintOwner(FileList * elm)
 {
@@ -272,18 +239,18 @@ PrintOwner(FileList * elm)
 	
 	if (pwd == NULL)
 	{
-	    if (PrintIntVal(0, elm->sb.st_uid, pinfos->max_uid_int_len))
+	    if (PrintIntVal(0, elm->sb.st_uid, PINFOS->max_uid_int_len))
 	        return errno;
 	}
 	else
 	{
 	    printf("%s", pwd->pw_name);
-	    Padding(pwd->pw_name, pinfos->max_uid_len);
+	    Padding(pwd->pw_name, PINFOS->max_uid_len);
 	}
     }
     else
     {
-	if (PrintIntVal(0, elm->sb.st_uid, pinfos->max_uid_int_len))
+	if (PrintIntVal(0, elm->sb.st_uid, PINFOS->max_uid_int_len))
 	    return errno;
     }
     
@@ -301,19 +268,19 @@ PrintGroup(FileList * elm)
 	
 	if (grp == NULL)
 	{
-	   if(PrintIntVal(0, elm->sb.st_gid, pinfos->max_gid_int_len))
+	   if(PrintIntVal(0, elm->sb.st_gid, PINFOS->max_gid_int_len))
 	       return errno;
 	}
 	
 	else
 	{
 	    printf("%s", grp->gr_name);
-	    Padding(grp->gr_name, pinfos->max_gid_len);
+	    Padding(grp->gr_name, PINFOS->max_gid_len);
 	}
     }
     else
     {
-	if (PrintIntVal(0, elm->sb.st_gid, pinfos->max_gid_int_len))
+	if (PrintIntVal(0, elm->sb.st_gid, PINFOS->max_gid_int_len))
 	    return errno;
     }
     
@@ -334,13 +301,88 @@ PrintDate(FileList * elm)
      printf("%s", out_str);
 }
 
+
+static int Handle_i_Option(FileList * elm)
+{
+    if (usr_opt->i)
+    {
+        if (PrintIntVal(1, elm->sb.st_ino, PINFOS->max_inode_nb_len))
+		return errno;
+    	printf(" ");
+    }
+    return 0;
+}
+
+static int Handle_s_Option(FileList * elm, int fromblocks)
+{
+    if (usr_opt->s)
+    {
+         if (!usr_opt->h)
+         {
+             if(PrintIntVal(1, ComputeBlock(elm->sb.st_blocks), PINFOS->max_nb_block_len))
+	         return errno;
+	 }
+	 else
+	 {
+	     long double raw_bytes = 0;
+ 	     if (fromblocks)
+	         raw_bytes = elm->sb.st_blocks * 512;
+	     else
+		 raw_bytes = elm->sb.st_size;
+
+	     double computed_bytes = ComputeBytes(raw_bytes);
+	     PrintBytes(computed_bytes, raw_bytes, 0);
+	 } 
+	 printf(" ");
+    }
+    return 0;
+}
+
+static int 
+Handle_l_Option(FileList * list)
+{
+	if (usr_opt->l) {
+		/* Print the file mode */
+		char * res = calloc(sizeof(char), 11);
+		strmode(list->sb.st_mode, res);
+		printf("%s ", res);
+		free(res);
+
+		/* Print the number of links */
+		if (PrintIntVal(1, list->sb.st_nlink, PINFOS->max_link_nb_len))
+		    return errno;
+		printf(" ");
+
+
+		PrintOwner(list);
+		PrintGroup(list);
+		printf(" ");
+	
+		/* If s or h is specified print the number of bytes */
+		if (usr_opt->s && usr_opt->h)
+	    		PrintBytes(ComputeBytes(list->sb.st_size), list->sb.st_size, 0);
+
+		else if (PrintIntVal(1, list->sb.st_size, PINFOS->max_nb_byte_len))
+	    		return errno;
+
+		printf(" ");
+
+		/* Print the date */
+		PrintDate(list);
+		printf(" ");
+	}
+	return 0;
+}
+
 int 
 LongFormatPrinter(FileList * list)
 {
     /* Skip head element */
     list = list->next;
 
-    PrintTotalBytes();
+    if (usr_opt->l) {
+	    PrintTotalBytes();
+    }
 
     while (list)
     {
@@ -350,35 +392,9 @@ LongFormatPrinter(FileList * list)
 	if (Handle_s_Option(list, 1))
 	    return errno;
 
-	/* Print the file mode */
-	char * res = calloc(sizeof(char), 11);
-	strmode(list->sb.st_mode, res);
-	printf("%s ", res);
-	free(res);
-
-	/* Print the number of links */
-	if (PrintIntVal(1, list->sb.st_nlink, pinfos->max_link_nb_len))
+	if (Handle_l_Option(list))
 	    return errno;
-	printf(" ");
-
-
-	PrintOwner(list);
-	PrintGroup(list);
-	printf(" ");
 	
-	/* If s or h is specified print the number of bytes */
-	if (usr_opt->s && usr_opt->h)
-	    PrintBytes(ComputeBytes(list->sb.st_size), list->sb.st_size, 0);
-
-	else if (PrintIntVal(1, list->sb.st_size, pinfos->max_nb_byte_len))
-	    return errno;
-
-	printf(" ");
-
-	/* Print the date */
-	PrintDate(list);
-	printf(" ");
-
 	/* Print the file name */
 	PrintFileName(list);
         printf("\n");
@@ -388,7 +404,6 @@ LongFormatPrinter(FileList * list)
     }
     
     /* Reset padding for further prints */
-    ResetPinfos(pinfos);
     return 0;
 }
 

@@ -20,12 +20,37 @@ extern int RevSort;
 extern UsrOptions * usr_opt;
 extern int symredirection;
 
-/* PrintInfos structure thta will be used later in printing.c */
-extern PrintInfos * pinfos;
+/* PrintInfos structure that will be used later in printing.c */
+extern PrintInfos * PINFOS;
+
+void
+ResetPrintInfos(PrintInfos * infos)
+{
+    infos->max_link_nb_len = 0;
+    infos->max_uid_len = 0;
+    infos->max_gid_len = 0;
+    infos->max_uid_int_len = 0;
+    infos->max_gid_int_len = 0;
+    infos->max_nb_byte_len = 0;
+    infos->max_nb_block_len = 0;
+
+    infos->max_inode_nb_len = 0;
+
+    infos->total_bytes = 0;
+    infos->total_blocks = 0; 
+}
 
 void 
 ComputePaddingNeeded(FileList * elm)
 {
+    
+    /* 
+     * Compute the length of all the possible numerical fields 
+     * of the long format printer for all elments.
+     *
+     * Compare it to the pinfos actual structure that needs to contain
+     * all the max lengths to get a proper output
+     */
     struct passwd * pwd = getpwuid(elm->sb.st_uid);
     struct group * grp = getgrgid(elm->sb.st_gid);
 
@@ -40,38 +65,38 @@ ComputePaddingNeeded(FileList * elm)
     if (pwd != NULL)
     {
 	int uidlen = strlen(pwd->pw_name);
-        if (uidlen > pinfos->max_uid_len)
-	    pinfos->max_uid_len = uidlen;
+        if (uidlen > PINFOS->max_uid_len)
+	    PINFOS->max_uid_len = uidlen;
     }
     if (grp != NULL)
     {
 	int gidlen = strlen(grp->gr_name);
-	if (gidlen > pinfos->max_gid_len)
-	    pinfos->max_gid_len = gidlen;
+	if (gidlen > PINFOS->max_gid_len)
+	    PINFOS->max_gid_len = gidlen;
    }
     
-    if (uid_int_len > pinfos->max_uid_int_len)
-        pinfos->max_uid_int_len = uid_int_len;
+    if (uid_int_len > PINFOS->max_uid_int_len)
+        PINFOS->max_uid_int_len = uid_int_len;
 
-    if (gid_int_len > pinfos->max_gid_int_len)
-	pinfos->max_gid_int_len = gid_int_len;
+    if (gid_int_len > PINFOS->max_gid_int_len)
+	PINFOS->max_gid_int_len = gid_int_len;
 
-    if (nb_byte_len > pinfos->max_nb_byte_len)
-	pinfos->max_nb_byte_len = nb_byte_len;
+    if (nb_byte_len > PINFOS->max_nb_byte_len)
+	PINFOS->max_nb_byte_len = nb_byte_len;
 
-    if (nb_link_len > pinfos->max_link_nb_len)
-	pinfos->max_link_nb_len = nb_link_len;
+    if (nb_link_len > PINFOS->max_link_nb_len)
+	PINFOS->max_link_nb_len = nb_link_len;
 
-    if (nb_block_len > pinfos->max_nb_block_len)
-        pinfos->max_nb_block_len = nb_block_len;
+    if (nb_block_len > PINFOS->max_nb_block_len)
+        PINFOS->max_nb_block_len = nb_block_len;
 
-    if (inode_nb_len > pinfos->max_inode_nb_len)
-	pinfos->max_inode_nb_len = inode_nb_len;
+    if (inode_nb_len > PINFOS->max_inode_nb_len)
+	PINFOS->max_inode_nb_len = inode_nb_len;
 
     if (usr_opt->h)
-        pinfos->total_bytes += elm->sb.st_size;
+        PINFOS->total_bytes += elm->sb.st_size;
     else
-        pinfos->total_blocks += elm->sb.st_blocks;
+        PINFOS->total_blocks += elm->sb.st_blocks;
 }
 
 static int 

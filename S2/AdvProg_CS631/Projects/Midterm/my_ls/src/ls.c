@@ -7,17 +7,23 @@
 
 #include "error.h"
 #include "listing.h"
+#include "list-handling.h"
 #include "opt_parser.h"
 #include "targ_parser.h"
 #include "tokenize.h"
 #include "utility.h"
 
+/* On most systems 512 is the default block size
+ * It is the norm on most UNIX fs
+ */
 #ifndef DEFAULT_BLK_SIZE
 #define DEFAULT_BLK_SIZE 512
 #endif /* !DEFAULT_BLK_SIZE */
 
 /* Global variable representing options structure */
 UsrOptions * usr_opt;
+
+PrintInfos * PINFOS;
 
 /* Global variable representing if a target as been tested */
 int targ_found;
@@ -28,7 +34,10 @@ int targ_count = 0;
 /* Global variable indicating if the program is launch as root */
 int root = 0;
 
+/* Global variable indicating the default block_size ls must take */
 int block_size = DEFAULT_BLK_SIZE;
+
+
 
 int 
 ls_main(int argc, char * argv[])
@@ -97,11 +106,16 @@ wrapper_ls(int argc, char ** argv)
 	/* First call that will setup Options and Targets */
 	int ret;
 
+	PINFOS = calloc(sizeof(PrintInfos), 1);
+
 	root = CheckRoot();
        	ret = ls_main(argc, argv);
 
 	if (usr_opt != NULL)	
 	    free(usr_opt);
+
+	if (PINFOS != NULL)
+	    free(PINFOS);
 	
 	return ret;
 }

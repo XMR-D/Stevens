@@ -19,30 +19,12 @@
 #include "listing.h"
 
 
-PrintInfos * pinfos;
-
+extern PrintInfos * PINFOS;
 extern UsrOptions * usr_opt;
 extern int targ_count;
 extern int root;
 extern int rec_level;
 
-void
-ResetPinfos(PrintInfos * infos)
-{
-    infos->max_link_nb_len = 0;
-    infos->max_uid_len = 0;
-    infos->max_gid_len = 0;
-    infos->max_uid_int_len = 0;
-    infos->max_gid_int_len = 0;
-    infos->max_nb_byte_len = 0;
-    infos->max_nb_block_len = 0;
-
-    infos->max_inode_nb_len = 0;
-
-    infos->total_bytes = 0;
-    infos->total_blocks = 0;
-  
-}
 
 /* List files from dir and create a filelist and reclist for last step (STEP 3 PRINTING) */
 int 
@@ -160,14 +142,7 @@ Handle_R_option(TargList * targets, FileList *new_targets)
 int 
 TargetLProcess(TargList * targ_list)
 {
-    TargList * targets = targ_list;
-
-    pinfos = calloc(sizeof(PrintInfos), 1);
-    if (!pinfos)
-    {
-	throw_error("", MEM_ERR);
-	return errno;
-    }
+    TargList * targets = targ_list; 
 
     targets = targets->next;
 
@@ -180,7 +155,7 @@ TargetLProcess(TargList * targ_list)
 	     * print the name of the target then the listing
 	     */
 	    if (targ_count > 1)
-            	printf("\n%s :\n", targets->target);
+            	printf("\n%s:\n", targets->target);
 	    
 	    /* 
 	     * We have a directory to read through and list
@@ -225,6 +200,7 @@ TargetLProcess(TargList * targ_list)
 	    
 	    FileListFree(new_targets);
 	    targets = targets->next;
+    	    ResetPrintInfos(PINFOS);
         }
         else
         {
@@ -240,6 +216,7 @@ TargetLProcess(TargList * targ_list)
             {
                 char * filename = strdup(targets->target);
                 FileListInsert("./", filename, file_listing, NULL); 
+		free(filename);
                 targets = targets->next;
             }
 
@@ -255,14 +232,15 @@ TargetLProcess(TargList * targ_list)
 
 	if (targets == NULL)
 	{
-	    free(pinfos);
             return EXIT_SUCCESS;
 	}
 	else
 	   printf("\n");
+
+	ResetPrintInfos(PINFOS);
     }
 
-    free(pinfos);
+    ResetPrintInfos(PINFOS);
 
     if (errno)
         return errno;
