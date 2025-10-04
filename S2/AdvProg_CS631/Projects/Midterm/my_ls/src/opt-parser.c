@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> 
+#include <unistd.h>
 
 #include "error.h"
 #include "log.h"
@@ -11,7 +12,9 @@ extern UsrOptions * usr_opt;
 
 extern int help;
 
-int OptSet(char opt)
+
+int 
+OptSet(char opt)
 {
     switch (opt) {
     /* Scope Option detected */
@@ -25,6 +28,7 @@ int OptSet(char opt)
         if (usr_opt->a)
             break;
         usr_opt->a++;
+	usr_opt->A = 0;
         break;
     
     case 'R':
@@ -156,7 +160,39 @@ int OptSet(char opt)
     return 0;
 }
 
-void OptionLog(UsrOptions * opt)
+void 
+RootOptionSet(UsrOptions * opt)
+{
+   uid_t euid = geteuid();
+
+   if (euid == 0) {
+	if (opt->A == 0) {
+        	opt->A++;
+	}
+    }
+}
+
+/* 
+ * Checking for whenever the output is to a terminal or a file 
+ * And depending on that, set the default printing behaviour
+ * for non printable characters
+ */
+void 
+NonPrintableOptionSet(UsrOptions * opt)
+{
+	if (isatty(STDOUT_FILENO)) {
+        	if (!opt->w && !opt->q) {
+			opt->q++;
+		}
+    	} else {
+		if (!opt->w && !opt->q) {
+			opt->w++;
+		}
+	}
+}
+
+void 
+OptionLog(UsrOptions * opt)
 {
     printf("Option activated:\n"
            "A=%i a=%i R=%i d=%i\n"

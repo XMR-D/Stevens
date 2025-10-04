@@ -23,6 +23,11 @@
 /* Global variable representing options structure */
 UsrOptions * usr_opt;
 
+/* 
+ * Global variable that contain all informations of printing
+ * Including maximum lengths to adapt the padding during 
+ * printing
+ */
 PrintInfos * PINFOS;
 
 /* Global variable representing if a target as been tested */
@@ -31,13 +36,16 @@ int targ_found;
 /* Global variable representing the numbers of targets */
 int targ_count = 0;
 
-/* Global variable indicating if the program is launch as root */
-int root = 0;
-
 /* Global variable indicating the default block_size ls must take */
 int block_size = DEFAULT_BLK_SIZE;
 
-
+/* 
+ * Global variable indicating the path of ls binary 
+ * that will be used to print each target path description
+ * 
+ * modified once in ls_wrapper.
+ */
+char * LS_PATH;
 
 int 
 ls_main(int argc, char * argv[])
@@ -46,8 +54,11 @@ ls_main(int argc, char * argv[])
 	int ret = 0;
 	TargList * tl_tail;
 
-	if (!usr_opt)
-	{
+	/* 
+	 * Prevent from reallocating options structure if on a recrusion
+	 * usr_opt wil be alloced only once, on the first call of ls_main
+	 */
+	if (usr_opt == NULL) {
 		usr_opt = calloc(1, sizeof(UsrOptions));
 		if (!usr_opt) 
 		{
@@ -64,8 +75,12 @@ ls_main(int argc, char * argv[])
 	}
 	tl_tail = targ_list;
 
-	ret = tokenize(argc, argv, targ_list, tl_tail);
+	/* Set default options for non printable characters and root */
+	RootOptionSet(usr_opt);
+	NonPrintableOptionSet(usr_opt);
 	
+	ret = tokenize(argc, argv, targ_list, tl_tail);
+
 	if (ret && ret != 2)
 	{
 		free(usr_opt);
@@ -108,7 +123,8 @@ wrapper_ls(int argc, char ** argv)
 
 	PINFOS = calloc(sizeof(PrintInfos), 1);
 
-	root = CheckRoot();
+	LS_PATH = getcwd(NULL, 0);
+
        	ret = ls_main(argc, argv);
 
 	if (usr_opt != NULL)	
@@ -116,6 +132,9 @@ wrapper_ls(int argc, char ** argv)
 
 	if (PINFOS != NULL)
 	    free(PINFOS);
+
+	if (LS_PATH != NULL)
+	    free(LS_PATH);
 	
 	return ret;
 }

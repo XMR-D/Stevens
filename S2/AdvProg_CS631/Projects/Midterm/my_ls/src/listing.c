@@ -22,47 +22,7 @@
 extern PrintInfos * PINFOS;
 extern UsrOptions * usr_opt;
 extern int targ_count;
-extern int root;
 extern int rec_level;
-
-
-/* List files from dir and create a filelist and reclist for last step (STEP 3 PRINTING) */
-int 
-ListFile(char * dir, FileList * filelist, FileList * reclist)
-{
-    DIR * dp;
-    struct dirent * dirp;
-
-
-    if((dp = opendir(dir)) == NULL)
-    {
-        throw_error(dir, WRNG_TARG_ERR);
-        return errno;
-    }
-
-
-    while((dirp = readdir(dp)) != NULL)
-    {
-	int ishidden = IsHidden(dirp->d_name);
-
-	/* if the file is . or .. and that a is not specified skip it. */	
-        if (ishidden == -1 && !usr_opt->a)
-	    continue;
-
-	/* 
-	 * if the file is hidden, that we are not root and that the option -a 
-	 * is not specified skip it. 
-	 */
-	if (ishidden == 1 && !root && !usr_opt->a && !usr_opt->A)
-	    continue;
-		
-        if (FileListInsert(dir, dirp->d_name, filelist, reclist) != 0)
-	    return errno;
-    }
-
-    closedir(dp);
-    return 0;
-}
 
 static int
 Handle_R_option(TargList * targets, FileList *new_targets)
@@ -79,7 +39,6 @@ Handle_R_option(TargList * targets, FileList *new_targets)
 
 	curr = new_targets;
 	
-
 	if (chdir(targets->target))
 	{
 		throw_error(targets->target, WRNG_TARG_ERR);
@@ -89,23 +48,14 @@ Handle_R_option(TargList * targets, FileList *new_targets)
 	while (curr != NULL)
 	{
 
-	    if (IsHidden(curr->fname) == -1)
-	    {
+	    if (IsDotDirectory(curr->fname)) {
 		curr = curr->next;
 	        continue;
 	    }
-
-	    //TODO: - Here save the cwd to print + move accordingly
-	    //	    It will help for debugging the ls -R situation
-	    //	    
-	    //	    - Craft a better saved path, as it will be important 
-	    //	    to move between directories 
-	    
-
+  
 	    argc = 2;
 	    argv = calloc(sizeof(char *), 2);
-	    if (argv == NULL)
-	    {
+	    if (argv == NULL) {
 	        throw_error(NULL, MEM_ERR);
 		return errno;
 	    }
@@ -115,16 +65,16 @@ Handle_R_option(TargList * targets, FileList *new_targets)
 	    
 	    rec_level++;
 	    
-	    if (ls_main(argc, argv))
+	    if (ls_main(argc, argv)) {
+		free(argv);
 		return errno;
+	    }
 
 	    free(argv);
-
 	    curr = curr->next;
 	    
 	}
-	
-	
+		
 	if (rec_level != 0)
 	{
 		if (chdir(".."))
@@ -137,6 +87,44 @@ Handle_R_option(TargList * targets, FileList *new_targets)
 
 	return EXIT_SUCCESS;
 }
+
+
+/* List files from dir and create a filelist and reclist for last step (STEP 3 PRINTING) */
+int 
+ListFile(char * dir, FileList * filelist, FileList * reclist)
+{
+    DIR * dp;
+    struct dirent * dirp;
+
+    if((dp = opendir(dir)) == NULL)
+    {
+        throw_error(dir, WRNG_TARG_ERR);
+        return errno;
+    }
+
+    while((dirp = readdir(dp)) != NULL)
+    {
+	/* if -A is specified and the file is . or .. skip it. */
+	if (usr_opt->A && !usr_opt->a) {
+		if (IsDotDirectory(dirp->d_name)) {
+			continue;
+		}
+	} 
+	/* if the file is starting with '.' and -a is not specified skip */
+	if (IsStartingWithDot(dirp->d_name)) {
+		if (!usr_opt->a && !usr_opt->A) {
+			continue;
+		}
+	}
+		
+        if (FileListInsert(dir, dirp->d_name, filelist, reclist) != 0)
+	    return errno;
+    }
+
+    closedir(dp);
+    return 0;
+}
+
 
 
 int 
@@ -154,8 +142,9 @@ TargetLProcess(TargList * targ_list)
 	     * Fore more output clarity, if we have more than one target
 	     * print the name of the target then the listing
 	     */
-	    if (targ_count > 1)
-            	printf("\n%s:\n", targets->target);
+	    if (targ_count > 1) {
+		PrintTargetPath(targets->target);
+	    }
 	    
 	    /* 
 	     * We have a directory to read through and list

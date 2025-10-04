@@ -11,7 +11,8 @@
 #include "error.h"
 
 
-int throw_error(char * wrng_targ, int err)
+int 
+throw_error(char * wrng_targ, int err)
 {
     switch (err)
     {

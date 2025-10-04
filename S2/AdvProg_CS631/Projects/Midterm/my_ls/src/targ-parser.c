@@ -20,7 +20,8 @@ extern int RevSort;
 extern UsrOptions * usr_opt;
 extern int symredirection;
 
-static int TargLcompare(TargList * elm1, TargList * elm2, int isdir)
+static int 
+TargLcompare(TargList * elm1, TargList * elm2, int isdir)
 {
     int ret = 0;
 
@@ -97,7 +98,8 @@ static int TargLcompare(TargList * elm1, TargList * elm2, int isdir)
     return ret;
 }
 
-static int InsertEmptyList(TargList *list, TargList *elm, int isdir) 
+static int 
+InsertEmptyList(TargList *list, TargList *elm, int isdir) 
 {
     if ((!isdir && !list->next) || (isdir && !list->prev)) 
     {
@@ -162,7 +164,8 @@ static int InsertDirectory(TargList *list, TargList *elm)
     return 0;
 }
 
-static int InsertFile(TargList *list, TargList *elm) 
+static int 
+InsertFile(TargList *list, TargList *elm) 
 {
     elm->isdir = 0;
 
@@ -193,7 +196,8 @@ static int InsertFile(TargList *list, TargList *elm)
     return 0;
 }
 
-int TargLinsert(TargList *list, char *token, int isdir, int ishidden) 
+int 
+TargLinsert(TargList *list, char *token, int isdir, int ishidden) 
 {
     struct stat sb;
     
@@ -230,7 +234,8 @@ int TargLinsert(TargList *list, char *token, int isdir, int ishidden)
     return 0;
 }
 
-void TargLfree(TargList * list)
+void 
+TargLfree(TargList * list)
 {
     TargList * next = list->next;
     
@@ -243,7 +248,8 @@ void TargLfree(TargList * list)
     free(list);
 }
 
-void TargLlog(TargList * list)
+void 
+TargLlog(TargList * list)
 {
     int count = 1;
     list = list->next;

@@ -35,6 +35,17 @@ extern int block_size;
  */
 #define MAX_DATE_LEN 13
 
+/*
+ * This macro represent a year in seconds
+ * Nb_days_in_a_year * Nb_hours_in_a_day 
+ * 	* Nb_minutes_in_a_hour * nb_seconds_in_a_minutes
+ *
+ * 365 * 24 * 60 * 60 = 31536000
+ *
+ * Used to check if a file has been created long ago.
+ */
+#define YEAR_IN_SECONDS 31536000
+
 #ifndef SIZES
 #define SIZES
 #define BSIZE 1
@@ -43,9 +54,6 @@ extern int block_size;
 #define GBSIZE 1073741824
 #define TBSIZE 1099511627776
 #endif /* ! SIZES */
-
-/* TODO: IF THE st_mtime is more than a year ago, print only the year !*/
-/*	 Debug/ simplify padding logic */
 
 static void
 PrintFileName(FileList * elm)
@@ -57,7 +65,7 @@ PrintFileName(FileList * elm)
     {
         while (*filename != '\0')
 	{
-	    if (*filename < 32 || *filename >= 127)
+	    if (*filename < ' ' || *filename > '~')
 		putc('?', stdout);
 	    else
 		putc(*filename, stdout);
@@ -115,7 +123,7 @@ PrintFileName(FileList * elm)
     		int linklen = readlink(elm->fname, 
 				linkpath, sizeof(linkpath) - 1);
 
-        	linkpath[linklen] = '\0';  
+        	linkpath[linklen] = '\0'; 
        		printf(" -> %s", linkpath);
     		 
 	}	
@@ -294,15 +302,31 @@ PrintDate(FileList * elm)
 {
      char out_str[MAX_DATE_LEN] = {'\0'};
      struct tm *info;
+     time_t now;
+     char * date_to_print;
+     int time_err;
+     int time_diff;
 
      tzset();
      info = localtime(&(elm->sb.st_mtime));
-     strftime(out_str, sizeof(out_str), "%b %e %H:%M", info);
+     time_err = time(&now);
+     time_diff = difftime(now, elm->sb.st_mtime);
+
+
+     if ((time_err == -1) 
+		     || abs((int) time_diff) < YEAR_IN_SECONDS) {
+	date_to_print = "%b %e %H:%M";
+     } else {
+	date_to_print = "%b %e  %Y";
+     }
+
+     strftime(out_str, sizeof(out_str), date_to_print, info);
      printf("%s", out_str);
 }
 
 
-static int Handle_i_Option(FileList * elm)
+static int 
+Handle_i_Option(FileList * elm)
 {
     if (usr_opt->i)
     {
@@ -313,7 +337,8 @@ static int Handle_i_Option(FileList * elm)
     return 0;
 }
 
-static int Handle_s_Option(FileList * elm, int fromblocks)
+static int 
+Handle_s_Option(FileList * elm, int fromblocks)
 {
     if (usr_opt->s)
     {

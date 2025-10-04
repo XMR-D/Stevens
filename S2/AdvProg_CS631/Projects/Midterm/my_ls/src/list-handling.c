@@ -206,7 +206,8 @@ PushToList(char * filename, struct stat * sb,
     return 0;
 }
 
-int FileListInsert(char * dirname, char * filename, 
+int 
+FileListInsert(char * dirname, char * filename, 
 		FileList * filelist, FileList * reclist)
 {
     int ishidden = 0;
@@ -251,7 +252,8 @@ int FileListInsert(char * dirname, char * filename,
     return 0;
 }
 
-void FileListLog(FileList * list)
+void 
+FileListLog(FileList * list)
 {
     int count = 0;
     list = list->next;

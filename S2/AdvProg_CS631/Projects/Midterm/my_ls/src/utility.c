@@ -25,15 +25,87 @@
 #define MIN_BLK_SIZE DEFAULT_BLK_SIZE
 #define MAX_BLK_SIZE GBSIZE
 
+
 extern int block_size;
 extern UsrOptions * usr_opt;
+extern char * LS_PATH;
+
 
 /*
- * return -1 if the path is . or ..
+ * Print the actual relative path
+ * By getting the actual pwd, printing only the part that differs from
+ * the ls absolute path
+ *
+ * TODO: When the working directory is really really long getcwd fails
+ */
+void
+PrintTargetPath(char * target) {
+    /* Craft path relative to the actual target */
+    char * actual_path;
+    char * ls_path_char;
+    char * actual_path_char;
+
+    actual_path = getcwd(NULL, 0); 
+    ls_path_char = LS_PATH;
+    actual_path_char = actual_path;
+
+    while (*ls_path_char == *actual_path_char) {
+	 ls_path_char++;
+	 actual_path_char++;
+    }
+    
+    if (*actual_path_char == '/')
+        actual_path_char++;
+
+    printf("\n%s/%s:\n", actual_path_char, target);
+    free(actual_path);
+
+}
+
+/*
+ * Note: Normally we would not need to handle
+ * multiple directories path as we move and list
+ * files dynamically, changing the cwd. So each time
+ * this function will be called, it will be called on 
+ * pathname that directly represent a file.
+ */
+int 
+IsStartingWithDot(char * pathname)
+{
+    return (pathname[0] == '.');
+}
+
+/*
+ * return EXIT_FAILURE (0) if the path is "." or ".."
+ * return exit_SUCCESS (1) if the path is not "." or ".."
+ *
+ * Note: Since we can't create hardlink to directories
+ * and symlink is considered another file than . or ..
+ * Checking only the string should be sufficient
+ */ 
+int 
+IsDotDirectory(char * pathname)
+{
+    int len = strlen(pathname);
+
+    if (pathname[len-1] == '/') {
+        pathname[len-1] = '\0';
+    }
+
+    if (strcmp(pathname, "..") == 0
+		    || strcmp(pathname, ".") == 0) {
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+
+}
+
+/*
  * return 0 if the path is a non hidden file
  * return 1 if the path is a hidden file
  */
-int IsHidden(char * pathname)
+int 
+IsHidden(char * pathname)
 {
     int len = strlen(pathname);
     int recover = 0;
@@ -46,7 +118,7 @@ int IsHidden(char * pathname)
      * as ..a* or .a* could be considered as .. and . by strncmp
      */ 
     if (strcmp(pathname, "..") == 0 || strcmp(pathname, ".") == 0)
-        return -1;
+        return 0;
 
     /* If we have a trailing '/' remove it and replace it later */
     if (pathname[len-1] == '/') 
@@ -69,7 +141,7 @@ int IsHidden(char * pathname)
 
     /* If the end is .. or . then it's not a hidden file */
     if (!strcmp(end, "..") || !strcmp(end, "."))
-        ret = -1;
+        ret = 0;
    
     /* else we have a filename so check it's first char is '.' */	
     if (end[0] == '.')
@@ -84,7 +156,8 @@ int IsHidden(char * pathname)
     return ret;
 }
 
-int CompareMetrics(int metric1, int metric2)
+int 
+CompareMetrics(int metric1, int metric2)
 {
     if (metric1 > metric2)
         return -1;
@@ -94,7 +167,8 @@ int CompareMetrics(int metric1, int metric2)
         return 0;
 }
 
-int CompareTimeMetrics(struct timespec t1, struct timespec t2)
+int 
+CompareTimeMetrics(struct timespec t1, struct timespec t2)
 {
     if (t1.tv_sec != t2.tv_sec)
     {
@@ -115,7 +189,8 @@ int CompareTimeMetrics(struct timespec t1, struct timespec t2)
 }
 
 
-void Padding(char * str1, int longest)
+void 
+Padding(char * str1, int longest)
 {
      
     int spaces = longest - strlen(str1);
@@ -127,7 +202,8 @@ void Padding(char * str1, int longest)
     }
 }
 
-int NbDigitFromInt(int val)
+int 
+NbDigitFromInt(int val)
 {
     int nb_digit = 0;
 
@@ -153,7 +229,8 @@ int NbDigitFromInt(int val)
  * basically doing the job of strtol that will consider that
  * 10523kl52 is a valid integer
  */
-static long int CheckForMult(const char * var)
+static long int 
+CheckForMult(const char * var)
 {
     long int mult = 1;
 
@@ -195,7 +272,8 @@ static long int CheckForMult(const char * var)
 	return mult;
   }
 
-static long IsValidInt(const char * var)
+static long 
+IsValidInt(const char * var)
 {
     char *ep;
     long var_value;
@@ -227,7 +305,8 @@ static long IsValidInt(const char * var)
  * On errors return the default size (512B) with proper error message
  * On success return the blocksize extract from the variable
  */
-int GetBlockSize(void)
+int 
+GetBlockSize(void)
 {
     const char * val = getenv("BLOCKSIZE");
     int value;
@@ -272,20 +351,12 @@ int GetBlockSize(void)
 
 
 /* 
- * Check if ls is called as root
- */
-int CheckRoot(void)
-{
-    return (getuid() == 0);
-}
-
-
-/* 
  * From a number of given blocks of 512B, Convert it in unit of
  * BLOCKSIZE, if BLOCKSIZE was not defined for any reasons
  * It falls back to 512B blocks unit
  */
-int ComputeBlock(int nb_blocks)
+int 
+ComputeBlock(int nb_blocks)
 {
     int nb_bytes;
 
@@ -308,7 +379,8 @@ int ComputeBlock(int nb_blocks)
  * From nb_bytes bytes, print and return the number of bytes
  * in the most apropriate unit.
  */
-long double ComputeBytes(long double nb_bytes)
+long double 
+ComputeBytes(long double nb_bytes)
 {
     long int unit = 0;
 
@@ -336,7 +408,8 @@ long double ComputeBytes(long double nb_bytes)
  * Function to decide when to print the padding for 
  * Classical printer
  */ 
-int CheckPaddingWithStep(FileList * list, int step)
+int 
+CheckPaddingWithStep(FileList * list, int step)
 {
     if (list)
     {

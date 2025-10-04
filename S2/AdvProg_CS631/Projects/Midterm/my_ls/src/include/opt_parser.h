@@ -54,6 +54,10 @@ typedef struct UsrOptions {
  */
 int OptSet(char token);
 
+void NonPrintableOptionSet(UsrOptions * opt);
+
+void RootOptionSet(UsrOptions * opt);
+
 /* Simple UsrOptions struct logging function for debug */
 void OptionLog(UsrOptions * opt);
 #endif /* !_OPT_PARSER_H */

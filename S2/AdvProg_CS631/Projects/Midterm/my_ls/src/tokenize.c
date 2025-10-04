@@ -34,9 +34,9 @@ extern TargList * tl_tail;
 extern TargList * targ_list;
 extern int targ_found;
 extern UsrOptions * usr_opt;
-extern int root;
 
-int process_targets(char * token, TargList * head, TargList * tail)
+int 
+process_targets(char * token, TargList * head, TargList * tail)
 {
 
     struct stat sb;
@@ -69,7 +69,7 @@ int process_targets(char * token, TargList * head, TargList * tail)
         head = tail;
         isdir++;
     }
-    if (IsHidden(token) && !root)
+    if (IsHidden(token))
         ishidden++;
     
     if (TargLinsert(head, token, isdir, ishidden))
@@ -79,7 +79,8 @@ int process_targets(char * token, TargList * head, TargList * tail)
 
 }
 
-int tokenize(int argc, char * input[], TargList * head, TargList * tail)
+int 
+tokenize(int argc, char * input[], TargList * head, TargList * tail)
 {
     int opt_err = 0;
     int targ_err = 0;
