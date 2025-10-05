@@ -14,8 +14,10 @@ ResetPinfos(PrintInfos * infos);
 void
 ComputePaddingNeeded(FileList * elm);
 
-int 
-TargetLProcess(TargList * targets);
+int
+DirectoriesProcess(TargList * directories_list);
 
+int 
+FilesProcess(TargList * file_list);
 
 #endif /* !LISTING_H */

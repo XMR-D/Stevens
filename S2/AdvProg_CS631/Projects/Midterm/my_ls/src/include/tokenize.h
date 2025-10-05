@@ -3,6 +3,6 @@
 
 #include "targ_parser.h"
 
-int tokenize(int argc, char * input[], TargList * head, TargList * tail);
+int tokenize(int, char *[], TargList *, TargList *);
 
 #endif  /* !_TOKENIZE_H */

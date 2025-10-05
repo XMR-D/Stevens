@@ -21,217 +21,111 @@ extern UsrOptions * usr_opt;
 extern int symredirection;
 
 static int 
-TargLcompare(TargList * elm1, TargList * elm2, int isdir)
+TargLcompare(TargList * elm1, TargList * elm2)
 {
     int ret = 0;
-
     char * str1 = elm1->target;
     char * str2 = elm2->target;
-
     
     /* Handle hidden files for alphabetical sorting */
-    if (elm1->ishidden)
-    {
+    if (elm1->ishidden) {
         char * end = strrchr(str1, '/');
-        if (end != NULL)
-        {
+        if (end != NULL) {
             /* Skip "/." */
             end += 2;
             str1 = end;
         }
     }
-    if (elm2->ishidden)
-    {
+
+    if (elm2->ishidden) {
         char * end = strrchr(str2, '/');
-        if (end != NULL)
-        {
+        if (end != NULL) {
             /* Skip "/." */
             end += 2;
             str2 = end;
         }
     }
-
-    if (isdir)
-    {
-        /* 
-	 * Compare two list elements depending on the leftmost sorting option 
-	 * The element we want to insert is a dir, we need to invert
-	 * the result because the traversal is left to right
-	 * that's why we multiply by -1.
-	 */
-        if (usr_opt->S)
-            ret = CompareMetrics(elm2->sb.st_size, elm1->sb.st_size) * -1;
-
-        else if (usr_opt->t && usr_opt->c)
-            ret = CompareTimeMetrics(elm2->sb.st_ctim, elm1->sb.st_ctim) * -1;
-
-        else if (usr_opt->t && usr_opt->u)
-            ret = CompareTimeMetrics(elm2->sb.st_atim, elm1->sb.st_atim) * -1;
-
-        else if (usr_opt->t)
-            ret = CompareTimeMetrics(elm2->sb.st_mtim, elm1->sb.st_mtim) * -1;
-	
-	if (ret == 0)
-            ret = strcmp(str1, str2);
+    
+   //TODO DEBUG 
+    if (usr_opt->S) {
+        ret = CompareMetrics(elm1->sb.st_size, elm2->sb.st_size);
     }
-    else
-    {
-        /* 
-	 * The element we want to insert is a file, we don't need to invert 
-	 * the result as the traversal is right to left
-	 */
-        if (usr_opt->S)
-            ret = CompareMetrics(elm1->sb.st_size, elm2->sb.st_size);
-
-        else if (usr_opt->t && usr_opt->c)
-            ret = CompareTimeMetrics(elm1->sb.st_ctim, elm2->sb.st_ctim);
-
-        else if (usr_opt->t && usr_opt->u)
-            ret = CompareTimeMetrics(elm1->sb.st_atim, elm2->sb.st_atim);
-        
-        else if (usr_opt->t)
-            ret = CompareTimeMetrics(elm1->sb.st_mtim, elm2->sb.st_mtim);
-	
-	if (ret == 0)
-            ret = strcmp(str1, str2);
+    else if (usr_opt->t && usr_opt->c) {
+        ret = CompareTimeMetrics(elm1->sb.st_ctim, elm2->sb.st_ctim);
     }
+    else if (usr_opt->t && usr_opt->u) {
+        ret = CompareTimeMetrics(elm1->sb.st_atim, elm2->sb.st_atim);
+    }
+    else if (usr_opt->t) {
+        ret = CompareTimeMetrics(elm1->sb.st_mtim, elm2->sb.st_mtim);
+    }
+    if (ret == 0)
+        ret = strcmp(str1, str2);
+
     return ret;
 }
 
 static int 
-InsertEmptyList(TargList *list, TargList *elm, int isdir) 
-{
-    if ((!isdir && !list->next) || (isdir && !list->prev)) 
-    {
-        list->next = elm;
-        elm->prev = list;
-        targ_count++;
-        return 0;
-    }
-    return 1;
-}
-
-static int InsertDirectory(TargList *list, TargList *elm) 
-{
-    elm->isdir = 1;
-
-    if (usr_opt->f)
-    {
-        list->next = elm;
-        elm->prev = list;
-        return 0;
-    }
-
-    while (list->isdir && (RevSort * TargLcompare(list, elm, elm->isdir) > 0)) 
-    {
-        if (!list->prev->isdir) 
-            break;
-        list = list->prev;
-    }
-      
-    if (!list->next) {
-        if (list->isdir && (RevSort * TargLcompare(list, elm, elm->isdir) > 0))
-        {
-            list->prev->next = elm;
-            elm->prev = list->prev;
-            list->prev = elm;
-            elm->next = list;
-        }
-        else 
-        {
-            list->next = elm;
-            elm->prev = list;
-        }
-    } 
-    else 
-    {
-        if ((RevSort * TargLcompare(list, elm, elm->isdir) > 0))
-        {
-            list->prev->next = elm;
-            elm->prev = list->prev;
-            list->prev = elm;
-            elm->next = list;
-        }
-        else
-        {
-            list->next->prev = elm;
-            elm->next = list->next;
-            list->next = elm;
-            elm->prev = list;
-        }
-
-    }
-    return 0;
-}
-
-static int 
-InsertFile(TargList *list, TargList *elm) 
+InsertToken(TargList *list, TargList *elm) 
 {
     elm->isdir = 0;
 
-    if (usr_opt->f)
-    {
-        while (list->next && !list->next->isdir)
+    if (usr_opt->f) {
+        while (list->next) {
             list = list->next;
+	}
     }
-    else
-    {
-        while (list->next && !list->next->isdir && 
-			(RevSort * TargLcompare(list->next, elm, elm->isdir) <= 0)) 
+    else {
+	while (list->next && (RevSort * TargLcompare(list->next, elm) <= 0)) {
             list = list->next;
+ 	}
     }
 
-    if (list->next) 
-    {
+    if (list->next) {
         list->next->prev = elm;
         elm->next = list->next;
         list->next = elm;
         elm->prev = list;
-    } 
-    else 
-    {
+    } else {
         list->next = elm;
         elm->prev = list;
     }
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 int 
-TargLinsert(TargList *list, char *token, int isdir, int ishidden) 
+TargLinsert(TargList *list, char *token, int ishidden) 
 {
     struct stat sb;
     
     TargList *elm = calloc(sizeof(TargList), 1);
-    if (!elm) 
-    {
+    if (!elm) {
         TargLfree(list);
         return errno;
     }
 
     elm->target = token;
-    elm->isdir = isdir;
     elm->ishidden = ishidden;
     elm->next = NULL;
     elm->prev = list;
 
-    if (fstatat(AT_FDCWD, token, &sb, symredirection) == -1) 
-    {
+    if (fstatat(AT_FDCWD, token, &sb, symredirection) == -1) {
         throw_error(token, WRNG_TARG_ERR);
         return errno;
     } 
-    else 
-        elm->sb = sb;
-
-    if (InsertEmptyList(list, elm, isdir) == 0) 
-        return 0;
-
-    if (isdir && !usr_opt->d) 
-        InsertDirectory(list, elm);
-    else
-        InsertFile(list, elm);
+    
+    elm->sb = sb;
+ 
+    if (list->next == NULL) {
+        list->next = elm;
+        elm->prev = list;
+        targ_count++;	
+    } else {
+	InsertToken(list, elm);
+    }
 
     targ_count++;
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 void 
@@ -239,8 +133,7 @@ TargLfree(TargList * list)
 {
     TargList * next = list->next;
     
-    while (next != NULL)
-    {
+    while (next != NULL) {
         free(list);
         list = next;
         next = list->next;
@@ -254,14 +147,12 @@ TargLlog(TargList * list)
     int count = 1;
     list = list->next;
 
-    if (list)
-    {
-        while (list != NULL)
-        {
+    if (list) {
+        while (list != NULL) {
             printf("target %i: %s\n", count, list->target);
             //printf("===> dir : %i\n", list->isdir);
             //printf("===> hidden : %i\n", list->ishidden);
-            //printf("===> size : %li\n", list->st_size);
+            //printf("===> size : %li\n", list->sb.st_size);
             //printf("===> last access ts : %li\n", list->st_atim);
             //printf("===> last modification ts : %li\n", list->st_mtim);
             //printf("===> last status change ts : %li\n\n", list->st_ctim);

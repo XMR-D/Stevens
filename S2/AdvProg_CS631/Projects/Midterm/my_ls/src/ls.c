@@ -45,64 +45,94 @@ int
 ls_main(int argc, char * argv[])
 {
 
-	int ret = 0;
-	TargList * tl_tail;
-
-	/* 
+ 	/* 
 	 * Prevent from reallocating options structure if on a recrusion
 	 * usr_opt wil be alloced only once, on the first call of ls_main
 	 */
 	if (usr_opt == NULL) {
 		usr_opt = calloc(1, sizeof(UsrOptions));
-		if (!usr_opt) 
-		{
+		if (!usr_opt) {
 			throw_error(NULL, MEM_ERR);
 			return errno;
 		}
+
+		/* Set default options for non printable characters and root */
+		RootOptionSet(usr_opt);
+		NonPrintableOptionSet(usr_opt);
 	}
-	
-	TargList * targ_list = calloc(1, sizeof(TargList));
-	if (!targ_list) 
-	{
+
+	/* 
+	 * Create two list that will contains the file targets 
+	 * and the directory targets, then tokenize the input
+	 * to fill thoses lists to use for the listing.
+	 */
+	TargList * file_list = calloc(1, sizeof(TargList));
+	TargList * dir_list = calloc(1, sizeof(TargList));
+
+	if (file_list == NULL || dir_list == NULL) {
+	    if (file_list) {
+		    TargLfree(file_list);
+	    }
+	    if (dir_list) {
+		    TargLfree(dir_list);
+	    }
 	    throw_error(NULL, MEM_ERR);
 	    return errno;
 	}
-	tl_tail = targ_list;
-
-	/* Set default options for non printable characters and root */
-	RootOptionSet(usr_opt);
-	NonPrintableOptionSet(usr_opt);
 	
-	ret = tokenize(argc, argv, targ_list, tl_tail);
+	tokenize(argc, argv, file_list, dir_list);
 
-	if (ret && ret != 2)
-	{
+	/* 
+	 * Suppress "the not a file or directory" error 
+	 * as we might have encountered a valid target 
+	 */ 
+	if (errno && errno != ENOENT) {
 		free(usr_opt);
-		TargLfree(targ_list);
-		return ret;
+		TargLfree(file_list);
+		TargLfree(dir_list);
+		return errno;
 	}
 
-	if (!targ_list->next && (targ_found == 0) && ret == 0)
+	/* 
+	 * If no error has been encountered during the tokenize phase
+	 * But we did not have any targets (file or directory)
+	 * then add the default target './' depending on the -d option
+	 */
+	if (targ_found == 0)
 	{
-	    if (usr_opt->d)
-	        TargLinsert(targ_list, ".", 0, 0);
-	    else
-		TargLinsert(targ_list, ".", 1, 0);
+	    TargList * target_list;
+	    if (usr_opt->d) {
+		target_list = file_list;
+	    }
+	    else {
+		target_list = dir_list;
+	    }
+
+	    /* 0 to mark and insert "." as a non-hidden target */
+	    TargLinsert(target_list, ".", 0);
 	}
 	
 	/* Get environement values and check for validity */
-	if (usr_opt->s)
+	if (usr_opt->s) {
 	    block_size = GetBlockSize();
+	}
+	
+	if (FilesProcess(file_list->next)) {
+	    TargLfree(file_list);
+	    TargLfree(dir_list);
+	    return errno;
+	}
 
-	if (TargetLProcess(targ_list))
-	{
-	    TargLfree(targ_list);
+	if (DirectoriesProcess(dir_list->next)) {
+	    TargLfree(file_list);
+	    TargLfree(dir_list);
 	    return errno;
 	}
 	
-	TargLfree(targ_list);
+	TargLfree(file_list);
+	TargLfree(dir_list);
 
-	return ret;
+	return errno;
 }
 
 
@@ -113,11 +143,9 @@ wrapper_ls(int argc, char ** argv)
 {
 
 	/* First call that will setup Options and Targets */
-	int ret;
-
 	PINFOS = calloc(sizeof(PrintInfos), 1);
 
-       	ret = ls_main(argc, argv);
+       	ls_main(argc, argv);
 
 	if (usr_opt != NULL) {	
 	    free(usr_opt);
@@ -131,6 +159,6 @@ wrapper_ls(int argc, char ** argv)
 	    free(TARGET_PATH);
 	}
 	
-	return ret;
+	return errno;
 }
 

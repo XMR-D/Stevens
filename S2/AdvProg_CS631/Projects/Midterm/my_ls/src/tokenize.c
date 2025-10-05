@@ -28,20 +28,18 @@ int symredirection = 0;
  * small signal to indicate whenever the program is in a recursion
  * to indicate to ls if fetching option is necessary or not
  */
-int rec_level;
+int rec_level = 0;
 
-extern TargList * tl_tail;
-extern TargList * targ_list;
 extern int targ_found;
 extern UsrOptions * usr_opt;
 
 int 
-process_targets(char * token, TargList * head, TargList * tail)
+process_inputs(char * token, TargList * file_list, TargList * dir_list)
 {
 
     struct stat sb;
-    int isdir = 0;
-    int ishidden = 0;
+    int ishidden;
+    TargList * target_list;
 
     if (!strcmp(token, "--")) {
         opt_delim++;
@@ -53,38 +51,40 @@ process_targets(char * token, TargList * head, TargList * tail)
 
     targ_found++;
 
-    if (fstatat(AT_FDCWD, token, &sb, symredirection) == -1)
-    {
+    if (fstatat(AT_FDCWD, token, &sb, symredirection) == -1) {
         throw_error(token, WRNG_TARG_ERR);
         return errno;
     }
 
     /* 
-     * the target is a directory, hence start at the tail of the list
-     * and do a reverse traversal and insertion, so that files and dirs are
-     * sorted separatly
+     * the target is a directory, hence insert in the list of directories found
+     * otherwise insert in the list of files found, so that files and directories
+     * are sorted separatly.
      */
-    if (S_ISDIR(sb.st_mode) && !usr_opt->d)
-    {
-        head = tail;
-        isdir++;
+    if (S_ISDIR(sb.st_mode) && !usr_opt->d) {
+        target_list = dir_list;
+    } else {
+	target_list = file_list;
     }
-    if (IsHidden(token))
-        ishidden++;
+
+    if (IsHidden(token)) {
+        ishidden = 1;
+    } else {
+	ishidden = 0;
+    }
     
-    if (TargLinsert(head, token, isdir, ishidden))
+    if (TargLinsert(target_list, token, ishidden)) {
         return errno;
-    else 
-        return 0;
+    }
+    
+    return EXIT_SUCCESS;
 
 }
 
 int 
-tokenize(int argc, char * input[], TargList * head, TargList * tail)
+tokenize(int argc, char * input[], TargList * file_list, TargList * dir_list)
 {
     int opt_err = 0;
-    int targ_err = 0;
-
     int opt;
 
     while(rec_level == 0 && 
@@ -114,21 +114,18 @@ tokenize(int argc, char * input[], TargList * head, TargList * tail)
 
     for (int i = 1; i < argc; i++)
     {
-        targ_err = process_targets(*input, head, tail);
-             
-        /* In any case update the tail */
-        if (tail->next != NULL)
-            tail = tail->next;
-
+        process_inputs(*input, file_list, dir_list);
+         
 	/* 
-	 * If an error has been encountered set the return code
+	 * If an ENOENT error has been encountered set the return code
 	 * but don't stop the execution to see if the next target
-	 * works.
+	 * works. (ls behaviour on non existing target)
 	 */
-	if (targ_err)
-	    targ_err = errno;
-
-        input++;
+	if (errno != ENOENT) {
+		input++;
+	} else {
+		return errno;
+	}
     }
-    return targ_err;
+    return EXIT_SUCCESS;
 }
