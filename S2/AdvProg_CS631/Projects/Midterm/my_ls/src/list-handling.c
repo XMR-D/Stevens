@@ -97,6 +97,7 @@ ComputePaddingNeeded(FileList * elm)
         PINFOS->total_bytes += elm->sb.st_size;
     else
         PINFOS->total_blocks += elm->sb.st_blocks;
+
 }
 
 static int 

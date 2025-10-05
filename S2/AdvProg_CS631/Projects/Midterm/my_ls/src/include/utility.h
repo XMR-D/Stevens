@@ -3,8 +3,8 @@
 
 #include "list-handling.h"
 
-
-void PrintTargetPath(char * target);
+char * ConcatTargetToPath(char * path, char * target);
+char * RemoveLastFileFromPath(char * path); 
 int IsStartingWithDot(char * pathname);
 int IsDotDirectory(char * pathname);
 int IsHidden(char * pathname);

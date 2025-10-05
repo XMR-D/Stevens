@@ -24,6 +24,8 @@ extern UsrOptions * usr_opt;
 extern int targ_count;
 extern int rec_level;
 
+extern char * TARGET_PATH;
+
 static int
 Handle_R_option(TargList * targets, FileList *new_targets)
 {
@@ -117,8 +119,9 @@ ListFile(char * dir, FileList * filelist, FileList * reclist)
 		}
 	}
 		
-        if (FileListInsert(dir, dirp->d_name, filelist, reclist) != 0)
+        if (FileListInsert(dir, dirp->d_name, filelist, reclist) != 0) {
 	    return errno;
+	}
     }
 
     closedir(dp);
@@ -130,8 +133,7 @@ ListFile(char * dir, FileList * filelist, FileList * reclist)
 int 
 TargetLProcess(TargList * targ_list)
 {
-    TargList * targets = targ_list; 
-
+    TargList * targets = targ_list;
     targets = targets->next;
 
     while(targets != NULL)
@@ -143,7 +145,8 @@ TargetLProcess(TargList * targ_list)
 	     * print the name of the target then the listing
 	     */
 	    if (targ_count > 1) {
-		PrintTargetPath(targets->target);
+		TARGET_PATH = ConcatTargetToPath(TARGET_PATH, targets->target);
+		printf("\n%s:\n", TARGET_PATH);
 	    }
 	    
 	    /* 
@@ -154,8 +157,7 @@ TargetLProcess(TargList * targ_list)
 	     */
 
             FileList * dir_listing = calloc(sizeof(FileList), 1);
-            if (!dir_listing)
-            {
+            if (!dir_listing) {
                 throw_error(NULL, MEM_ERR);
                 break;
             }
@@ -166,7 +168,7 @@ TargetLProcess(TargList * targ_list)
                 throw_error(NULL, MEM_ERR);
                 free(dir_listing);
                 break;
-            }
+	    }
 
             if(ListFile(targets->target, dir_listing, new_targets)
 			    || LongFormatPrinter(dir_listing))
@@ -190,6 +192,7 @@ TargetLProcess(TargList * targ_list)
 	    FileListFree(new_targets);
 	    targets = targets->next;
     	    ResetPrintInfos(PINFOS);
+	    TARGET_PATH = RemoveLastFileFromPath(TARGET_PATH);
         }
         else
         {
@@ -209,8 +212,7 @@ TargetLProcess(TargList * targ_list)
                 targets = targets->next;
             }
 
-	    if (LongFormatPrinter(file_listing))
-	    {
+	    if (LongFormatPrinter(file_listing)) {
 		FileListFree(file_listing);
 		break;
 	    }
@@ -219,8 +221,7 @@ TargetLProcess(TargList * targ_list)
         }
 
 
-	if (targets == NULL)
-	{
+	if (targets == NULL) {
             return EXIT_SUCCESS;
 	}
 	else
@@ -230,7 +231,6 @@ TargetLProcess(TargList * targ_list)
     }
 
     ResetPrintInfos(PINFOS);
-
     if (errno)
         return errno;
     else

@@ -28,8 +28,6 @@
 
 extern int block_size;
 extern UsrOptions * usr_opt;
-extern char * LS_PATH;
-
 
 /*
  * Print the actual relative path
@@ -38,29 +36,73 @@ extern char * LS_PATH;
  *
  * TODO: When the working directory is really really long getcwd fails
  */
-void
-PrintTargetPath(char * target) {
-    /* Craft path relative to the actual target */
-    char * actual_path;
-    char * ls_path_char;
-    char * actual_path_char;
+char *
+ConcatTargetToPath(char * path, char * target) 
+{
+    int old_size;
+    int target_size;
+    int final_size;
+    char * path_saved;
+    char * tmp_target;
 
-    actual_path = getcwd(NULL, 0); 
-    ls_path_char = LS_PATH;
-    actual_path_char = actual_path;
+    tmp_target = strdup(target);
 
-    while (*ls_path_char == *actual_path_char) {
-	 ls_path_char++;
-	 actual_path_char++;
+    if (path == NULL){
+	return tmp_target;
+    }
+
+    /* +1 to account for '/'*/
+    target_size = strlen(tmp_target);
+    old_size = strlen(path) + 1;
+
+    final_size = old_size + target_size;
+
+    path_saved = strdup(path);
+    free(path);
+
+    path = calloc(final_size, sizeof(char)); 
+    path = strcat(path, path_saved);
+    path = strcat(path, "/");
+    path = strcat(path, tmp_target);
+    
+    free(path_saved);
+    free(tmp_target);
+
+    return path; 
+}
+
+/* That will remove the last chunk of a path */
+char *
+RemoveLastFileFromPath(char * path) 
+{
+    char * last_chunk;
+
+    if (path == NULL)
+	    return NULL;
+
+    last_chunk = strrchr(path, '/');
+
+    if (last_chunk == NULL)  {
+	    free(path);
+	    return NULL;
+    } else {
+	    last_chunk++;
+	    /* if the path is ending with a '/' remove it and restart */
+	    if (*last_chunk == '\0') {
+		    last_chunk--;
+		    *last_chunk = 0;
+		    last_chunk = RemoveLastFileFromPath(last_chunk);
+	    }
+ 
+	    last_chunk--;
     }
     
-    if (*actual_path_char == '/')
-        actual_path_char++;
+    *last_chunk = '\0';
 
-    printf("\n%s/%s:\n", actual_path_char, target);
-    free(actual_path);
+    return path;
 
 }
+
 
 /*
  * Note: Normally we would not need to handle

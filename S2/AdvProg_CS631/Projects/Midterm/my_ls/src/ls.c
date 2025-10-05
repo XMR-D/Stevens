@@ -39,13 +39,7 @@ int targ_count = 0;
 /* Global variable indicating the default block_size ls must take */
 int block_size = DEFAULT_BLK_SIZE;
 
-/* 
- * Global variable indicating the path of ls binary 
- * that will be used to print each target path description
- * 
- * modified once in ls_wrapper.
- */
-char * LS_PATH;
+char * TARGET_PATH;
 
 int 
 ls_main(int argc, char * argv[])
@@ -123,18 +117,19 @@ wrapper_ls(int argc, char ** argv)
 
 	PINFOS = calloc(sizeof(PrintInfos), 1);
 
-	LS_PATH = getcwd(NULL, 0);
-
        	ret = ls_main(argc, argv);
 
-	if (usr_opt != NULL)	
+	if (usr_opt != NULL) {	
 	    free(usr_opt);
+	}
 
-	if (PINFOS != NULL)
+	if (PINFOS != NULL) {
 	    free(PINFOS);
-
-	if (LS_PATH != NULL)
-	    free(LS_PATH);
+	}
+	
+	if (TARGET_PATH != NULL) {
+	    free(TARGET_PATH);
+	}
 	
 	return ret;
 }
