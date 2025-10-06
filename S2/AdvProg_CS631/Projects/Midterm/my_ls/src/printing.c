@@ -11,18 +11,16 @@
 #include <unistd.h>
 
 #include "error.h"
-#include "listing.h"
-#include "list-handling.h"
+#include "padding-handling.h"
 #include "opt_parser.h"
 #include "utility.h"
 
 #include "printing.h"
 
-extern UsrOptions * usr_opt;
+extern UsrOptions * USR_OPT;
+extern int BLOCK_SIZE;
+extern PaddingInfos * PINFOS;
 
-extern PrintInfos * PINFOS;
-
-extern int block_size;
 
 /* 
  * This macro represent the maximum possible len for a
@@ -56,12 +54,10 @@ extern int block_size;
 #endif /* ! SIZES */
 
 static void
-PrintFileName(FileList * elm)
+PrintFileName(char * filename)
 {
-    char * filename = elm->fname;
-
     /* Force printing of non-printable characters as '?' */
-    if (usr_opt->q)
+    if (USR_OPT->q)
     {
         while (*filename != '\0')
 	{
@@ -73,65 +69,15 @@ PrintFileName(FileList * elm)
 	    filename++;
 	}
     }
-
     /* Force raw printing of non-printable characters */
-    else if (usr_opt->w)
-        fwrite(elm->fname, sizeof(char), strlen(elm->fname), stdout);
+    else if (USR_OPT->w)
+        fwrite(filename, sizeof(char), strlen(filename), stdout);
     /* Else, print the file name normally */
     else
-	printf("%s", elm->fname);
-    
-    /* Add a character representing the file type after the file name */
-    if (usr_opt->F)
-    {
-	char filetype;
-	char * res = calloc(sizeof(char), 11);
-	strmode(elm->sb.st_mode, res);
-	
-	filetype = *res;
-
-	switch (filetype)
-	{
-	    case 'l':
-		printf("@");
-		break;
-	    case 'd':
-		printf("/");
-	        break;
-	    case 's':
-		printf("=");
-		break;
-	    case 'w':
-		printf("%c", '%');
-		break;
-	    case 'p':
-		printf("|");
-		break;
-	    case '-':
-		if (elm->sb.st_mode & S_IXUSR)
-			printf("*");
-		break;
-	    default:
-		break;
-	} 
-	
-	/* If the file is a simlink, print the link path as well */
-	if (S_ISLNK(elm->sb.st_mode)) 
-	{
-		char linkpath[PATH_MAX] = {0};
-
-    		int linklen = readlink(elm->fname, 
-				linkpath, sizeof(linkpath) - 1);
-
-        	linkpath[linklen] = '\0'; 
-       		printf(" -> %s", linkpath);
-    		 
-	}	
-	free(res);
-    }
+	printf("%s", filename);
 }
 
-static void
+void
 PrintTotalBytes()
 {
     char unit = '\0';
@@ -141,7 +87,7 @@ PrintTotalBytes()
      * If -h is specified then we need to print the total of bytes
      * else it's the total of blocks
      */ 
-    if (usr_opt->h)
+    if (USR_OPT->h)
     	total_p = PINFOS->total_bytes;
     else
 	total_p = PINFOS->total_blocks;
@@ -160,7 +106,7 @@ PrintTotalBytes()
 	    unit = 'T';
     }
 
-    if (usr_opt->h)
+    if (USR_OPT->h)
     {
 	long double bytes_to_print = ComputeBytes(total_p);
 	if (bytes_to_print >= 10.0f)
@@ -194,7 +140,7 @@ PrintIntVal(int padding_order, long int val, long int max_len)
 	Padding(val_str, max_len);
     
     free(val_str);
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 static void 
@@ -239,15 +185,15 @@ PrintBytes(double nb_bytes, long int raw_nb_bytes, int do_round)
 }
 
 static int 
-PrintOwner(FileList * elm)
+PrintOwner(struct stat sb)
 {
-    if (!usr_opt->n)
+    if (!USR_OPT->n)
     {
-        struct passwd * pwd = getpwuid(elm->sb.st_uid);
+        struct passwd * pwd = getpwuid(sb.st_uid);
 	
 	if (pwd == NULL)
 	{
-	    if (PrintIntVal(0, elm->sb.st_uid, PINFOS->max_uid_int_len))
+	    if (PrintIntVal(0, sb.st_uid, PINFOS->max_uid_int_len))
 	        return errno;
 	}
 	else
@@ -258,25 +204,25 @@ PrintOwner(FileList * elm)
     }
     else
     {
-	if (PrintIntVal(0, elm->sb.st_uid, PINFOS->max_uid_int_len))
+	if (PrintIntVal(0, sb.st_uid, PINFOS->max_uid_int_len))
 	    return errno;
     }
     
     printf("  ");
-    return 0;
+    return EXIT_SUCCESS;
     
 }
 
 static int 
-PrintGroup(FileList * elm)
+PrintGroup(struct stat sb)
 {
-    if (!usr_opt->n)
+    if (!USR_OPT->n)
     {
-        struct group * grp = getgrgid(elm->sb.st_gid);
+        struct group * grp = getgrgid(sb.st_gid);
 	
 	if (grp == NULL)
 	{
-	   if(PrintIntVal(0, elm->sb.st_gid, PINFOS->max_gid_int_len))
+	   if(PrintIntVal(0, sb.st_gid, PINFOS->max_gid_int_len))
 	       return errno;
 	}
 	
@@ -288,17 +234,16 @@ PrintGroup(FileList * elm)
     }
     else
     {
-	if (PrintIntVal(0, elm->sb.st_gid, PINFOS->max_gid_int_len))
+	if (PrintIntVal(0, sb.st_gid, PINFOS->max_gid_int_len))
 	    return errno;
     }
     
     printf(" ");
-    return 0;
+    return EXIT_SUCCESS;
 }
 
-
 static void 
-PrintDate(FileList * elm)
+PrintDate(struct stat sb)
 {
      char out_str[MAX_DATE_LEN] = {'\0'};
      struct tm *info;
@@ -308,9 +253,9 @@ PrintDate(FileList * elm)
      int time_diff;
 
      tzset();
-     info = localtime(&(elm->sb.st_mtime));
+     info = localtime(&(sb.st_mtime));
      time_err = time(&now);
-     time_diff = difftime(now, elm->sb.st_mtime);
+     time_diff = difftime(now, sb.st_mtime);
 
 
      if ((time_err == -1) 
@@ -324,111 +269,177 @@ PrintDate(FileList * elm)
      printf("%s", out_str);
 }
 
+/* Add a character representing the file type after the file name */
+static void
+Handle_F_Option(struct stat sb) {
+    if (USR_OPT->F)
+    {
+	char filetype;
+	char * res = calloc(sizeof(char), 11);
+	strmode(sb.st_mode, res);
+	
+	filetype = *res;
+
+	switch (filetype)
+	{
+	    case 'l':
+		printf("@");
+		break;
+	    case 'd':
+		printf("/");
+	        break;
+	    case 's':
+		printf("=");
+		break;
+	    case 'w':
+		printf("%c", '%');
+		break;
+	    case 'p':
+		printf("|");
+		break;
+	    case '-':
+		if (sb.st_mode & S_IXUSR)
+			printf("*");
+		break;
+	    default:
+		break;
+	}
+    }
+}
+
 
 static int 
-Handle_i_Option(FileList * elm)
+Handle_i_Option(struct stat sb)
 {
-    if (usr_opt->i)
+    if (USR_OPT->i)
     {
-        if (PrintIntVal(1, elm->sb.st_ino, PINFOS->max_inode_nb_len))
+        if (PrintIntVal(1, sb.st_ino, PINFOS->max_inode_nb_len))
 		return errno;
     	printf(" ");
     }
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 static int 
-Handle_s_Option(FileList * elm, int fromblocks)
+Handle_s_Option(struct stat sb, int fromblocks)
 {
-    if (usr_opt->s)
+    if (USR_OPT->s)
     {
-         if (!usr_opt->h)
+         if (!USR_OPT->h)
          {
-             if(PrintIntVal(1, ComputeBlock(elm->sb.st_blocks), PINFOS->max_nb_block_len))
+             if(PrintIntVal(1, ComputeBlock(sb.st_blocks), PINFOS->max_nb_block_len))
 	         return errno;
 	 }
 	 else
 	 {
 	     long double raw_bytes = 0;
  	     if (fromblocks)
-	         raw_bytes = elm->sb.st_blocks * 512;
+	         raw_bytes = sb.st_blocks * 512;
 	     else
-		 raw_bytes = elm->sb.st_size;
+		 raw_bytes = sb.st_size;
 
 	     double computed_bytes = ComputeBytes(raw_bytes);
 	     PrintBytes(computed_bytes, raw_bytes, 0);
 	 } 
 	 printf(" ");
     }
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 static int 
-Handle_l_Option(FileList * list)
+Handle_l_Option(struct stat sb)
 {
-	if (usr_opt->l) {
+	if (USR_OPT->l) {
 		/* Print the file mode */
 		char * res = calloc(sizeof(char), 11);
-		strmode(list->sb.st_mode, res);
+		strmode(sb.st_mode, res);
 		printf("%s ", res);
 		free(res);
 
 		/* Print the number of links */
-		if (PrintIntVal(1, list->sb.st_nlink, PINFOS->max_link_nb_len))
+		if (PrintIntVal(1, sb.st_nlink, PINFOS->max_link_nb_len))
 		    return errno;
 		printf(" ");
 
 
-		PrintOwner(list);
-		PrintGroup(list);
+		PrintOwner(sb);
+		PrintGroup(sb);
 		printf(" ");
 	
 		/* If s or h is specified print the number of bytes */
-		if (usr_opt->s && usr_opt->h)
-	    		PrintBytes(ComputeBytes(list->sb.st_size), list->sb.st_size, 0);
+		if (USR_OPT->s && USR_OPT->h)
+	    		PrintBytes(ComputeBytes(sb.st_size), sb.st_size, 0);
 
-		else if (PrintIntVal(1, list->sb.st_size, PINFOS->max_nb_byte_len))
+		else if (PrintIntVal(1, sb.st_size, PINFOS->max_nb_byte_len))
 	    		return errno;
 
 		printf(" ");
 
 		/* Print the date */
-		PrintDate(list);
+		PrintDate(sb);
 		printf(" ");
 	}
-	return 0;
+	return EXIT_SUCCESS;
 }
 
-int 
-LongFormatPrinter(FileList * list)
+static int 
+DispFile(struct stat file_sb, char * filename)
 {
-    /* Skip head element */
-    list = list->next;
 
-    if (usr_opt->l) {
-	    PrintTotalBytes();
-    }
-
-    while (list)
-    {
-	if (Handle_i_Option(list))
+	if (Handle_i_Option(file_sb))
 	    return errno;
 
-	if (Handle_s_Option(list, 1))
+	if (Handle_s_Option(file_sb, 1))
 	    return errno;
 
-	if (Handle_l_Option(list))
+	if (Handle_l_Option(file_sb))
 	    return errno;
 	
 	/* Print the file name */
-	PrintFileName(list);
-        printf("\n");
+	PrintFileName(filename);
 
-	/* then do the same on the next element */
-	list = list->next;
-    }
+	Handle_F_Option(file_sb);
+
+	/* If the file is a simlink, print the link path as well */
+	if ((USR_OPT->l || USR_OPT->F) && S_ISLNK(file_sb.st_mode)) 
+	{
+		char linkpath[PATH_MAX] = {0};
+
+    		int linklen = readlink(filename, 
+				linkpath, sizeof(linkpath) - 1);
+
+        	linkpath[linklen] = '\0'; 
+       		printf(" -> %s", linkpath);
+    		 
+	}	
+
+        printf("\n");
     
     /* Reset padding for further prints */
-    return 0;
+    return EXIT_SUCCESS;
+}
+
+
+/* Call DispFile on every file after computing padding necessary */
+int LongFormatPrinter(FTSENT *parentdir, FTSENT *list)
+{
+	FTSENT * saved = list;
+	while (saved != NULL) {
+		ComputePaddingNeeded(*(list->fts_statp), USR_OPT);
+		saved = saved->fts_link;
+	}
+
+	while (list != NULL) {
+		if (parentdir == NULL && list->fts_info == FTS_D) {
+			list = list->fts_link;
+			continue;
+		}
+		if (DispFile(*(list->fts_statp), list->fts_name)) {
+			return errno;
+		}
+		list = list->fts_link;
+	}
+
+	return EXIT_SUCCESS;
 }
 

@@ -1,10 +1,11 @@
 #ifndef PRINTING_H
 #define PRINTING_H
 
-#include "list-handling.h"
+#include <sys/stat.h>
 
-int ClassicPrinter(FileList * list);
-int LongFormatPrinter(FileList * list);
+#include <fts.h>
 
+void PrintTotalBytes(void);
+int LongFormatPrinter(FTSENT *parentdir, FTSENT *list);
 
 #endif /* !PRINTING_H */

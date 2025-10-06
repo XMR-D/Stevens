@@ -26,121 +26,8 @@
 #define MAX_BLK_SIZE GBSIZE
 
 
-extern int block_size;
-extern UsrOptions * usr_opt;
-
-/*
- * Print the actual relative path
- * By getting the actual pwd, printing only the part that differs from
- * the ls absolute path
- *
- * TODO: When the working directory is really really long getcwd fails
- */
-char *
-ConcatTargetToPath(char * path, char * target) 
-{
-    int old_size;
-    int target_size;
-    int final_size;
-    char * path_saved;
-    char * tmp_target;
-
-    tmp_target = strdup(target);
-
-    if (path == NULL){
-	return tmp_target;
-    }
-
-    /* +1 to account for '/'*/
-    target_size = strlen(tmp_target);
-    old_size = strlen(path) + 1;
-
-    final_size = old_size + target_size;
-
-    path_saved = strdup(path);
-    free(path);
-
-    path = calloc(final_size, sizeof(char)); 
-    path = strcat(path, path_saved);
-    path = strcat(path, "/");
-    path = strcat(path, tmp_target);
-    
-    free(path_saved);
-    free(tmp_target);
-
-    return path; 
-}
-
-/* That will remove the last chunk of a path */
-char *
-RemoveLastFileFromPath(char * path) 
-{
-    char * last_chunk;
-
-    if (path == NULL)
-	    return NULL;
-
-    last_chunk = strrchr(path, '/');
-
-    if (last_chunk == NULL)  {
-	    free(path);
-	    return NULL;
-    } else {
-	    last_chunk++;
-	    /* if the path is ending with a '/' remove it and restart */
-	    if (*last_chunk == '\0') {
-		    last_chunk--;
-		    *last_chunk = 0;
-		    last_chunk = RemoveLastFileFromPath(last_chunk);
-	    }
- 
-	    last_chunk--;
-    }
-    
-    *last_chunk = '\0';
-
-    return path;
-
-}
-
-
-/*
- * Note: Normally we would not need to handle
- * multiple directories path as we move and list
- * files dynamically, changing the cwd. So each time
- * this function will be called, it will be called on 
- * pathname that directly represent a file.
- */
-int 
-IsStartingWithDot(char * pathname)
-{
-    return (pathname[0] == '.');
-}
-
-/*
- * return EXIT_FAILURE (0) if the path is "." or ".."
- * return exit_SUCCESS (1) if the path is not "." or ".."
- *
- * Note: Since we can't create hardlink to directories
- * and symlink is considered another file than . or ..
- * Checking only the string should be sufficient
- */ 
-int 
-IsDotDirectory(char * pathname)
-{
-    int len = strlen(pathname);
-
-    if (pathname[len-1] == '/') {
-        pathname[len-1] = '\0';
-    }
-
-    if (strcmp(pathname, "..") == 0
-		    || strcmp(pathname, ".") == 0) {
-        return EXIT_FAILURE;
-    }
-    return EXIT_SUCCESS;
-
-}
+extern int BLOCKSIZE;
+extern UsrOptions * USR_OPT;
 
 /*
  * return 0 if the path is a non hidden file
@@ -407,13 +294,12 @@ ComputeBlock(int nb_blocks)
 
     nb_bytes = nb_blocks * 512;
        
-    if (usr_opt->k)
-    {
+    if (USR_OPT->k) {
 	    /* Divide by 1024 to get KB, override any user given block size */
 	    return (nb_bytes + KBSIZE - 1) / KBSIZE;
     }    
 
-    return (nb_bytes + block_size - 1) / block_size;
+    return (nb_bytes + BLOCKSIZE - 1) / BLOCKSIZE;
 }
 
 
@@ -429,8 +315,7 @@ ComputeBytes(long double nb_bytes)
     if (nb_bytes == 0)
        return 0; 
     
-    if (nb_bytes != 0)
-    {
+    if (nb_bytes != 0) {
         if (nb_bytes < KBSIZE)
 	    unit = BSIZE;
 	else if (nb_bytes >= KBSIZE && nb_bytes < MBSIZE)
@@ -444,24 +329,4 @@ ComputeBytes(long double nb_bytes)
     }
 
     return nb_bytes / unit;
-}
-
-/* 
- * Function to decide when to print the padding for 
- * Classical printer
- */ 
-int 
-CheckPaddingWithStep(FileList * list, int step)
-{
-    if (list)
-    {
-        while (step)
-	{
-	    if (list->next == NULL)
-	        return 0;
-	    list = list->next;
-	    step--;
-	}
-    }
-    return 1;
 }

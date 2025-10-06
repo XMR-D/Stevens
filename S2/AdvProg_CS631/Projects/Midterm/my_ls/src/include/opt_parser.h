@@ -52,7 +52,7 @@ typedef struct UsrOptions {
  * If any error is encountered, it will be immediatly thrown 
  * and all structures will be freed.
  */
-int OptSet(char token);
+int OptSet(char token, UsrOptions * usr_opt);
 
 void NonPrintableOptionSet(UsrOptions * opt);
 

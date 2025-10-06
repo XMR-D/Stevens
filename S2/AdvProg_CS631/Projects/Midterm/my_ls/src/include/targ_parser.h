@@ -7,11 +7,9 @@
 #include <time.h>
 
 typedef struct TargList {
-    char * target;                  /* Name of the target */
-    unsigned char isdir: 1;         /* Is the target a directory ?*/
-    unsigned char ishidden: 1;      /* Is the target a hidden file ?*/
-    struct stat sb;                 /* Information about the target */
-    
+    char * target;                 
+    unsigned char ishidden: 1;      
+    struct stat sb;                 
     struct TargList * next;
     struct TargList * prev;
 } TargList;
@@ -28,5 +26,7 @@ void TargLfree(TargList *);
 
 /* Target list logging function*/
 void TargLlog(TargList *);
+
+int TargLcompare(struct stat *, struct stat *, char*, char*);
 
 #endif /* !_TARG_PARSER_H */

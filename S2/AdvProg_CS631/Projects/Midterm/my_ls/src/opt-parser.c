@@ -7,14 +7,8 @@
 #include "log.h"
 #include "opt_parser.h"
 
-/* usr_opt pointer that will contain the options for later purpose */
-extern UsrOptions * usr_opt;
-
-extern int help;
-
-
 int 
-OptSet(char opt)
+OptSet(char opt, UsrOptions * usr_opt)
 {
     switch (opt) {
     /* Scope Option detected */
