@@ -18,6 +18,14 @@
 
 extern UsrOptions * USR_OPT;
 
+/* 
+ * Global that notify TreeTraversal that something has been output on the terminal
+ * In this case we need to add an additional '\n', 
+ * initialized to 0 (Nothing has been printed)
+ * Can be set to 1 (Something has been printed) in LongFormatPrinter
+ */
+int PRINTED = 0;
+
 static int 
 FTSCompare(const FTSENT **elm1, const FTSENT **elm2)
 {
@@ -55,9 +63,11 @@ FTSCompare(const FTSENT **elm1, const FTSENT **elm2)
 int
 TreeTraversal(int argc, char * argv[])
 {
+
+	int fts_flags;
 	FTS * ftsp = NULL;
 	FTSENT * entry;
-	int fts_flags;
+	FTSENT * children_dir;
 
 	fts_flags = FTS_PHYSICAL;
 	
@@ -78,27 +88,72 @@ TreeTraversal(int argc, char * argv[])
 		return errno;
 	}
 
+	/* 
+	 * if we need to list directories as plain files
+	 * we can return as going through them is not
+	 * necessary
+	 */
+	if (USR_OPT->d) {
+		fts_close(ftsp);
+		return EXIT_SUCCESS;
+	}
+
 	while((entry = fts_read(ftsp)) != NULL) {
 		switch(entry->fts_info) {
 			case FTS_D:
-				if (argc > 1)
-					continue;
-			case FTS_SLNONE:
-			case FTS_SL:
-			case FTS_W:
-			case FTS_F:
+				/* 
+				 * If something has been printed add a \n to get a clear
+				 * output
+				 */
+				if (PRINTED) {
+					printf("\n%s:\n", entry->fts_path);
+				}
+				else if (argc > 1) {
+					printf("%s:\n", entry->fts_path);
+				}
+
+				if (USR_OPT->s) {
+					PrintTotalBytes();
+				}
+
+				/* 
+				 * Get all children files from the actual dir
+				 * and print them all
+				 */
+				children_dir = fts_children(ftsp, 0);
+				if(LongFormatPrinter(entry, children_dir)) {
+					fts_close(ftsp);
+					return errno;
+				}
+
+				/* 
+				 * If we don't need recursion but
+				 * we have directories to list skip them
+				 */
+				if (!USR_OPT->R && children_dir != NULL) {
+					fts_set(ftsp, entry, FTS_SKIP);
+				}
+				break;
+
+		 	case FTS_DNR:
+			case FTS_ERR:
+				/* In case of error, just print the error reason and try to continue */
+				fprintf(stderr, "ls: %s: %s\n", entry->fts_name, strerror(entry->fts_errno));
+				errno = entry->fts_errno;
+				break;
 			case FTS_DC:
-			case FTS_DEFAULT:
-			case FTS_DP:
-				default:
-			break;
+				/* In case a cycle is detected, throw an error and return to avoid side effects */
+				fprintf(stderr, "ls: %s: this directory is creating a circle\n", entry->fts_name);
+				errno = entry->fts_errno;
+				return errno;
+			default:
+				break;
 		}
 
 	}
 	fts_close(ftsp);
 
 	if (errno != 0) {
-		fprintf(stderr, "ls: error: %s\n", strerror(errno));
 		return errno;
 	}
 	return EXIT_SUCCESS;

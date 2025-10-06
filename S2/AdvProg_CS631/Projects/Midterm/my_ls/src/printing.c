@@ -20,7 +20,7 @@
 extern UsrOptions * USR_OPT;
 extern int BLOCK_SIZE;
 extern PaddingInfos * PINFOS;
-
+extern int PRINTED;
 
 /* 
  * This macro represent the maximum possible len for a
@@ -78,7 +78,7 @@ PrintFileName(char * filename)
 }
 
 void
-PrintTotalBytes()
+PrintTotalBytes(void)
 {
     char unit = '\0';
     long double total_p = 0;
@@ -423,23 +423,34 @@ DispFile(struct stat file_sb, char * filename)
 /* Call DispFile on every file after computing padding necessary */
 int LongFormatPrinter(FTSENT *parentdir, FTSENT *list)
 {
-	FTSENT * saved = list;
+	FTSENT * saved;
+
+	if (list == NULL) {
+		return EXIT_SUCCESS;
+	}
+
+        saved = list;
 	while (saved != NULL) {
 		ComputePaddingNeeded(*(list->fts_statp), USR_OPT);
 		saved = saved->fts_link;
 	}
 
 	while (list != NULL) {
-		if (parentdir == NULL && list->fts_info == FTS_D) {
+		if (parentdir == NULL  && list->fts_info == FTS_D 
+				&& !USR_OPT->d) {
 			list = list->fts_link;
 			continue;
 		}
 		if (DispFile(*(list->fts_statp), list->fts_name)) {
 			return errno;
 		}
+		if (!PRINTED) {
+			PRINTED = 1;
+		}
 		list = list->fts_link;
 	}
 
+	ResetPrintInfos(PINFOS);
 	return EXIT_SUCCESS;
 }
 

@@ -43,9 +43,9 @@ tokenize(int *argc, char ** input[], UsrOptions *usr_opt)
 	    throw_error(NULL, WRNG_OPT_ERR);
             return opt_err;
 	}
-	*argc -= optind;
-	*input += optind;
     }
+    *argc -= optind;
+    *input += optind;
     return EXIT_SUCCESS;
 }
 

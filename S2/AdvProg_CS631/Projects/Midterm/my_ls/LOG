@@ -1,3 +1,87 @@
+commit d3c51a3920de2aca3eb9e6326e82de75a994a4e8
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Wed Oct 8 21:39:11 2025 -0400
+
+    Update error.c
+
+commit 443e58a6007ad173c3d607cfc6d2872818ead4d1
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Wed Oct 8 21:38:37 2025 -0400
+
+    Delete S2/AdvProg_CS631/Projects/Midterm/my_ls/debug_ls
+
+commit 3568408313265a1bb2d1499d0cf2cbf709925c0b
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Wed Oct 8 21:38:24 2025 -0400
+
+    Delete S2/AdvProg_CS631/Projects/Midterm/my_ls/debug_ls.core
+
+commit cd8086da28a5cb9e6c752836b091a9ae3482c41d
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Wed Oct 8 21:38:17 2025 -0400
+
+    Delete S2/AdvProg_CS631/Projects/Midterm/my_ls/gitlog
+
+commit 9e621a6eacd4c1014c49218789918d64156c355a
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Wed Oct 8 21:38:03 2025 -0400
+
+    Delete S2/AdvProg_CS631/Projects/Midterm/my_ls/test.sh
+
+commit 6b224d642b3c1bbda8656a76bac3ca97a2a4e7f9
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Wed Oct 8 21:37:49 2025 -0400
+
+    Delete S2/AdvProg_CS631/Projects/Midterm/my_ls/toto
+
+commit 572f04faa0e5d6b698915da6366ddc109383aba6
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Mon Oct 6 14:32:47 2025 +0000
+
+    Last Cleaning
+
+commit 51aff4ab6273f7455ea6945f5f74fbad7f51b787
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Mon Oct 6 14:26:43 2025 +0000
+
+    Clean push
+
+commit 275f2d7a1d4e8339974c1f502ed214d19a958fb3
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Wed Oct 8 21:29:57 2025 -0400
+
+    Delete S2/AdvProg_CS631/Projects/Midterm/my_ls/symlink
+
+commit 7de31ec8d2e305dd296d055d3519e7fe46b0b254
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Wed Oct 8 21:29:15 2025 -0400
+
+    Cleaning 4
+
+commit 4f4dd26418a439a287af2f917fce2e8daf7a3335
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Wed Oct 8 21:29:03 2025 -0400
+
+    Cleaning 3
+
+commit aa90597b4af08a5b7abdd021c297b4b3db51931a
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Wed Oct 8 21:28:30 2025 -0400
+
+    Change 2
+
+commit fd514cf175f8a692091fbd4bff120677002c2aff
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Wed Oct 8 21:28:11 2025 -0400
+
+    Cleaning 1
+
+commit a64d249e841bfc21db8e807a912295e359fbaf77
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Mon Oct 6 14:22:03 2025 +0000
+
+    Feat(Project Rework to use fts, lot of simplification for a safer and better code)
+
 commit 2dfea35d867b94ff334087f758ccb0db8094f48a
 Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
 Date:   Sun Oct 5 19:04:33 2025 +0000

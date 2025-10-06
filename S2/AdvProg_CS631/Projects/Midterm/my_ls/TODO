@@ -1,9 +1,6 @@
 ## Priority: 1
-//TODO : Fix segfault when trying to handle directories
-
-## Priority: 2
-//TODO: Handle the ls . -S situation (where files are before an option, meaning once a file as been found, 
-consider all remaining options as files too)
+//TODO : Fix Padding computation bug
+	 Fix mem leakage in Handle_F option  
 
 ## Priority : 3
 //TODO: Run return code tests
