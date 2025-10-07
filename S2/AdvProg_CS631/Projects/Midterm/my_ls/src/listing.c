@@ -85,10 +85,12 @@ TreeTraversal(int argc, char *argv[])
 {
 
     int fts_flags;
+    int retcode;
     FTS *ftsp = NULL;
     FTSENT *entry;
     FTSENT *children_dir;
 
+    retcode = EXIT_SUCCESS;
     SetFTSFlag(&fts_flags);
 
     ftsp = fts_open(argv, fts_flags, USR_OPT->f ? NULL : FTSCompare);
@@ -98,11 +100,11 @@ TreeTraversal(int argc, char *argv[])
         return errno;
     }
 
-    /* Call the printer on the first batch of arguments  */
-    if (LongFormatPrinter(NULL, fts_children(ftsp, 0))) {
-        fts_close(ftsp);
-        return errno;
-    }
+    /*
+     * Call the printer on the command line arguments and set errno
+     * if an error is encountered
+     */
+    retcode = LongFormatPrinter(NULL, fts_children(ftsp, 0));
 
     /*
      * if we need to list directories as plain files
@@ -111,10 +113,11 @@ TreeTraversal(int argc, char *argv[])
      */
     if (USR_OPT->d) {
         fts_close(ftsp);
-        return EXIT_SUCCESS;
+        return errno;
     }
 
     while ((entry = fts_read(ftsp)) != NULL) {
+
         switch (entry->fts_info) {
         case FTS_D:
 
@@ -134,7 +137,6 @@ TreeTraversal(int argc, char *argv[])
              * If something has been printed add a '\n' to get a clean
              * output
              */
-
             if (PRINTED) {
                 printf("\n%s:\n", entry->fts_path);
             } else if (argc > 1) {
@@ -146,13 +148,12 @@ TreeTraversal(int argc, char *argv[])
              * and print them all
              */
             children_dir = fts_children(ftsp, 0);
-            if (LongFormatPrinter(entry, children_dir)) {
-                return errno;
-            }
+
+            LongFormatPrinter(entry, children_dir);
 
             /*
-             * If we don't need recursion but
-             * we have directories to list skip them
+             * If -R is NOT specified and that
+             * we found directories to list, skip them
              */
             if (!USR_OPT->R && children_dir != NULL) {
                 fts_set(ftsp, entry, FTS_SKIP);
@@ -184,8 +185,8 @@ TreeTraversal(int argc, char *argv[])
     }
     fts_close(ftsp);
 
-    if (errno != 0) {
-        return errno;
+    if (errno == 0 && retcode != 0) {
+        errno = retcode;
     }
-    return EXIT_SUCCESS;
+    return errno;
 }

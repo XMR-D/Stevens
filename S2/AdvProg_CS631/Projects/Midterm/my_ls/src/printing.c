@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 
 #include <errno.h>
+#include <fcntl.h>
 #include <grp.h>
 #include <math.h>
 #include <pwd.h>
@@ -43,6 +44,27 @@ extern int PRINTED;
  * Used to check if a file has been created long ago.
  */
 #define YEAR_IN_SECONDS 31536000
+
+/*
+ * Define the maximum mode field length as 10 chars
+ * + one terminating null byte
+ *
+ * i.e. -rwxrwxrwx
+ * 	10 + (\0) = 11
+ */
+#define MAX_MODE_LEN 11
+
+
+/*
+ * Define the maximum number of char that a
+ * human byte representation can take
+ * 3 char + 1 unit + 1 terminating null byte
+ *
+ * i.e. 999M
+ * 	3 + 1 + (\0) = 5
+ */
+#define MAX_BYTE_FIELD_LEN 5
+
 
 #ifndef SIZES
 #define SIZES
@@ -151,7 +173,7 @@ PrintIntVal(int padding_order, long int val, long int max_len)
 static void
 PrintBytes(double nb_bytes, long int raw_nb_bytes, int do_round)
 {
-    char pbuf[5] = {0};
+    char pbuf[MAX_BYTE_FIELD_LEN] = {0};
 
     char unit = '\0';
 
@@ -175,16 +197,18 @@ PrintBytes(double nb_bytes, long int raw_nb_bytes, int do_round)
 
     if (nb_bytes >= 10.f) {
         if (do_round) {
-            snprintf(pbuf, 5, "%i%c", (int)round(nb_bytes), unit);
+            snprintf(pbuf, MAX_BYTE_FIELD_LEN, "%i%c", (int)round(nb_bytes),
+                     unit);
         } else {
-            snprintf(pbuf, 5, "%i%c", (int)nb_bytes, unit);
+            snprintf(pbuf, MAX_BYTE_FIELD_LEN, "%i%c", (int)nb_bytes, unit);
         }
 
     } else {
-        snprintf(pbuf, 5, "%.1f%c", nb_bytes, unit);
+        snprintf(pbuf, MAX_BYTE_FIELD_LEN, "%.1f%c", nb_bytes, unit);
     }
 
-    Padding(pbuf, 4);
+    /* -1 to supress the terminating null byte that take one extra char */
+    Padding(pbuf, MAX_BYTE_FIELD_LEN - 1);
     printf("%s", pbuf);
 }
 
@@ -279,7 +303,7 @@ Handle_F_Option(struct stat sb)
 {
     if (USR_OPT->F) {
         char filetype;
-        char *res = calloc(sizeof(char), 11);
+        char res[MAX_MODE_LEN] = {'\0'};
         strmode(sb.st_mode, res);
 
         filetype = *res;
@@ -308,8 +332,6 @@ Handle_F_Option(struct stat sb)
         default:
             break;
         }
-
-        free(res);
     }
 }
 
@@ -355,10 +377,10 @@ Handle_l_Option(struct stat sb)
 {
     if (USR_OPT->l) {
         /* Print the file mode */
-        char *res = calloc(sizeof(char), 11);
+        char res[MAX_MODE_LEN] = {'\0'};
+
         strmode(sb.st_mode, res);
         printf("%s ", res);
-        free(res);
 
         /* Print the number of links */
         if (PrintIntVal(1, sb.st_nlink, PINFOS->max_link_nb_len)) {
@@ -371,7 +393,7 @@ Handle_l_Option(struct stat sb)
         PrintGroup(sb);
 
         /* If s or h is specified print the number of bytes */
-        if (USR_OPT->s && USR_OPT->h) {
+        if (USR_OPT->s || USR_OPT->h) {
             PrintBytes(ComputeBytes(sb.st_size), sb.st_size, 0);
         }
 
@@ -411,13 +433,17 @@ DispFile(struct stat file_sb, char *filename)
 
     /* If the file is a simlink and that -l is specified
      * print the path pointed by the link as well */
-    if (USR_OPT->l && S_ISLNK(file_sb.st_mode)) {
+    if ((USR_OPT->l || USR_OPT->F || USR_OPT->d) && S_ISLNK(file_sb.st_mode)) {
+
         char linkpath[PATH_MAX] = {0};
 
         int linklen = readlink(filename, linkpath, sizeof(linkpath) - 1);
-
-        linkpath[linklen] = '\0';
-        printf(" -> %s", linkpath);
+        if (linklen != -1) {
+            linkpath[linklen] = '\0';
+            printf(" -> %s", linkpath);
+        } else {
+            printf(" -> [invalid]");
+        }
     }
 
     printf("\n");
@@ -438,10 +464,23 @@ LongFormatPrinter(FTSENT *parentdir, FTSENT *list)
 
     saved = list;
     while (saved != NULL) {
+
+        if (saved->fts_errno != 0) {
+            fprintf(stderr, "ls: %s: %s\n", saved->fts_name,
+                    strerror(saved->fts_errno));
+            errno = saved->fts_errno;
+            saved = saved->fts_link;
+            continue;
+        }
+
         ComputePaddingNeeded(*(saved->fts_statp), USR_OPT);
         saved = saved->fts_link;
     }
 
+    /*
+     * If the -l or the -s option is set and that we are not printing
+     * the command line files then print the total number of bytes
+     */
     if (parentdir != NULL && (USR_OPT->l || USR_OPT->s)) {
         PrintTotalBytes();
     }
@@ -451,7 +490,24 @@ LongFormatPrinter(FTSENT *parentdir, FTSENT *list)
             list = list->fts_link;
             continue;
         }
-        if (DispFile(*(list->fts_statp), list->fts_name)) {
+
+        /*
+         * If -a is not specified and -A is not specified skip all files
+         * that start with '.' . Because "." and ".." are considered
+         * directories that start with '.'.
+         *
+         * if -A is specified, we want to list everything except "." and ".."
+         * So we do not want to skip a file that starts with ".".
+         * "." and ".." are handled in the fts_flag option, so it should not
+         * show up here.
+         */
+        if (!USR_OPT->a && !USR_OPT->A && list->fts_name[0] == '.') {
+            list = list->fts_link;
+            continue;
+        }
+
+        if (list->fts_errno == 0 &&
+            DispFile(*(list->fts_statp), list->fts_name)) {
             return errno;
         }
         if (!PRINTED) {
@@ -461,6 +517,5 @@ LongFormatPrinter(FTSENT *parentdir, FTSENT *list)
     }
 
     ResetPrintInfos(PINFOS);
-
-    return EXIT_SUCCESS;
+    return errno;
 }

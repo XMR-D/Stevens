@@ -1,6 +1,5 @@
 ## Priority: 1
-//TODO : Fix mem leakage in Handle_F option
-	 Fix Symlink redirection 
+//TODO : Fix Symlink redirection 
 
 ## Priority : 3
 //TODO: Run return code tests
