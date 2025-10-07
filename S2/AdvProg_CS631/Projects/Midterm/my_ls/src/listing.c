@@ -121,12 +121,12 @@ TreeTraversal(int argc, char *argv[])
             /*
              * If -A is specified we must print the file starting with '.'
              * So if it's not the case just skip the directory
-	     * But only if we are not on the command lines arguments
-	     * otherwise we would skip all the regular files as '.' is 
-	     * placed by default when not specified anything in the cmd.
+             * But only if we are not on the command lines arguments
+             * otherwise we would skip all the regular files as '.' is
+             * placed by default when not specified anything in the cmd.
              */
-            if (!USR_OPT->A && entry->fts_name[0] == '.' 
-			    && entry->fts_level != FTS_ROOTLEVEL) {
+            if (!USR_OPT->A && entry->fts_name[0] == '.' &&
+                entry->fts_level != FTS_ROOTLEVEL) {
                 break;
             }
 

@@ -5,9 +5,9 @@
 
 #include "opt_parser.h"
 
-/* 
- * This structure contain various fields that will hold the maximum length 
- * of various stat informations so that the correct padding can be applied 
+/*
+ * This structure contain various fields that will hold the maximum length
+ * of various stat informations so that the correct padding can be applied
  * when printing, all fields should be self explanatory
  */
 typedef struct PaddingInfos {
@@ -23,10 +23,9 @@ typedef struct PaddingInfos {
     long double total_blocks;
 } PaddingInfos;
 
-
 void Padding(char *str1, int longest);
-void ResetPrintInfos(PaddingInfos * infos);
-void ComputePaddingNeeded(struct stat sb, UsrOptions * usr_opt);
+void ResetPrintInfos(PaddingInfos *infos);
+void ComputePaddingNeeded(struct stat sb, UsrOptions *usr_opt);
 
 
 #endif /* ! PADDING_HANDLING_H */

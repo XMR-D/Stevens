@@ -4,7 +4,6 @@
 #include <unistd.h>
 
 #include "error.h"
-#include "log.h"
 #include "opt_parser.h"
 
 int

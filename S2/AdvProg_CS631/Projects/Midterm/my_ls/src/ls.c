@@ -31,7 +31,7 @@ PaddingInfos *PINFOS;
  */
 UsrOptions *USR_OPT;
 
-/* 
+/*
  * Global variable that will hold the blocksize value, setted once here
  * and used in the byte computations functions
  */
@@ -39,7 +39,7 @@ long BLOCKSIZE;
 
 /*
  * Routine that will get the option passed in the command line argument
- * 
+ *
  * Note: Once a token that is not an option is met, the tokenizing stop
  * 	 Considering each subsequent tokens as targets, even if formated
  * 	 like options

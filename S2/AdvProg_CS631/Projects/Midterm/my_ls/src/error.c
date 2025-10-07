@@ -5,9 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "log.h"
 #include "opt_parser.h"
-#include "targ_parser.h"
 
 int
 throw_error(char *wrng_targ, int err)
