@@ -18,92 +18,100 @@
 #define DEFAULT_BLK_SIZE 512
 #endif /* !DEFAULT_BLK_SIZE */
 
-/* 
+/*
  * Global variable that contain all informations of printing
- * Including maximum lengths to adapt the padding during 
+ * Including maximum lengths to adapt the padding during
  * printing
  */
-PaddingInfos * PINFOS;
+PaddingInfos *PINFOS;
 
-UsrOptions * USR_OPT;
+/*
+ * Global varaible that contains all the flag set by the user and present
+ * in the command line, they will dictate how ls should behave
+ */
+UsrOptions *USR_OPT;
 
-/* Global variable indicating the default block_size ls must take */
-int BLOCKSIZE = DEFAULT_BLK_SIZE;
+/* 
+ * Global variable that will hold the blocksize value, setted once here
+ * and used in the byte computations functions
+ */
+long BLOCKSIZE;
 
-int 
-tokenize(int *argc, char ** input[], UsrOptions *usr_opt)
+/*
+ * Routine that will get the option passed in the command line argument
+ * 
+ * Note: Once a token that is not an option is met, the tokenizing stop
+ * 	 Considering each subsequent tokens as targets, even if formated
+ * 	 like options
+ */
+static int
+tokenize_cmd(int *argc, char **input[], UsrOptions *usr_opt)
 {
     int opt_err = 0;
     int opt_found;
 
-    while((opt_found = getopt(*argc, *input, "AacdFfhiklnqRrSstuw")) != -1) {
-	/* If an option is invalid stop exec and return the error */
-	opt_err = OptSet((char) opt_found, usr_opt);
+    while ((opt_found = getopt(*argc, *input, "AacdFfhiklnqRrSstuw")) != -1) {
+        /* If an option is invalid stop exec and return the error */
+        opt_err = OptSet((char)opt_found, usr_opt);
         if (opt_err) {
-	    throw_error(NULL, WRNG_OPT_ERR);
+            throw_error(NULL, WRNG_OPT_ERR);
             return opt_err;
-	}
+        }
     }
     *argc -= optind;
     *input += optind;
     return EXIT_SUCCESS;
 }
 
-int 
-ls_main(int argc, char * argv[])
+int
+ls_main(int argc, char *argv[])
 {
-	setprogname(argv[0]);
+    setprogname(argv[0]);
 
-	USR_OPT = calloc(1, sizeof(UsrOptions));
-	if (!USR_OPT) {
-		throw_error(NULL, MEM_ERR);
-		return errno;
-	}
+    USR_OPT = calloc(1, sizeof(UsrOptions));
+    if (!USR_OPT) {
+        throw_error(NULL, MEM_ERR);
+        return errno;
+    }
 
-	PINFOS = calloc(1, sizeof(PaddingInfos));
-	if (!PINFOS) {
-		throw_error(NULL, MEM_ERR);
-		return errno;
-	}
+    PINFOS = calloc(1, sizeof(PaddingInfos));
+    if (!PINFOS) {
+        throw_error(NULL, MEM_ERR);
+        return errno;
+    }
 
 
-	/* Set default options for non printable characters and root */
-	RootOptionSet(USR_OPT);
-	NonPrintableOptionSet(USR_OPT);
+    /* Set default options for non printable characters and root */
+    RootOptionSet(USR_OPT);
+    NonPrintableOptionSet(USR_OPT);
 
-	if (tokenize(&argc, &argv, USR_OPT)) {
-		free(USR_OPT);
-		free(PINFOS);
-		return errno;
-	}
+    if (tokenize_cmd(&argc, &argv, USR_OPT)) {
+        free(USR_OPT);
+        free(PINFOS);
+        return errno;
+    }
 
-	if (!argc) {
-		char * dot[] = {".", NULL};
-		argv = dot;
-		argc = 1;
-	}
-	
-	/* Get block size environment value and check for validity */
-	if (USR_OPT->s) {
-	    BLOCKSIZE = GetBlockSize();
-	}
+    if (!argc) {
+        char *dot[] = {".", NULL};
+        argv = dot;
+        argc = 1;
+    }
 
-	if (TreeTraversal(argc, argv)) {
-		free(USR_OPT);
-		free(PINFOS);
-		return errno;
-	}
+    getbsize(NULL, &BLOCKSIZE);
 
-	
-	free(USR_OPT);
-	free(PINFOS);	
-	return EXIT_SUCCESS;
+    if (TreeTraversal(argc, argv)) {
+        free(USR_OPT);
+        free(PINFOS);
+        return errno;
+    }
+
+    free(USR_OPT);
+    free(PINFOS);
+    return EXIT_SUCCESS;
 }
 
-int 
-main(int argc, char ** argv)
+int
+main(int argc, char **argv)
 {
-    return ls_main(argc, argv);	
+    return ls_main(argc, argv);
 }
-
-

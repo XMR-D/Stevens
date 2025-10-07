@@ -1,12 +1,11 @@
 ## Priority: 1
-//TODO : Fix Padding computation bug
-	 Fix mem leakage in Handle_F option  
+//TODO : Fix mem leakage in Handle_F option
+	 Fix Symlink redirection 
 
 ## Priority : 3
 //TODO: Run return code tests
-
-## Priority : 3
-//TODO : Run some leakage test
+//TODO: Run some leakage test
+//TODO: See if we can remove error.c and use fprintf manually to handle errors
 
 ## Priority: 4
 //TODO: Code Cleaning and Coding_style compliance review
