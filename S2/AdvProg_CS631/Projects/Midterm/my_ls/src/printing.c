@@ -19,8 +19,8 @@
 #include "utility.h"
 
 extern UsrOptions *USR_OPT;
-extern int BLOCK_SIZE;
 extern PaddingInfos *PINFOS;
+extern long BLOCKSIZE;
 extern int PRINTED;
 
 /*
@@ -53,6 +53,13 @@ extern int PRINTED;
  * 	10 + (\0) = 11
  */
 #define MAX_MODE_LEN 11
+
+
+/* 
+ * 512 is the default size for file blocks in most systems
+ * including >NetBSD 10.0
+ */
+#define DEFAULT_BLOCK_SIZE 512
 
 
 /*
@@ -100,48 +107,6 @@ PrintFileName(char *filename)
     }
 }
 
-void
-PrintTotalBytes(void)
-{
-    char unit = '\0';
-    long double total_p = 0;
-
-    /*
-     * If -h is specified then we need to print the total of bytes
-     * else it's the total of blocks
-     */
-    if (USR_OPT->h) {
-        total_p = PINFOS->total_bytes;
-    } else {
-        total_p = PINFOS->total_blocks;
-    }
-
-    if (total_p != 0) {
-        if (total_p < KBSIZE) {
-            unit = 'B';
-        } else if (total_p >= KBSIZE && total_p < MBSIZE) {
-            unit = 'K';
-        } else if (total_p >= MBSIZE && total_p < GBSIZE) {
-            unit = 'M';
-        } else if (total_p >= GBSIZE && total_p < TBSIZE) {
-            unit = 'G';
-        } else if (total_p >= TBSIZE) {
-            unit = 'T';
-        }
-    }
-
-    if (USR_OPT->h) {
-        long double bytes_to_print = ComputeBytes(total_p);
-        if (bytes_to_print >= 10.0f) {
-            printf("total %i%c\n", (int)round(bytes_to_print), unit);
-        } else {
-            printf("total %.1Lf%c\n", bytes_to_print, unit);
-        }
-    } else {
-        printf("total %i\n", ComputeBlock((int)total_p));
-    }
-}
-
 /* If padding_order = 0 the padding is after the value, else it's before */
 static int
 PrintIntVal(int padding_order, long int val, long int max_len)
@@ -168,48 +133,6 @@ PrintIntVal(int padding_order, long int val, long int max_len)
 
     free(val_str);
     return EXIT_SUCCESS;
-}
-
-static void
-PrintBytes(double nb_bytes, long int raw_nb_bytes, int do_round)
-{
-    char pbuf[MAX_BYTE_FIELD_LEN] = {0};
-
-    char unit = '\0';
-
-    if (nb_bytes == 0) {
-        printf("  0B");
-        return;
-    }
-
-    if (raw_nb_bytes < KBSIZE) {
-        unit = 'B';
-    } else if (raw_nb_bytes >= KBSIZE && raw_nb_bytes < MBSIZE) {
-        unit = 'K';
-    } else if (raw_nb_bytes >= MBSIZE && raw_nb_bytes < GBSIZE) {
-        unit = 'M';
-    } else if (raw_nb_bytes >= GBSIZE && raw_nb_bytes < TBSIZE) {
-        unit = 'G';
-    } else if (raw_nb_bytes >= TBSIZE) {
-        unit = 'T';
-    }
-
-
-    if (nb_bytes >= 10.f) {
-        if (do_round) {
-            snprintf(pbuf, MAX_BYTE_FIELD_LEN, "%i%c", (int)round(nb_bytes),
-                     unit);
-        } else {
-            snprintf(pbuf, MAX_BYTE_FIELD_LEN, "%i%c", (int)nb_bytes, unit);
-        }
-
-    } else {
-        snprintf(pbuf, MAX_BYTE_FIELD_LEN, "%.1f%c", nb_bytes, unit);
-    }
-
-    /* -1 to supress the terminating null byte that take one extra char */
-    Padding(pbuf, MAX_BYTE_FIELD_LEN - 1);
-    printf("%s", pbuf);
 }
 
 static int
@@ -297,6 +220,17 @@ PrintDate(struct stat sb)
     printf("%s", out_str);
 }
 
+static void
+PrintHumanReadable(int byte_nb, int padding_size) {
+
+	char pbuf[MAX_BYTE_FIELD_LEN] = {0};
+	humanize_number(pbuf, MAX_BYTE_FIELD_LEN , 
+			    byte_nb, 0, 
+			    HN_AUTOSCALE, HN_B | HN_DECIMAL | HN_NOSPACE);
+	Padding(pbuf, padding_size);
+	printf("%s", pbuf);
+}
+
 /* Add a character representing the file type after the file name */
 static void
 Handle_F_Option(struct stat sb)
@@ -364,8 +298,11 @@ Handle_s_Option(struct stat sb, int fromblocks)
                 raw_bytes = sb.st_size;
             }
 
-            double computed_bytes = ComputeBytes(raw_bytes);
-            PrintBytes(computed_bytes, raw_bytes, 0);
+	    /* 
+	     * -1 is used to account for the extra '\0' 
+	     * that impact the computations
+	     */
+	    PrintHumanReadable(raw_bytes, MAX_BYTE_FIELD_LEN - 1);
         }
         printf(" ");
     }
@@ -378,6 +315,7 @@ Handle_l_Option(struct stat sb)
     if (USR_OPT->l) {
         /* Print the file mode */
         char res[MAX_MODE_LEN] = {'\0'};
+	int padding_size;
 
         strmode(sb.st_mode, res);
         printf("%s ", res);
@@ -386,19 +324,41 @@ Handle_l_Option(struct stat sb)
         if (PrintIntVal(1, sb.st_nlink, PINFOS->max_link_nb_len)) {
             return errno;
         }
-        printf(" ");
-
+        
+	printf(" ");
 
         PrintOwner(sb);
         PrintGroup(sb);
 
-        /* If s or h is specified print the number of bytes */
-        if (USR_OPT->s || USR_OPT->h) {
-            PrintBytes(ComputeBytes(sb.st_size), sb.st_size, 0);
-        }
+	/* Set padding size for number of byte field */
+	if (USR_OPT->h) {
+		if (PINFOS->max_special_file_byte_len > MAX_BYTE_FIELD_LEN) {
+	    		padding_size = PINFOS->max_special_file_byte_len;
+    		} else {
+	    		padding_size = MAX_BYTE_FIELD_LEN - 1;
+    		}
+	} else {
+		padding_size = PINFOS->max_nb_byte_len;
+	}
 
+	/* 
+	 * Handle block special or character special file
+	 * + 2 to account for the ", " we will print
+	 */
+	if (S_ISCHR(sb.st_mode) || S_ISBLK(sb.st_mode)) {
+		int total_len = NbDigitFromInt(major(sb.st_rdev)) 
+			+ NbDigitFromInt(minor(sb.st_rdev)) + 2;
+
+		Padding(NULL, padding_size - total_len);
+    		printf("%d, %d", major(sb.st_rdev), minor(sb.st_rdev));
+	}
+        /* If h is specified print the number of bytes */
+	else if (USR_OPT->h) {
+	    PrintHumanReadable(sb.st_size, padding_size);
+        }
         else if (PrintIntVal(1, sb.st_size, PINFOS->max_nb_byte_len)) {
             return errno;
+    		/* -1 to supress the terminating null byte that take one extra char */
         }
 
         printf(" ");
@@ -482,7 +442,14 @@ LongFormatPrinter(FTSENT *parentdir, FTSENT *list)
      * the command line files then print the total number of bytes
      */
     if (parentdir != NULL && (USR_OPT->l || USR_OPT->s)) {
-        PrintTotalBytes();
+	printf("total ");
+	if (USR_OPT->h) {
+        	PrintHumanReadable(PINFOS->total_bytes, 0);
+	} else {
+		int nb_byte = (PINFOS->total_blocks * DEFAULT_BLOCK_SIZE);
+		printf("%d", (int) round(nb_byte / BLOCKSIZE));
+	}
+	printf("\n");	
     }
 
     while (list != NULL) {

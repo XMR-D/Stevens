@@ -19,6 +19,7 @@ typedef struct PaddingInfos {
     int max_nb_byte_len;
     int max_nb_block_len;
     int max_inode_nb_len;
+    int max_special_file_byte_len;
     long double total_bytes;
     long double total_blocks;
 } PaddingInfos;
