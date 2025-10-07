@@ -1,3 +1,33 @@
+commit 8641335c4909902b1ad650a857d6fb7e486e2754
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Tue Oct 7 07:03:22 2025 +0000
+
+    Adding gitignore
+
+commit f6079730c1ebe0d8ca917373ab66109e1434c7e1
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Tue Oct 7 07:02:39 2025 +0000
+
+    Clean(Cleaning code + debugging -A -a)
+
+commit 943147013efb4d2db93acae3c80e31921eb8b5f6
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Tue Oct 7 00:49:03 2025 +0000
+
+    Clean(some header garbage to remove)
+
+commit 4a3502da1699ddfee405c5f7b848f64c882dd625
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Tue Oct 7 00:44:50 2025 +0000
+
+    Feat/Fix(Polishing code, fixing some argument bug, fixing padding + clang-formating)
+
+commit 032ddbe3c14e0b24aa06728b426ab9807106ecd5
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Mon Oct 6 16:16:53 2025 +0000
+
+    Fix(Some bugs on edge cases, now only padding bugs to fix)
+
 commit d3c51a3920de2aca3eb9e6326e82de75a994a4e8
 Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
 Date:   Wed Oct 8 21:39:11 2025 -0400
