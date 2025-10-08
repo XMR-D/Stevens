@@ -40,8 +40,9 @@ or
 The debug version add some debugging flags at compilation time, 
 and do not strip the binary from debugging symbol.
 
-The classic version contains some compiler optimizations flags : ```-Ofast```.
+The classic version contains some compiler optimizations flags : ```-O3```.
 
+**All Makefile flags definition can be found in mkflags/**
 **Building and running the utility requires a NetBSD >= 10.0 system**
 ___
 ### DESCRIPTION
