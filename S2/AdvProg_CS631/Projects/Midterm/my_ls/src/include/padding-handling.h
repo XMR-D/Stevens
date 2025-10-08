@@ -24,9 +24,9 @@ typedef struct PaddingInfos {
     long double total_blocks;
 } PaddingInfos;
 
-void Padding(char *str1, int longest);
-void ResetPrintInfos(PaddingInfos *infos);
-void ComputePaddingNeeded(struct stat sb, UsrOptions *usr_opt);
+void print_padding(char *str1, int longest);
+void reset_print_infos(PaddingInfos *infos);
+void compute_padding_needed(struct stat sb, UsrOptions *usr_opt);
 
 
 #endif /* ! PADDING_HANDLING_H */

@@ -18,9 +18,12 @@
 #include "padding-handling.h"
 #include "utility.h"
 
+/* defined in ls.c */
 extern UsrOptions *USR_OPT;
 extern PaddingInfos *PINFOS;
 extern long BLOCKSIZE;
+
+/* defined in listing.c */
 extern int PRINTED;
 
 /*
@@ -53,14 +56,6 @@ extern int PRINTED;
  * 	10 + (\0) = 11
  */
 #define MAX_MODE_LEN 11
-
-
-/*
- * 512 is the default size for file blocks in most systems
- * including >NetBSD 10.0
- */
-#define DEFAULT_BLOCK_SIZE 512
-
 
 /*
  * Define the maximum number of char that a
@@ -122,13 +117,13 @@ PrintIntVal(int padding_order, long int val, long int max_len)
     snprintf(val_str, val_size, "%ld", val);
 
     if (padding_order) {
-        Padding(val_str, max_len);
+        print_padding(val_str, max_len);
     }
 
     printf("%s", val_str);
 
     if (padding_order == 0) {
-        Padding(val_str, max_len);
+        print_padding(val_str, max_len);
     }
 
     free(val_str);
@@ -152,7 +147,7 @@ PrintOwner(struct stat sb)
             }
         } else {
             printf("%s", pwd->pw_name);
-            Padding(pwd->pw_name, PINFOS->max_uid_str_len);
+            print_padding(pwd->pw_name, PINFOS->max_uid_str_len);
         }
     } else {
         if (PrintIntVal(0, sb.st_uid, PINFOS->max_uid_int_len)) {
@@ -182,7 +177,7 @@ PrintGroup(struct stat sb)
 
         else {
             printf("%s", grp->gr_name);
-            Padding(grp->gr_name, PINFOS->max_gid_str_len);
+            print_padding(grp->gr_name, PINFOS->max_gid_str_len);
         }
     } else {
         if (PrintIntVal(0, sb.st_gid, PINFOS->max_gid_int_len)) {
@@ -204,12 +199,20 @@ PrintDate(struct stat sb)
     int time_err;
     int time_diff;
 
+    /* 
+     * tzset will retreive TZ environement value and set it automatically
+     * see tzset(3) for more information
+     */
     tzset();
     info = localtime(&(sb.st_mtime));
     time_err = time(&now);
     time_diff = difftime(now, sb.st_mtime);
 
 
+    /* 
+     * If the time difference between now and the file creation is 
+     * more than a year ago, print only the date
+     */
     if ((time_err == -1) || abs((int)time_diff) < YEAR_IN_SECONDS) {
         date_to_print = "%b %e %H:%M";
     } else {
@@ -227,7 +230,7 @@ PrintHumanReadable(int byte_nb, int padding_size)
     char pbuf[MAX_BYTE_FIELD_LEN] = {0};
     humanize_number(pbuf, MAX_BYTE_FIELD_LEN, byte_nb, 0, HN_AUTOSCALE,
                     HN_B | HN_DECIMAL | HN_NOSPACE);
-    Padding(pbuf, padding_size);
+    print_padding(pbuf, padding_size);
     printf("%s", pbuf);
 }
 
@@ -238,7 +241,7 @@ PrintTotalByte(void)
     if (USR_OPT->h) {
         PrintHumanReadable(PINFOS->total_bytes, 0);
     } else {
-        int nb_byte = (PINFOS->total_blocks * DEFAULT_BLOCK_SIZE);
+        int nb_byte = (PINFOS->total_blocks * BLOCKSIZE);
         printf("%d", (int)round(nb_byte / BLOCKSIZE));
     }
     printf("\n");
@@ -398,7 +401,7 @@ Handle_l_Option(struct stat sb)
             int total_len = NbDigitFromInt(major(sb.st_rdev)) +
                             NbDigitFromInt(minor(sb.st_rdev)) + 2;
 
-            Padding(NULL, padding_size - total_len);
+            print_padding(NULL, padding_size - total_len);
             printf("%d, %d", major(sb.st_rdev), minor(sb.st_rdev));
         }
         /* If h is specified print the number of bytes */
@@ -473,7 +476,7 @@ LongFormatPrinter(FTSENT *parentdir, FTSENT *list)
             continue;
         }
 
-        ComputePaddingNeeded(*(saved->fts_statp), USR_OPT);
+        compute_padding_needed(*(saved->fts_statp), USR_OPT);
         saved = saved->fts_link;
     }
 
@@ -518,6 +521,6 @@ LongFormatPrinter(FTSENT *parentdir, FTSENT *list)
         list = list->fts_link;
     }
 
-    ResetPrintInfos(PINFOS);
+    reset_print_infos(PINFOS);
     return errno;
 }

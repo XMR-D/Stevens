@@ -3,6 +3,6 @@
 
 #include <sys/stat.h>
 
-int TreeTraversal(int argc, char *argv[]);
+int tree_traversal(int argc, char *argv[]);
 
 #endif /* !LISTING_H */

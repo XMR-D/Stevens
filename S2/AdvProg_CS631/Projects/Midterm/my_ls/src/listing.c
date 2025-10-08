@@ -27,8 +27,16 @@ extern UsrOptions *USR_OPT;
  */
 int PRINTED = 0;
 
+/*
+ * set_fts_flag : This routine will evaluate different options from the 
+ * USR_OPT options structure, and set the flags for the subsequents
+ * fts functions calls by editing the fts_flags pointer passed as the
+ * routine argument.
+ *
+ * Note: (None)
+ */
 static void
-SetFTSFlag(int *fts_flags)
+set_fts_flag(int *fts_flags)
 {
 
     /* By default always return FTSENT struct for the symlink themselves */
@@ -50,8 +58,16 @@ SetFTSFlag(int *fts_flags)
     }
 }
 
+/*
+ * fts_compare : This routine will evaluate the options in the 
+ * USR_OPT options to compare two fts entry elements accordingly.
+ *
+ * Note: This function is never directly called in the code
+ * but rather used as the comparison function for fts_open
+ * that way all fts entries found by the libfts will be sorted properly. 
+ */
 static int
-FTSCompare(const FTSENT **elm1, const FTSENT **elm2)
+fts_compare(const FTSENT **elm1, const FTSENT **elm2)
 {
     int ret = 0;
     struct stat *sb1;
@@ -73,6 +89,10 @@ FTSCompare(const FTSENT **elm1, const FTSENT **elm2)
         ret = strcmp((*elm1)->fts_name, (*elm2)->fts_name);
     }
 
+    /* 
+     * If we need to revert the sort, instead of calling again the same block
+     * of functions invert the result by multiplying by -1 
+     */
     if (USR_OPT->r) {
         return ret * -1;
     } else {
@@ -80,8 +100,23 @@ FTSCompare(const FTSENT **elm1, const FTSENT **elm2)
     }
 }
 
+/*
+ * tree_traversal : This routine will use libfts to traverse a file hierarchy
+ * and print informations on the files and directory encountered.
+ *
+ * Note : It will take the number of remaining arguments (argc)
+ * after the tokenization phase (that can be safely considered as user desired
+ * targets) and the targets themselves (argc)
+ *
+ * If no error is encountered while listing or printing the routine return 0
+ * else it will return a non null value that represent the error type.
+ *
+ * WARNING: The function can return an error code but output some 
+ * valid file listing as long as one target found is valid
+ * (depending on the USR_OPT)
+ */
 int
-TreeTraversal(int argc, char *argv[])
+tree_traversal(int argc, char *argv[])
 {
 
     int fts_flags;
@@ -91,9 +126,9 @@ TreeTraversal(int argc, char *argv[])
     FTSENT *children_dir;
 
     retcode = EXIT_SUCCESS;
-    SetFTSFlag(&fts_flags);
+    set_fts_flag(&fts_flags);
 
-    ftsp = fts_open(argv, fts_flags, USR_OPT->f ? NULL : FTSCompare);
+    ftsp = fts_open(argv, fts_flags, (USR_OPT->f ? NULL : fts_compare));
 
     if (ftsp == NULL) {
         fprintf(stderr, "ls: error: %s\n", strerror(errno));
@@ -101,15 +136,14 @@ TreeTraversal(int argc, char *argv[])
     }
 
     /*
-     * Call the printer on the command line arguments and set errno
+     * Call the printer on the command line targets (not options) and set errno
      * if an error is encountered
      */
     retcode = LongFormatPrinter(NULL, fts_children(ftsp, 0));
 
     /*
      * if we need to list directories as plain files
-     * we can return as going through them is not
-     * necessary
+     * we can return as going through them is not necessary.
      */
     if (USR_OPT->d) {
         fts_close(ftsp);
@@ -119,9 +153,6 @@ TreeTraversal(int argc, char *argv[])
     while ((entry = fts_read(ftsp)) != NULL) {
 
         switch (entry->fts_info) {
-        case FTS_SL:
-            // printf("\nTRAVERSAL CURRENT CWD: %s\n", getcwd(NULL, 0));
-            break;
         case FTS_D:
             /*
              * If -A is specified we must print the file starting with '.'
