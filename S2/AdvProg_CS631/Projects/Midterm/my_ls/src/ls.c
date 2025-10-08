@@ -66,6 +66,34 @@ tokenize_cmd(int *argc, char **input[], UsrOptions *usr_opt)
 int
 ls_main(int argc, char *argv[])
 {
+    /* Set default options for non printable characters and root */
+    RootOptionSet(USR_OPT);
+    NonPrintableOptionSet(USR_OPT);
+
+    if (tokenize_cmd(&argc, &argv, USR_OPT)) {
+        return errno;
+    }
+
+    if (!argc) {
+        char *dot[] = {".", NULL};
+        argv = dot;
+        argc = 1;
+    }
+
+    getbsize(NULL, &BLOCKSIZE);
+
+    if (TreeTraversal(argc, argv)) {
+        return errno;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+int
+main(int argc, char **argv)
+{
+
+    int errcode;
     setprogname(argv[0]);
 
     USR_OPT = calloc(1, sizeof(UsrOptions));
@@ -80,38 +108,11 @@ ls_main(int argc, char *argv[])
         return errno;
     }
 
-
-    /* Set default options for non printable characters and root */
-    RootOptionSet(USR_OPT);
-    NonPrintableOptionSet(USR_OPT);
-
-    if (tokenize_cmd(&argc, &argv, USR_OPT)) {
-        free(USR_OPT);
-        free(PINFOS);
-        return errno;
-    }
-
-    if (!argc) {
-        char *dot[] = {".", NULL};
-        argv = dot;
-        argc = 1;
-    }
-
-    getbsize(NULL, &BLOCKSIZE);
-
-    if (TreeTraversal(argc, argv)) {
-        free(USR_OPT);
-        free(PINFOS);
-        return errno;
-    }
+    errcode = ls_main(argc, argv);
 
     free(USR_OPT);
     free(PINFOS);
-    return EXIT_SUCCESS;
-}
 
-int
-main(int argc, char **argv)
-{
-    return ls_main(argc, argv);
+    return errcode;
+
 }
