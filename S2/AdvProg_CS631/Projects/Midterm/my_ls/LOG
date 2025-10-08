@@ -1,3 +1,63 @@
+commit e9860391183d049ba848bdf9a502ac83a6fc3be2
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Wed Oct 8 06:39:37 2025 +0000
+
+    Clean(Small code clean on ls to avoid freeing redundancy)
+
+commit ff7e893099ba8638e7432091525b928683ae4b73
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Wed Oct 8 06:29:24 2025 +0000
+
+    Fix(Symlink redirection bug fixed)
+
+commit 63400388671d7e092ba3a81729a43f5285651830
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Tue Oct 7 14:37:27 2025 +0000
+
+    Feat(Now performing byte opertions using humanize func + Code cleaning)
+
+commit ba301561366c56e5600762f698f05ea69af15a8b
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Tue Oct 7 08:15:36 2025 +0000
+
+    Fix(Wrapping Readme at 80 cols)
+
+commit e0a86465270abccbaf9fd45fd392291274d960bd
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Fri Oct 10 20:51:54 2025 -0400
+
+    Update README.md
+
+commit 70a42ad98949de88646e3f19da5be64895df8d21
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Fri Oct 10 20:49:43 2025 -0400
+
+    Update README.md
+
+commit 74e6e8b7df160347939331fe8e99d40cdec08b81
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Fri Oct 10 20:49:27 2025 -0400
+
+    Update README.md
+
+commit 492b7d34fb04e04115b70775d159cd4bf31f0ea6
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Fri Oct 10 20:30:52 2025 -0400
+
+    Update README.md
+
+commit e5c38455f10e201d8bce23db1a19ae3485220085
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Fri Oct 10 20:29:46 2025 -0400
+
+    README.md cleaning
+
+commit 79af6a68644450967d44b8158b2bcfa982c5b5e1
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Fri Oct 10 20:20:48 2025 -0400
+
+    Delete S2/AdvProg_CS631/Projects/Midterm/my_ls/test directory
+
 commit 8641335c4909902b1ad650a857d6fb7e486e2754
 Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
 Date:   Tue Oct 7 07:03:22 2025 +0000

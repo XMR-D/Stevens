@@ -1,9 +1,4 @@
-## Priority: 1
-//TODO : Fix Symlink redirection 
-
 ## Priority : 3
-//TODO: Run return code tests
-//TODO: Run some leakage test
 //TODO: See if we can remove error.c and use fprintf manually to handle errors
 
 ## Priority: 4

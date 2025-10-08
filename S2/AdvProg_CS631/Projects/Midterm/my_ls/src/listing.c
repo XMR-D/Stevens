@@ -119,9 +119,9 @@ TreeTraversal(int argc, char *argv[])
     while ((entry = fts_read(ftsp)) != NULL) {
 
         switch (entry->fts_info) {
-	case FTS_SL:
-		//printf("\nTRAVERSAL CURRENT CWD: %s\n", getcwd(NULL, 0));
-		break;
+        case FTS_SL:
+            // printf("\nTRAVERSAL CURRENT CWD: %s\n", getcwd(NULL, 0));
+            break;
         case FTS_D:
             /*
              * If -A is specified we must print the file starting with '.'

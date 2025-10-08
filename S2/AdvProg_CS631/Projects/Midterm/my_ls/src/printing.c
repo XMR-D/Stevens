@@ -55,7 +55,7 @@ extern int PRINTED;
 #define MAX_MODE_LEN 11
 
 
-/* 
+/*
  * 512 is the default size for file blocks in most systems
  * including >NetBSD 10.0
  */
@@ -221,65 +221,63 @@ PrintDate(struct stat sb)
 }
 
 static void
-PrintHumanReadable(int byte_nb, int padding_size) {
+PrintHumanReadable(int byte_nb, int padding_size)
+{
 
-	char pbuf[MAX_BYTE_FIELD_LEN] = {0};
-	humanize_number(pbuf, MAX_BYTE_FIELD_LEN , 
-			    byte_nb, 0, 
-			    HN_AUTOSCALE, HN_B | HN_DECIMAL | HN_NOSPACE);
-	Padding(pbuf, padding_size);
-	printf("%s", pbuf);
+    char pbuf[MAX_BYTE_FIELD_LEN] = {0};
+    humanize_number(pbuf, MAX_BYTE_FIELD_LEN, byte_nb, 0, HN_AUTOSCALE,
+                    HN_B | HN_DECIMAL | HN_NOSPACE);
+    Padding(pbuf, padding_size);
+    printf("%s", pbuf);
 }
 
 static void
 PrintTotalByte(void)
 {
-	printf("total ");
-	if (USR_OPT->h) {
-        	PrintHumanReadable(PINFOS->total_bytes, 0);
-	} else {
-		int nb_byte = (PINFOS->total_blocks * DEFAULT_BLOCK_SIZE);
-		printf("%d", (int) round(nb_byte / BLOCKSIZE));
-	}
-	printf("\n");	
+    printf("total ");
+    if (USR_OPT->h) {
+        PrintHumanReadable(PINFOS->total_bytes, 0);
+    } else {
+        int nb_byte = (PINFOS->total_blocks * DEFAULT_BLOCK_SIZE);
+        printf("%d", (int)round(nb_byte / BLOCKSIZE));
+    }
+    printf("\n");
 }
 
 static void
-PrintSymlink(FTSENT* parentdir, char * filename)
+PrintSymlink(FTSENT *parentdir, char *filename)
 {
-	char linkpath[PATH_MAX] = {0};
-	char * accpath;
-	int curr_fd;
-	int linklen;
+    char linkpath[PATH_MAX] = {0};
+    char *accpath;
+    int curr_fd;
+    int linklen;
 
-	/* 
-	 * If we are handling a cmd file (no parent directory) just 
-	 * use the current dir to read the link using open.
-	 * Else use the path from the parent to read the link using open
-	 */
-	if (parentdir == NULL) {
-		accpath = ".";
-    	} else {
-		accpath = parentdir->fts_accpath;
-	}
+    /*
+     * If we are handling a cmd file (no parent directory) just
+     * use the current dir to read the link using open.
+     * Else use the path from the parent to read the link using open
+     */
+    if (parentdir == NULL) {
+        accpath = ".";
+    } else {
+        accpath = parentdir->fts_accpath;
+    }
 
-	curr_fd = open(accpath, O_RDONLY);
-	if (curr_fd == -1) {
-		printf(" -> [invalid]");
-		return;
-	}
-        
-	linklen = readlinkat(curr_fd, filename, linkpath, sizeof(linkpath));
-	close(curr_fd);
+    curr_fd = open(accpath, O_RDONLY);
+    if (curr_fd == -1) {
+        printf(" -> [invalid]");
+        return;
+    }
 
-        if (linklen != -1) {
-            linkpath[linklen] = '\0';
-            printf(" -> %s", linkpath);
-        }
-	else {
-	    printf(" -> [invalid]");
-	}
+    linklen = readlinkat(curr_fd, filename, linkpath, sizeof(linkpath));
+    close(curr_fd);
 
+    if (linklen != -1) {
+        linkpath[linklen] = '\0';
+        printf(" -> %s", linkpath);
+    } else {
+        printf(" -> [invalid]");
+    }
 }
 
 /* Add a character representing the file type after the file name */
@@ -349,11 +347,11 @@ Handle_s_Option(struct stat sb, int fromblocks)
                 raw_bytes = sb.st_size;
             }
 
-	    /* 
-	     * -1 is used to account for the extra '\0' 
-	     * that impact the computations
-	     */
-	    PrintHumanReadable(raw_bytes, MAX_BYTE_FIELD_LEN - 1);
+            /*
+             * -1 is used to account for the extra '\0'
+             * that impact the computations
+             */
+            PrintHumanReadable(raw_bytes, MAX_BYTE_FIELD_LEN - 1);
         }
         printf(" ");
     }
@@ -366,7 +364,7 @@ Handle_l_Option(struct stat sb)
     if (USR_OPT->l) {
         /* Print the file mode */
         char res[MAX_MODE_LEN] = {'\0'};
-	int padding_size;
+        int padding_size;
 
         strmode(sb.st_mode, res);
         printf("%s ", res);
@@ -375,39 +373,38 @@ Handle_l_Option(struct stat sb)
         if (PrintIntVal(1, sb.st_nlink, PINFOS->max_link_nb_len)) {
             return errno;
         }
-        
-	printf(" ");
+
+        printf(" ");
 
         PrintOwner(sb);
         PrintGroup(sb);
 
-	/* Set padding size for number of byte field */
-	if (USR_OPT->h) {
-		if (PINFOS->max_special_file_byte_len > MAX_BYTE_FIELD_LEN) {
-	    		padding_size = PINFOS->max_special_file_byte_len;
-    		} else {
-	    		padding_size = MAX_BYTE_FIELD_LEN - 1;
-    		}
-	} else {
-		padding_size = PINFOS->max_nb_byte_len;
-	}
-
-	/* 
-	 * Handle block special or character special file
-	 * + 2 to account for the ", " we will print
-	 */
-	if (S_ISCHR(sb.st_mode) || S_ISBLK(sb.st_mode)) {
-		int total_len = NbDigitFromInt(major(sb.st_rdev)) 
-			+ NbDigitFromInt(minor(sb.st_rdev)) + 2;
-
-		Padding(NULL, padding_size - total_len);
-    		printf("%d, %d", major(sb.st_rdev), minor(sb.st_rdev));
-	}
-        /* If h is specified print the number of bytes */
-	else if (USR_OPT->h) {
-	    PrintHumanReadable(sb.st_size, padding_size);
+        /* Set padding size for number of byte field */
+        if (USR_OPT->h) {
+            if (PINFOS->max_special_file_byte_len > MAX_BYTE_FIELD_LEN) {
+                padding_size = PINFOS->max_special_file_byte_len;
+            } else {
+                padding_size = MAX_BYTE_FIELD_LEN - 1;
+            }
+        } else {
+            padding_size = PINFOS->max_nb_byte_len;
         }
-        else if (PrintIntVal(1, sb.st_size, PINFOS->max_nb_byte_len)) {
+
+        /*
+         * Handle block special or character special file
+         * + 2 to account for the ", " we will print
+         */
+        if (S_ISCHR(sb.st_mode) || S_ISBLK(sb.st_mode)) {
+            int total_len = NbDigitFromInt(major(sb.st_rdev)) +
+                            NbDigitFromInt(minor(sb.st_rdev)) + 2;
+
+            Padding(NULL, padding_size - total_len);
+            printf("%d, %d", major(sb.st_rdev), minor(sb.st_rdev));
+        }
+        /* If h is specified print the number of bytes */
+        else if (USR_OPT->h) {
+            PrintHumanReadable(sb.st_size, padding_size);
+        } else if (PrintIntVal(1, sb.st_size, PINFOS->max_nb_byte_len)) {
             return errno;
         }
 
@@ -421,7 +418,7 @@ Handle_l_Option(struct stat sb)
 }
 
 static int
-DispFile(struct stat file_sb, char *filename, FTSENT* parentdir)
+DispFile(struct stat file_sb, char *filename, FTSENT *parentdir)
 {
 
     if (Handle_i_Option(file_sb)) {
@@ -441,9 +438,8 @@ DispFile(struct stat file_sb, char *filename, FTSENT* parentdir)
 
     Handle_F_Option(file_sb);
 
-    if ((USR_OPT->l || USR_OPT->F || USR_OPT->d) 
-		    && S_ISLNK(file_sb.st_mode)) {
-	     PrintSymlink(parentdir, filename);
+    if ((USR_OPT->l || USR_OPT->F || USR_OPT->d) && S_ISLNK(file_sb.st_mode)) {
+        PrintSymlink(parentdir, filename);
     }
 
     printf("\n");
@@ -465,10 +461,10 @@ LongFormatPrinter(FTSENT *parentdir, FTSENT *list)
     saved = list;
     while (saved != NULL) {
 
-	/* 
-	 * If the current file created an error, throw the corresponding error
-	 * message, set errno, and skip to the next file
-	 */
+        /*
+         * If the current file created an error, throw the corresponding error
+         * message, set errno, and skip to the next file
+         */
         if (saved->fts_errno != 0) {
             fprintf(stderr, "ls: %s: %s\n", saved->fts_name,
                     strerror(saved->fts_errno));
@@ -488,7 +484,7 @@ LongFormatPrinter(FTSENT *parentdir, FTSENT *list)
      * TODO: Print the total if the output is to a terminal only !
      */
     if (parentdir != NULL && (USR_OPT->l || USR_OPT->s)) {
-	    PrintTotalByte();
+        PrintTotalByte();
     }
 
     while (list != NULL) {
