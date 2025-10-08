@@ -5,6 +5,7 @@
 
 #include <errno.h>
 #include <fts.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,7 +41,6 @@ SetFTSFlag(int *fts_flags)
     if (!USR_OPT->F && !USR_OPT->d && !USR_OPT->l) {
         *fts_flags |= FTS_COMFOLLOW;
     }
-
     /*
      * If -a option is specified we need to print "." and ".."
      * when encountered during the traversal
@@ -119,13 +119,15 @@ TreeTraversal(int argc, char *argv[])
     while ((entry = fts_read(ftsp)) != NULL) {
 
         switch (entry->fts_info) {
+	case FTS_SL:
+		//printf("\nTRAVERSAL CURRENT CWD: %s\n", getcwd(NULL, 0));
+		break;
         case FTS_D:
-
             /*
              * If -A is specified we must print the file starting with '.'
              * So if it's not the case just skip the directory
              * But only if we are not on the command lines arguments
-             * otherwise we would skip all the regular files as '.' is
+             * otherwise we would skip all the regular files, as '.' is
              * placed by default when not specified anything in the cmd.
              */
             if (!USR_OPT->A && entry->fts_name[0] == '.' &&
