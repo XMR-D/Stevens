@@ -90,7 +90,7 @@ typedef struct UsrOptions {
  */
 int OptSet(char token, UsrOptions *usr_opt);
 
-void NonPrintableOptionSet(UsrOptions *opt);
+void OutputOptionSet(UsrOptions *opt);
 
 void RootOptionSet(UsrOptions *opt);
 

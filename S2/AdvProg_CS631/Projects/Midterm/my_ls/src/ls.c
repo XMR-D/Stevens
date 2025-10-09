@@ -1,3 +1,4 @@
+#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -5,7 +6,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "error.h"
 #include "listing.h"
 #include "opt_parser.h"
 #include "padding-handling.h"
@@ -49,8 +49,9 @@ parse_cmd(int *argc, char **input[], UsrOptions *usr_opt)
         /* If an option is invalid stop exec and return the error */
         opt_err = OptSet((char)opt_found, usr_opt);
         if (opt_err) {
-            throw_error(NULL, WRNG_OPT_ERR);
-            return opt_err;
+            warnx("usage : ls [-AacdFfhiklnqRrSstuw] [file ...]");
+
+            return EXIT_FAILURE;
         }
     }
     *argc -= optind;
@@ -73,13 +74,14 @@ parse_cmd(int *argc, char **input[], UsrOptions *usr_opt)
 int
 ls_main(int argc, char *argv[])
 {
-    /* Set default options for non printable characters and root */
+    /* Set default options for non printable characters and root */	
     RootOptionSet(USR_OPT);
-    NonPrintableOptionSet(USR_OPT);
 
     if (parse_cmd(&argc, &argv, USR_OPT)) {
-        return errno;
+        return EXIT_FAILURE;
     }
+    
+    OutputOptionSet(USR_OPT);
 
     /* 
      * If no argument other than options are found during tokenization
@@ -100,7 +102,7 @@ ls_main(int argc, char *argv[])
     getbsize(NULL, &BLOCKSIZE);
 
     if (tree_traversal(argc, argv)) {
-        return errno;
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;
@@ -123,13 +125,13 @@ main(int argc, char **argv)
      */
     USR_OPT = calloc(1, sizeof(UsrOptions));
     if (!USR_OPT) {
-        throw_error(NULL, MEM_ERR);
+        errx(1, "ls: memory error: %s\n", strerror(errno));
         return errno;
     }
 
     PINFOS = calloc(1, sizeof(PaddingInfos));
     if (!PINFOS) {
-        throw_error(NULL, MEM_ERR);
+        errx(1, "ls: memory error: %s\n", strerror(errno));
         return errno;
     }
 

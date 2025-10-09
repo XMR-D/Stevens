@@ -1,34 +1,11 @@
 #include "utility.h"
-
-#include <sys/types.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-
 #include "opt_parser.h"
 
-#ifndef SIZES
-#define BSIZE 1
 #define KBSIZE 1024
-#define MBSIZE 1048576
-#define GBSIZE 1073741824
-#define TBSIZE 1099511627776
-#define SIZES
 
-#endif /* ! SIZES */
-#ifndef DEFAULT_BLK_SIZE
-#define DEFAULT_BLK_SIZE 512
-#endif /* !DEFAULT_BLK_SIZE */
-
-#define MIN_BLK_SIZE DEFAULT_BLK_SIZE
-#define MAX_BLK_SIZE GBSIZE
-
-
-extern int BLOCKSIZE;
+/* defined in ls.c */
 extern UsrOptions *USR_OPT;
+extern int BLOCKSIZE;
 
 int
 CompareMetrics(int metric1, int metric2)
@@ -103,34 +80,4 @@ ComputeBlock(int nb_blocks)
     }
 
     return (nb_bytes + BLOCKSIZE - 1) / BLOCKSIZE;
-}
-
-/*
- * From nb_bytes bytes, print and return the number of bytes
- * in the most apropriate unit.
- */
-long double
-ComputeBytes(long double nb_bytes)
-{
-    long int unit = 0;
-
-    if (nb_bytes == 0) {
-        return 0;
-    }
-
-    if (nb_bytes != 0) {
-        if (nb_bytes < KBSIZE) {
-            unit = BSIZE;
-        } else if (nb_bytes >= KBSIZE && nb_bytes < MBSIZE) {
-            unit = KBSIZE;
-        } else if (nb_bytes >= MBSIZE && nb_bytes < GBSIZE) {
-            unit = MBSIZE;
-        } else if (nb_bytes >= GBSIZE && nb_bytes < TBSIZE) {
-            unit = GBSIZE;
-        } else if (nb_bytes >= TBSIZE) {
-            unit = TBSIZE;
-        }
-    }
-
-    return nb_bytes / unit;
 }

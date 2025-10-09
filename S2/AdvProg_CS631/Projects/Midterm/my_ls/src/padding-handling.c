@@ -2,7 +2,6 @@
 
 #include <sys/stat.h>
 
-#include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
 #include <pwd.h>
@@ -10,7 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "error.h"
 #include "opt_parser.h"
 #include "utility.h"
 

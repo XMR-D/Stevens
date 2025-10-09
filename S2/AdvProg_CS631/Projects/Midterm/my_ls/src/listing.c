@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <err.h>
 #include <errno.h>
 #include <fts.h>
 #include <limits.h>
@@ -11,7 +12,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "error.h"
 #include "opt_parser.h"
 #include "padding-handling.h"
 #include "printing.h"
@@ -131,7 +131,7 @@ tree_traversal(int argc, char *argv[])
     ftsp = fts_open(argv, fts_flags, (USR_OPT->f ? NULL : fts_compare));
 
     if (ftsp == NULL) {
-        fprintf(stderr, "ls: error: %s\n", strerror(errno));
+        warnx("ls: error: %s", strerror(errno));
         return errno;
     }
 
@@ -139,7 +139,7 @@ tree_traversal(int argc, char *argv[])
      * Call the printer on the command line targets (not options) and set errno
      * if an error is encountered
      */
-    retcode = LongFormatPrinter(NULL, fts_children(ftsp, 0));
+    retcode = long_format_printer(NULL, fts_children(ftsp, 0));
 
     /*
      * if we need to list directories as plain files
@@ -182,7 +182,7 @@ tree_traversal(int argc, char *argv[])
              */
             children_dir = fts_children(ftsp, 0);
 
-            LongFormatPrinter(entry, children_dir);
+            long_format_printer(entry, children_dir);
 
             /*
              * If -R is NOT specified and that
@@ -196,19 +196,18 @@ tree_traversal(int argc, char *argv[])
         case FTS_DNR:
         case FTS_ERR:
             /*
-             * In case of error, just print the error reason
-             * and try to continue
+             * In case of error, throw a warning and try to continue
              */
-            fprintf(stderr, "ls: %s: %s\n", entry->fts_name,
+            warnx("%s: %s", entry->fts_name,
                     strerror(entry->fts_errno));
             errno = entry->fts_errno;
             break;
         case FTS_DC:
             /*
-             * In case a cycle is detected, throw an error and
+             * In case a cycle is detected, throw a warning and
              * return to avoid side effects
              */
-            fprintf(stderr, "ls: %s: this directory is creating a circle\n",
+            warnx("ls: %s: this directory is creating a circle",
                     entry->fts_name);
             errno = entry->fts_errno;
             break;

@@ -5,7 +5,6 @@
 
 #include <fts.h>
 
-void PrintTotalBytes(void);
-int LongFormatPrinter(FTSENT *parentdir, FTSENT *list);
+int long_format_printer(FTSENT *parentdir, FTSENT *list);
 
 #endif /* !PRINTING_H */

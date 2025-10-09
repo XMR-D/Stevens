@@ -1,7 +1,7 @@
 include mkflags/generic_flags.mk
 
-#list all sources files in src/ dir, using a wildcard to prevent dev from adding every source file by hand.
-SRCS=src/ls.c src/opt-parser.c src/listing.c src/padding-handling.c src/printing.c src/utility.c src/error.c
+#list all sources files in src/ dir
+SRCS=src/ls.c src/opt-parser.c src/listing.c src/padding-handling.c src/printing.c src/utility.c
 
 # Create all objects files from C and Asm source files
 OBJS= ${SRCS:.c=.o}

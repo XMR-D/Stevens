@@ -1,7 +1,5 @@
-## Priority : 3
-//TODO: See if we can remove error.c and use fprintf manually to handle errors
+## Priority: 1 Tiny debug needed with -atu,
+#Compare ./ls -atu and ls -atu 
 
 ## Priority: 4
 //TODO: Code Cleaning and Coding_style compliance review
-        FIX INDENTATION / ADD STATIC FIELDS ON FUNCTIONS NOT IN HEADER / COMPLY WITH PROFESSOR Coding_style
-	Produce a good README 

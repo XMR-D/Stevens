@@ -1,30 +1,31 @@
 #include "printing.h"
 
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-
+#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <grp.h>
 #include <math.h>
+#include <grp.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include "error.h"
+
 #include "opt_parser.h"
 #include "padding-handling.h"
 #include "utility.h"
 
-/* defined in ls.c */
+/* defined (and expalined) in ls.c */
 extern UsrOptions *USR_OPT;
 extern PaddingInfos *PINFOS;
 extern long BLOCKSIZE;
 
-/* defined in listing.c */
+/* defined (and explained) in listing.c */
 extern int PRINTED;
+
+/* defined (and explained) in opt-parser.c */
+extern int PRINT_TOTAL;
 
 /*
  * This macro represent the maximum possible len for a
@@ -36,17 +37,6 @@ extern int PRINTED;
  * bounds year 9999->10000
  */
 #define MAX_DATE_LEN 13
-
-/*
- * This macro represent a year in seconds
- * Nb_days_in_a_year * Nb_hours_in_a_day
- * 	* Nb_minutes_in_a_hour * nb_seconds_in_a_minutes
- *
- * 365 * 24 * 60 * 60 = 31536000
- *
- * Used to check if a file has been created long ago.
- */
-#define YEAR_IN_SECONDS 31536000
 
 /*
  * Define the maximum mode field length as 10 chars
@@ -67,18 +57,8 @@ extern int PRINTED;
  */
 #define MAX_BYTE_FIELD_LEN 5
 
-
-#ifndef SIZES
-#define SIZES
-#define BSIZE 1
-#define KBSIZE 1024
-#define MBSIZE 1048576
-#define GBSIZE 1073741824
-#define TBSIZE 1099511627776
-#endif /* ! SIZES */
-
 static void
-PrintFileName(char *filename)
+print_file_name(char *filename)
 {
     /* Force printing of non-printable characters as '?' */
     if (USR_OPT->q) {
@@ -104,13 +84,13 @@ PrintFileName(char *filename)
 
 /* If padding_order = 0 the padding is after the value, else it's before */
 static int
-PrintIntVal(int padding_order, long int val, long int max_len)
+print_int_value(int padding_order, long int val, long int max_len)
 {
     /* +1 to account for the '\0' */
     int val_size = NbDigitFromInt(val) + 1;
     char *val_str = calloc(sizeof(char), val_size);
     if (!val_str) {
-        throw_error("", MEM_ERR);
+        warnx("ls: memory error: %s\n", strerror(errno));
         return errno;
     }
 
@@ -131,7 +111,7 @@ PrintIntVal(int padding_order, long int val, long int max_len)
 }
 
 static int
-PrintOwner(struct stat sb)
+print_owner(struct stat sb)
 {
     if (!USR_OPT->n) {
         struct passwd *pwd = getpwuid(sb.st_uid);
@@ -142,7 +122,7 @@ PrintOwner(struct stat sb)
          * of each file uid
          */
         if (pwd == NULL) {
-            if (PrintIntVal(0, sb.st_uid, PINFOS->max_uid_str_len)) {
+            if (print_int_value(0, sb.st_uid, PINFOS->max_uid_str_len)) {
                 return errno;
             }
         } else {
@@ -150,7 +130,7 @@ PrintOwner(struct stat sb)
             print_padding(pwd->pw_name, PINFOS->max_uid_str_len);
         }
     } else {
-        if (PrintIntVal(0, sb.st_uid, PINFOS->max_uid_int_len)) {
+        if (print_int_value(0, sb.st_uid, PINFOS->max_uid_int_len)) {
             return errno;
         }
     }
@@ -159,7 +139,7 @@ PrintOwner(struct stat sb)
 }
 
 static int
-PrintGroup(struct stat sb)
+print_group(struct stat sb)
 {
     if (!USR_OPT->n) {
         struct group *grp = getgrgid(sb.st_gid);
@@ -170,7 +150,7 @@ PrintGroup(struct stat sb)
          * of each file gid
          */
         if (grp == NULL) {
-            if (PrintIntVal(0, sb.st_gid, PINFOS->max_gid_str_len)) {
+            if (print_int_value(0, sb.st_gid, PINFOS->max_gid_str_len)) {
                 return errno;
             }
         }
@@ -180,7 +160,7 @@ PrintGroup(struct stat sb)
             print_padding(grp->gr_name, PINFOS->max_gid_str_len);
         }
     } else {
-        if (PrintIntVal(0, sb.st_gid, PINFOS->max_gid_int_len)) {
+        if (print_int_value(0, sb.st_gid, PINFOS->max_gid_int_len)) {
             return errno;
         }
     }
@@ -190,14 +170,11 @@ PrintGroup(struct stat sb)
 }
 
 static void
-PrintDate(struct stat sb)
+print_date(struct stat sb)
 {
     char out_str[MAX_DATE_LEN] = {'\0'};
     struct tm *info;
-    time_t now;
     char *date_to_print;
-    int time_err;
-    int time_diff;
 
     /* 
      * tzset will retreive TZ environement value and set it automatically
@@ -205,26 +182,15 @@ PrintDate(struct stat sb)
      */
     tzset();
     info = localtime(&(sb.st_mtime));
-    time_err = time(&now);
-    time_diff = difftime(now, sb.st_mtime);
 
-
-    /* 
-     * If the time difference between now and the file creation is 
-     * more than a year ago, print only the date
-     */
-    if ((time_err == -1) || abs((int)time_diff) < YEAR_IN_SECONDS) {
-        date_to_print = "%b %e %H:%M";
-    } else {
-        date_to_print = "%b %e  %Y";
-    }
+    date_to_print = "%b %e %H:%M";
 
     strftime(out_str, sizeof(out_str), date_to_print, info);
     printf("%s", out_str);
 }
 
 static void
-PrintHumanReadable(int byte_nb, int padding_size)
+print_human_readable(int byte_nb, int padding_size)
 {
 
     char pbuf[MAX_BYTE_FIELD_LEN] = {0};
@@ -235,11 +201,11 @@ PrintHumanReadable(int byte_nb, int padding_size)
 }
 
 static void
-PrintTotalByte(void)
+print_total_byte(void)
 {
     printf("total ");
     if (USR_OPT->h) {
-        PrintHumanReadable(PINFOS->total_bytes, 0);
+        print_human_readable(PINFOS->total_bytes, 0);
     } else {
         int nb_byte = (PINFOS->total_blocks * BLOCKSIZE);
         printf("%d", (int)round(nb_byte / BLOCKSIZE));
@@ -248,7 +214,7 @@ PrintTotalByte(void)
 }
 
 static void
-PrintSymlink(FTSENT *parentdir, char *filename)
+print_symlink(FTSENT *parentdir, char *filename)
 {
     char linkpath[PATH_MAX] = {0};
     char *accpath;
@@ -285,7 +251,7 @@ PrintSymlink(FTSENT *parentdir, char *filename)
 
 /* Add a character representing the file type after the file name */
 static void
-Handle_F_Option(struct stat sb)
+handle_F_option(struct stat sb)
 {
     if (USR_OPT->F) {
         char filetype;
@@ -305,7 +271,7 @@ Handle_F_Option(struct stat sb)
             printf("=");
             break;
         case 'w':
-            printf("%c", '%');
+            printf("%%");
             break;
         case 'p':
             printf("|");
@@ -322,10 +288,10 @@ Handle_F_Option(struct stat sb)
 }
 
 static int
-Handle_i_Option(struct stat sb)
+handle_i_option(struct stat sb)
 {
     if (USR_OPT->i) {
-        if (PrintIntVal(1, sb.st_ino, PINFOS->max_inode_nb_len)) {
+        if (print_int_value(1, sb.st_ino, PINFOS->max_inode_nb_len)) {
             return errno;
         }
         printf(" ");
@@ -334,11 +300,11 @@ Handle_i_Option(struct stat sb)
 }
 
 static int
-Handle_s_Option(struct stat sb, int fromblocks)
+handle_s_option(struct stat sb, int fromblocks)
 {
     if (USR_OPT->s) {
         if (!USR_OPT->h) {
-            if (PrintIntVal(1, ComputeBlock(sb.st_blocks),
+            if (print_int_value(1, ComputeBlock(sb.st_blocks),
                             PINFOS->max_nb_block_len)) {
                 return errno;
             }
@@ -354,7 +320,7 @@ Handle_s_Option(struct stat sb, int fromblocks)
              * -1 is used to account for the extra '\0'
              * that impact the computations
              */
-            PrintHumanReadable(raw_bytes, MAX_BYTE_FIELD_LEN - 1);
+            print_human_readable(raw_bytes, MAX_BYTE_FIELD_LEN - 1);
         }
         printf(" ");
     }
@@ -362,7 +328,7 @@ Handle_s_Option(struct stat sb, int fromblocks)
 }
 
 static int
-Handle_l_Option(struct stat sb)
+handle_l_option(struct stat sb)
 {
     if (USR_OPT->l) {
         /* Print the file mode */
@@ -373,14 +339,14 @@ Handle_l_Option(struct stat sb)
         printf("%s ", res);
 
         /* Print the number of links */
-        if (PrintIntVal(1, sb.st_nlink, PINFOS->max_link_nb_len)) {
+        if (print_int_value(1, sb.st_nlink, PINFOS->max_link_nb_len)) {
             return errno;
         }
 
         printf(" ");
 
-        PrintOwner(sb);
-        PrintGroup(sb);
+        print_owner(sb);
+        print_group(sb);
 
         /* Set padding size for number of byte field */
         if (USR_OPT->h) {
@@ -406,43 +372,43 @@ Handle_l_Option(struct stat sb)
         }
         /* If h is specified print the number of bytes */
         else if (USR_OPT->h) {
-            PrintHumanReadable(sb.st_size, padding_size);
-        } else if (PrintIntVal(1, sb.st_size, PINFOS->max_nb_byte_len)) {
+            print_human_readable(sb.st_size, padding_size);
+        } else if (print_int_value(1, sb.st_size, PINFOS->max_nb_byte_len)) {
             return errno;
         }
 
         printf(" ");
 
         /* Print the date */
-        PrintDate(sb);
+        print_date(sb);
         printf(" ");
     }
     return EXIT_SUCCESS;
 }
 
 static int
-DispFile(struct stat file_sb, char *filename, FTSENT *parentdir)
+disp_file(struct stat file_sb, char *filename, FTSENT *parentdir)
 {
 
-    if (Handle_i_Option(file_sb)) {
+    if (handle_i_option(file_sb)) {
         return errno;
     }
 
-    if (Handle_s_Option(file_sb, 1)) {
+    if (handle_s_option(file_sb, 1)) {
         return errno;
     }
 
-    if (Handle_l_Option(file_sb)) {
+    if (handle_l_option(file_sb)) {
         return errno;
     }
 
     /* Print the file name */
-    PrintFileName(filename);
+    print_file_name(filename);
 
-    Handle_F_Option(file_sb);
+    handle_F_option(file_sb);
 
     if ((USR_OPT->l || USR_OPT->F || USR_OPT->d) && S_ISLNK(file_sb.st_mode)) {
-        PrintSymlink(parentdir, filename);
+        print_symlink(parentdir, filename);
     }
 
     printf("\n");
@@ -451,9 +417,9 @@ DispFile(struct stat file_sb, char *filename, FTSENT *parentdir)
     return EXIT_SUCCESS;
 }
 
-/* Call DispFile on every file after computing padding necessary */
+/* Call disp_file on every file after computing padding necessary */
 int
-LongFormatPrinter(FTSENT *parentdir, FTSENT *list)
+long_format_printer(FTSENT *parentdir, FTSENT *list)
 {
     FTSENT *saved;
 
@@ -469,7 +435,7 @@ LongFormatPrinter(FTSENT *parentdir, FTSENT *list)
          * message, set errno, and skip to the next file
          */
         if (saved->fts_errno != 0) {
-            fprintf(stderr, "ls: %s: %s\n", saved->fts_name,
+            warnx("%s: %s", saved->fts_name,
                     strerror(saved->fts_errno));
             errno = saved->fts_errno;
             saved = saved->fts_link;
@@ -481,13 +447,13 @@ LongFormatPrinter(FTSENT *parentdir, FTSENT *list)
     }
 
     /*
-     * If the -l or the -s option is set and that we are not printing
+     * If PRINT_TOTAL has been set and that we are not printing
      * the command line files then print the total number of bytes
      *
-     * TODO: Print the total if the output is to a terminal only !
+     * (see opt-parser.c for more details on PRINT_TOTAL)
      */
-    if (parentdir != NULL && (USR_OPT->l || USR_OPT->s)) {
-        PrintTotalByte();
+    if (parentdir != NULL && PRINT_TOTAL) {
+        print_total_byte();
     }
 
     while (list != NULL) {
@@ -512,7 +478,7 @@ LongFormatPrinter(FTSENT *parentdir, FTSENT *list)
             continue;
         }
         if (list->fts_errno == 0 &&
-            DispFile(*(list->fts_statp), list->fts_name, parentdir)) {
+            disp_file(*(list->fts_statp), list->fts_name, parentdir)) {
             return errno;
         }
         if (!PRINTED) {

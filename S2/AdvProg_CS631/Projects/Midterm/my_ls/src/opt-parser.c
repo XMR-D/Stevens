@@ -3,8 +3,14 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "error.h"
 #include "opt_parser.h"
+
+/* 
+ * Signal used in printing.c to signal ls to print 
+ * the total of bytes/blocks (depending on options)
+ * found in the actual listing.
+ */
+int PRINT_TOTAL = 0;
 
 int
 OptSet(char opt, UsrOptions *usr_opt)
@@ -170,7 +176,7 @@ OptSet(char opt, UsrOptions *usr_opt)
         break;
 
     case '?':
-        return WRNG_OPT_ERR;
+        return (int) opt;
         break;
     }
 
@@ -183,9 +189,7 @@ RootOptionSet(UsrOptions *opt)
     uid_t euid = geteuid();
 
     if (euid == 0) {
-        if (opt->A == 0) {
             opt->A++;
-        }
     }
 }
 
@@ -195,16 +199,29 @@ RootOptionSet(UsrOptions *opt)
  * for non printable characters
  */
 void
-NonPrintableOptionSet(UsrOptions *opt)
+OutputOptionSet(UsrOptions *opt)
 {
+    /* 
+     * If the stdout used is a tty (a terminal) then set q 
+     * and PRINT_TOTAL depending on the other otions
+     */
     if (isatty(STDOUT_FILENO)) {
         if (!opt->w && !opt->q) {
             opt->q++;
         }
+
+	if (opt->s && !opt->l) {
+	    PRINT_TOTAL++;
+	}
     } else {
         if (!opt->w && !opt->q) {
             opt->w++;
         }
+    }
+    
+    /* If l is specified print the total anyway */
+    if (opt->l) {
+	    PRINT_TOTAL++;
     }
 }
 
