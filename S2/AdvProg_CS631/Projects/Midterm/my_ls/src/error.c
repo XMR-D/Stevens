@@ -4,7 +4,6 @@
 #include <stdio.h>
 
 #include "log.h"
-#include "tokenize.h"
 #include "opt_parser.h"
 #include "targ_parser.h"
 
