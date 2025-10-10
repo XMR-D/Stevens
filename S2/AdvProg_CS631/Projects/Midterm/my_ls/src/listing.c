@@ -28,7 +28,7 @@ extern UsrOptions *USR_OPT;
 int PRINTED = 0;
 
 /*
- * set_fts_flag : This routine will evaluate different options from the 
+ * set_fts_flag : This routine will evaluate different options from the
  * USR_OPT options structure, and set the flags for the subsequents
  * fts functions calls by editing the fts_flags pointer passed as the
  * routine argument.
@@ -59,12 +59,12 @@ set_fts_flag(int *fts_flags)
 }
 
 /*
- * fts_compare : This routine will evaluate the options in the 
+ * fts_compare : This routine will evaluate the options in the
  * USR_OPT options to compare two fts entry elements accordingly.
  *
  * Note: This function is never directly called in the code
  * but rather used as the comparison function for fts_open
- * that way all fts entries found by the libfts will be sorted properly. 
+ * that way all fts entries found by the libfts will be sorted properly.
  */
 static int
 fts_compare(const FTSENT **elm1, const FTSENT **elm2)
@@ -89,9 +89,9 @@ fts_compare(const FTSENT **elm1, const FTSENT **elm2)
         ret = strcmp((*elm1)->fts_name, (*elm2)->fts_name);
     }
 
-    /* 
+    /*
      * If we need to revert the sort, instead of calling again the same block
-     * of functions invert the result by multiplying by -1 
+     * of functions invert the result by multiplying by -1
      */
     if (USR_OPT->r) {
         return ret * -1;
@@ -111,7 +111,7 @@ fts_compare(const FTSENT **elm1, const FTSENT **elm2)
  * If no error is encountered while listing or printing the routine return 0
  * else it will return a non null value that represent the error type.
  *
- * WARNING: The function can return an error code but output some 
+ * WARNING: The function can return an error code but output some
  * valid file listing as long as one target found is valid
  * (depending on the USR_OPT)
  */
@@ -139,7 +139,7 @@ tree_traversal(int argc, char *argv[])
      * Call the printer on the command line targets (not options) and set errno
      * if an error is encountered
      */
-    retcode = long_format_printer(NULL, fts_children(ftsp, 0));
+    retcode = listing_printer(NULL, fts_children(ftsp, 0));
 
     /*
      * if we need to list directories as plain files
@@ -182,7 +182,7 @@ tree_traversal(int argc, char *argv[])
              */
             children_dir = fts_children(ftsp, 0);
 
-            long_format_printer(entry, children_dir);
+            listing_printer(entry, children_dir);
 
             /*
              * If -R is NOT specified and that
@@ -198,8 +198,7 @@ tree_traversal(int argc, char *argv[])
             /*
              * In case of error, throw a warning and try to continue
              */
-            warnx("%s: %s", entry->fts_name,
-                    strerror(entry->fts_errno));
+            warnx("%s: %s", entry->fts_name, strerror(entry->fts_errno));
             errno = entry->fts_errno;
             break;
         case FTS_DC:
@@ -208,7 +207,7 @@ tree_traversal(int argc, char *argv[])
              * return to avoid side effects
              */
             warnx("ls: %s: this directory is creating a circle",
-                    entry->fts_name);
+                  entry->fts_name);
             errno = entry->fts_errno;
             break;
         default:

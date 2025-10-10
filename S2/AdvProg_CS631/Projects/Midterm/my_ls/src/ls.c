@@ -26,13 +26,13 @@ UsrOptions *USR_OPT;
 
 /*
  * Global variable that will hold the blocksize value, setted once here
- * and used in the byte computations functions, and should not be 
+ * and used in the byte computations functions, and should not be
  * changed once the traversal has been called.
  */
 long BLOCKSIZE;
 
 /*
- * parse_cmd : Routine that will parse the options passed in the 
+ * parse_cmd : Routine that will parse the options passed in the
  * command line argument by the user
  *
  * Note: Once a token that is not an option is met, the tokenizing stop
@@ -66,24 +66,24 @@ parse_cmd(int *argc, char **input[], UsrOptions *usr_opt)
  *
  * Note: This routine return EXIT_SUCCESS on success or a non null integer
  * representing the error encountered during ls execution.
- * 
- * WARNING: The function can return an error code but output some 
+ *
+ * WARNING: The function can return an error code but output some
  * valid file listing as long as one target found is valid
  * (depending on the USR_OPT)
- */ 
+ */
 int
 ls_main(int argc, char *argv[])
 {
-    /* Set default options for non printable characters and root */	
+    /* Set default options for non printable characters and root */
     RootOptionSet(USR_OPT);
 
     if (parse_cmd(&argc, &argv, USR_OPT)) {
         return EXIT_FAILURE;
     }
-    
+
     OutputOptionSet(USR_OPT);
 
-    /* 
+    /*
      * If no argument other than options are found during tokenization
      * add the default '.' target.
      */
@@ -93,8 +93,8 @@ ls_main(int argc, char *argv[])
         argc = 1;
     }
 
-    /* 
-     * Retreive BLOCKSIZE environment variable, automatically handle 
+    /*
+     * Retreive BLOCKSIZE environment variable, automatically handle
      * case where the variable is wrong formated, invalid and will
      * default to the default block size used in the fs
      * if it's the case. see getbsize(3) for more information.
@@ -116,9 +116,9 @@ main(int argc, char **argv)
     setprogname(argv[0]);
 
 
-    /* 
+    /*
      * Allocate both USR_OPT and PINFOS global structures that
-     * will contain the options passed by the user and 
+     * will contain the options passed by the user and
      * the printing statistics that padding_handling.c will need.
      *
      * If we do it here, it will be easier for us to avoid leaks.

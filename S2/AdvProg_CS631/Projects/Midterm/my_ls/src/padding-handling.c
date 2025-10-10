@@ -19,7 +19,7 @@ extern PaddingInfos *PINFOS;
  * print_padding: This routine will print a number of space depending of str
  * and longest
  *
- * longest correspond to an int indicating on which numbers of chars 
+ * longest correspond to an int indicating on which numbers of chars
  * str must be represented, and that will be used to compute the number of
  * spaces required
  *
@@ -28,12 +28,12 @@ extern PaddingInfos *PINFOS;
  *
  * print_padding("150", 10) will print 10 - 4 spaces to align 150
  * to the longest existing in the current context giving as a result:
- * 		
+ *
  * 		1234567890
  * 		.......150	< ....... is what print_padding will print.
  *
  * Note: The only thing print_padding is doing is printing a number of spaces
- * printing str need to be handled in printing.c as the padding printing can be 
+ * printing str need to be handled in printing.c as the padding printing can be
  * before or after str depending on which field we want to print.
  */
 void
@@ -57,7 +57,7 @@ print_padding(char *str, int longest)
 }
 
 /*
- * reset_print_infos : This routine reset the PaddingInfos structure pointed to 
+ * reset_print_infos : This routine reset the PaddingInfos structure pointed to
  * by infos.
  *
  * Note : (None)
@@ -79,7 +79,6 @@ reset_print_infos(PaddingInfos *infos)
     infos->total_blocks = 0;
 }
 
-
 static void
 max_check(int val, int *max)
 {
@@ -89,9 +88,9 @@ max_check(int val, int *max)
 }
 
 /*
- * compute_padding_needed: This routine compute the length of all the 
+ * compute_padding_needed: This routine compute the length of all the
  * possible numerical fields of the long format printer for all files found.
- * by comparing each field of the file to the pinfos actual structure 
+ * by comparing each field of the file to the pinfos actual structure
  * that contains the max lengths of the file struct fields.
  *
  * Note: It's a particulary messy function that manually fetch and performs
@@ -121,7 +120,7 @@ compute_padding_needed(struct stat sb, UsrOptions *usr_opt)
         int total_len =
          NbDigitFromInt(major(sb.st_rdev)) + NbDigitFromInt(minor(sb.st_rdev));
 
-        /* +1 to account for the ", " when printing */
+        /* +2 to account for the ", " when printing */
         special_file_byte_len = total_len + 2;
 
         /*

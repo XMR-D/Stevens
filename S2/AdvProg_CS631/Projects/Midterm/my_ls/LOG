@@ -1,3 +1,39 @@
+commit e18cb628066ba3636251bc66a181ac644816ccab
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Thu Oct 9 22:07:13 2025 +0000
+
+    Cleaning/Fix(): Cleaning code to be more efficient, removed error.c/h and use the err.h lib instead leading to more stable code
+    refactoring name to have a more coehsive code, find a new bug to solve before deadline, apparently a tiny error occured with '.' and other files on the access time
+    sort, applying teacher feedback and trying to have more explicit commit messages
+
+commit 3c512e6a4d6ba2701392492f59bb7c7d3fa8b870
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Wed Oct 8 21:03:45 2025 +0000
+
+    Fix(Fixing segfault due to compiler optimization + changed the names of the function + adding some commentary on routine to make them underestanable)
+    
+    Removed -03 compiler flag that caused a segmentation fault
+    Adding commentary on several functions
+    Need to refactor and add commentary on all the functions in printing.c and utility.c
+
+commit 5c36a4a5f583795b1dcdbe38ebae440d0ac1b4e4
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Sun Oct 12 23:31:07 2025 -0400
+
+    Update README.md
+
+commit 3bd700a7f3733f10130aa924f837b2036770edcf
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Wed Oct 8 06:48:32 2025 +0000
+
+    little changes
+
+commit 1c6c4b2a7d114ef08fef7a0ca6adf46fcd0f9703
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Wed Oct 8 06:43:25 2025 +0000
+
+    Clean(Clang format)
+
 commit e9860391183d049ba848bdf9a502ac83a6fc3be2
 Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
 Date:   Wed Oct 8 06:39:37 2025 +0000

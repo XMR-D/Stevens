@@ -1,4 +1,5 @@
 #include "utility.h"
+
 #include "opt_parser.h"
 
 #define KBSIZE 1024
@@ -7,6 +8,15 @@
 extern UsrOptions *USR_OPT;
 extern int BLOCKSIZE;
 
+/* CompareMetrics : Utility routine that compare two integer value 
+ * representing two metrics 
+ *
+ * return -1 if the first one is bigger than the second one
+ * return 1 if the first one is smaller than the second one
+ * return 0 if both are equal
+ *
+ * Note : (None)
+ */
 int
 CompareMetrics(int metric1, int metric2)
 {
@@ -20,9 +30,26 @@ CompareMetrics(int metric1, int metric2)
     }
 }
 
+/* CompareTimeMetrics : Utility routine that compare two integer value 
+ * representing two time metrics
+ *
+ * return -1 if the first one is bigger than the second one
+ * return 1 if the first one is smaller than the second one
+ * return 0 if both are equal
+ *
+ * Note : (None)
+ */
 int
 CompareTimeMetrics(struct timespec t1, struct timespec t2)
 {
+    /*
+     * First compare seconds, if it's the same try to
+     * discriminate using nanoseconds for higher precision.
+     *
+     * If a time metric for sorting is specificaly
+     * passed it means that this is check is important
+     * to the user so we might as well done it precisely.
+     */
     if (t1.tv_sec != t2.tv_sec) {
         if (t1.tv_sec > t2.tv_sec) {
             return -1;
@@ -41,6 +68,13 @@ CompareTimeMetrics(struct timespec t1, struct timespec t2)
     }
 }
 
+/* NbDigitFromInt : Utility routine that compute the number
+ * of digit in val.
+ *
+ * return the number of digit found.
+ *
+ * Note : (None)
+ */
 int
 NbDigitFromInt(int val)
 {
@@ -59,9 +93,10 @@ NbDigitFromInt(int val)
 }
 
 /*
- * From a number of given blocks of 512B, Convert it in unit of
- * BLOCKSIZE, if BLOCKSIZE was not defined for any reasons
- * It falls back to 512B blocks unit
+ * ComputeBlock : Utility routine that convert a number of blocks of 512B
+ * into blocks of BLOCKSIZE  or in blocks of KBSIZE if k is specified. 
+ *
+ * Note : (None)
  */
 int
 ComputeBlock(int nb_blocks)

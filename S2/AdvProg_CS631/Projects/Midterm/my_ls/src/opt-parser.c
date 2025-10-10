@@ -5,8 +5,8 @@
 
 #include "opt_parser.h"
 
-/* 
- * Signal used in printing.c to signal ls to print 
+/*
+ * Signal used in printing.c to signal ls to print
  * the total of bytes/blocks (depending on options)
  * found in the actual listing.
  */
@@ -176,7 +176,7 @@ OptSet(char opt, UsrOptions *usr_opt)
         break;
 
     case '?':
-        return (int) opt;
+        return (int)opt;
         break;
     }
 
@@ -189,7 +189,7 @@ RootOptionSet(UsrOptions *opt)
     uid_t euid = geteuid();
 
     if (euid == 0) {
-            opt->A++;
+        opt->A++;
     }
 }
 
@@ -201,8 +201,8 @@ RootOptionSet(UsrOptions *opt)
 void
 OutputOptionSet(UsrOptions *opt)
 {
-    /* 
-     * If the stdout used is a tty (a terminal) then set q 
+    /*
+     * If the stdout used is a tty (a terminal) then set q
      * and PRINT_TOTAL depending on the other otions
      */
     if (isatty(STDOUT_FILENO)) {
@@ -210,18 +210,18 @@ OutputOptionSet(UsrOptions *opt)
             opt->q++;
         }
 
-	if (opt->s && !opt->l) {
-	    PRINT_TOTAL++;
-	}
+        if (opt->s && !opt->l) {
+            PRINT_TOTAL++;
+        }
     } else {
         if (!opt->w && !opt->q) {
             opt->w++;
         }
     }
-    
+
     /* If l is specified print the total anyway */
     if (opt->l) {
-	    PRINT_TOTAL++;
+        PRINT_TOTAL++;
     }
 }
 

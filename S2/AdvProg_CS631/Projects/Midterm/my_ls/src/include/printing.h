@@ -5,6 +5,6 @@
 
 #include <fts.h>
 
-int long_format_printer(FTSENT *parentdir, FTSENT *list);
+int listing_printer(FTSENT *parentdir, FTSENT *list);
 
 #endif /* !PRINTING_H */

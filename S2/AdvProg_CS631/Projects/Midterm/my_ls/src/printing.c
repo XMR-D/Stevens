@@ -1,16 +1,16 @@
 #include "printing.h"
 
+#include <ctype.h>
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <math.h>
 #include <grp.h>
+#include <math.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
 
 #include "opt_parser.h"
 #include "padding-handling.h"
@@ -57,13 +57,18 @@ extern int PRINT_TOTAL;
  */
 #define MAX_BYTE_FIELD_LEN 5
 
+/* print_file_name : This routine will print filename depending
+ * on the option passed in USR_OPT for the non-printable char handling
+ *
+ * Note: (None)
+ */
 static void
 print_file_name(char *filename)
 {
-    /* Force printing of non-printable characters as '?' */
+    /* If -q force printing of non-printable characters as '?' */
     if (USR_OPT->q) {
         while (*filename != '\0') {
-            if (*filename < ' ' || *filename > '~') {
+            if (isprint((int)*filename) == 0) {
                 putc('?', stdout);
             } else {
                 putc(*filename, stdout);
@@ -72,7 +77,7 @@ print_file_name(char *filename)
             filename++;
         }
     }
-    /* Force raw printing of non-printable characters */
+    /* If -w force raw printing of non-printable characters */
     else if (USR_OPT->w) {
         fwrite(filename, sizeof(char), strlen(filename), stdout);
     }
@@ -82,7 +87,24 @@ print_file_name(char *filename)
     }
 }
 
-/* If padding_order = 0 the padding is after the value, else it's before */
+/*
+ * print_int_value : This routine will print val inserting a padding
+ * made of ' ' characters computed with max_len.
+ *
+ * Note : The padding can be inserted before of after the value depending
+ * of the need.
+ *
+ * if padding_order is 1, then the padding will be inserted before the value.
+ * if padding_order is 0, then the padding will be inserted after the value.
+ * if padding_order is an other value, then no padding is inserted.
+ *
+ * max_len correspond to the total number of chars on which the value and the
+ * padding will be written on, if this value is previously wrong computed then
+ * the result is undefined.
+ *
+ *
+ * the routine will return 0 on success, a value >1 if failed.
+ */
 static int
 print_int_value(int padding_order, long int val, long int max_len)
 {
@@ -110,6 +132,16 @@ print_int_value(int padding_order, long int val, long int max_len)
     return EXIT_SUCCESS;
 }
 
+/*
+ * print_owner : This routine will print the owner informations extracted
+ * from sb stat structure depending on the options passed in USR_OPT structure.
+ *
+ * the routine will return 0 on success, a value >1 if failed.
+ *
+ * Note : If the user want to print the owner id as a string representation
+ * and the conversion fail, then print_owner will default to its integer
+ * representation.
+ */
 static int
 print_owner(struct stat sb)
 {
@@ -138,6 +170,16 @@ print_owner(struct stat sb)
     return EXIT_SUCCESS;
 }
 
+/*
+ * print_group : This routine will print the group informations extracted
+ * from sb stat structure depending on the options passed in USR_OPT structure.
+ *
+ * the routine will return 0 on success, a value >1 if failed.
+ *
+ * Note : If the user want to print the group id as a string representation
+ * and the conversion fail, then print_group will default to its integer
+ * representation.
+ */
 static int
 print_group(struct stat sb)
 {
@@ -169,6 +211,16 @@ print_group(struct stat sb)
     return EXIT_SUCCESS;
 }
 
+/*
+ * print_date : This routine will print the date extracted
+ * from sb stat structure depending on the TZ environment variable.
+ *
+ * Note : The timezone environement variable is automatically set using
+ * tzset(3) inside the call of localtime(3) and will handle possible
+ * invalid timezone passed by the user.
+ *
+ * see tzset(3) and localtime(3) man page for more information.
+ */
 static void
 print_date(struct stat sb)
 {
@@ -176,11 +228,6 @@ print_date(struct stat sb)
     struct tm *info;
     char *date_to_print;
 
-    /* 
-     * tzset will retreive TZ environement value and set it automatically
-     * see tzset(3) for more information
-     */
-    tzset();
     info = localtime(&(sb.st_mtime));
 
     date_to_print = "%b %e %H:%M";
@@ -189,6 +236,13 @@ print_date(struct stat sb)
     printf("%s", out_str);
 }
 
+/*
+ * print_human_readable : This routine is a wrapper to humanize_number(3)
+ * that will print byte_nb value in a human readable format inserting
+ * padding_size chars of padding
+ *
+ * Note : (None)
+ */
 static void
 print_human_readable(int byte_nb, int padding_size)
 {
@@ -200,6 +254,13 @@ print_human_readable(int byte_nb, int padding_size)
     printf("%s", pbuf);
 }
 
+/*
+ * print_total_byte : This routine will print the total
+ * of bytes found in a listing of files in a directory depending
+ * on options passed in USR_OPT
+ *
+ * Note : the total of bytes value is in the PINFOS structure.
+ */
 static void
 print_total_byte(void)
 {
@@ -207,12 +268,28 @@ print_total_byte(void)
     if (USR_OPT->h) {
         print_human_readable(PINFOS->total_bytes, 0);
     } else {
-        int nb_byte = (PINFOS->total_blocks * BLOCKSIZE);
-        printf("%d", (int)round(nb_byte / BLOCKSIZE));
+        printf("%d", ComputeBlock(PINFOS->total_blocks));
     }
     printf("\n");
 }
 
+/*
+ * print_symlink : This routine will print the symlink path pointed
+ * by filename depending on the parent directory.
+ *
+ * Note : Symlink resolution is done in the following manner,
+ *
+ * if parentdir is NULL, it means that filename is a target passed in by the
+ * user as a command line argument, so in this case '.' should be used as the
+ * CWD to resolve the symlink.
+ *
+ * if parentdir is not NULL, it means that filename is a file obtained in the
+ * fts traversal and parentdir access path should be used to resolve the
+ * symlink.
+ *
+ * Otherwise the path resolution could fail, if it's the case "-> [invalid]"
+ * should be printed.
+ */
 static void
 print_symlink(FTSENT *parentdir, char *filename)
 {
@@ -249,7 +326,13 @@ print_symlink(FTSENT *parentdir, char *filename)
     }
 }
 
-/* Add a character representing the file type after the file name */
+/*
+ * handle_F_option : This routine will print a trailing character to specify
+ * the type of the file listed depending on the -F option in USR_OPT
+ *
+ * Note : see the section LONGFORMAT of the README.md to get more information
+ * on which characters depict which filetype.
+ */
 static void
 handle_F_option(struct stat sb)
 {
@@ -287,6 +370,14 @@ handle_F_option(struct stat sb)
     }
 }
 
+/*
+ * handle_i_option : This routine will print the inode number extracted from
+ * sb stat structure, depending on the -i option in USR_OPT.
+ *
+ * the routine will return 0 on success, a value >1 if failed.
+ *
+ * Note : (None)
+ */
 static int
 handle_i_option(struct stat sb)
 {
@@ -299,27 +390,24 @@ handle_i_option(struct stat sb)
     return EXIT_SUCCESS;
 }
 
+/*
+ * handle_s_option : This routine will print the size extracted
+ * from sb stat structure depending on the options passed in USR_OPT.
+ *
+ * Note : (None)
+ */
 static int
-handle_s_option(struct stat sb, int fromblocks)
+handle_s_option(struct stat sb)
 {
     if (USR_OPT->s) {
         if (!USR_OPT->h) {
             if (print_int_value(1, ComputeBlock(sb.st_blocks),
-                            PINFOS->max_nb_block_len)) {
+                                PINFOS->max_nb_block_len)) {
                 return errno;
             }
         } else {
-            long double raw_bytes = 0;
-            if (fromblocks) {
-                raw_bytes = sb.st_blocks * 512;
-            } else {
-                raw_bytes = sb.st_size;
-            }
-
-            /*
-             * -1 is used to account for the extra '\0'
-             * that impact the computations
-             */
+            long double raw_bytes = sb.st_size;
+            /* -1 is used to account for the extra '\0' */
             print_human_readable(raw_bytes, MAX_BYTE_FIELD_LEN - 1);
         }
         printf(" ");
@@ -327,6 +415,15 @@ handle_s_option(struct stat sb, int fromblocks)
     return EXIT_SUCCESS;
 }
 
+/*
+ * handle_l_option : This routine will print various informations extracted
+ * from sb stat structure. This function will follow the guideline in
+ * LONGFORMAT part of the README.md to display the informations.
+ *
+ * the routine will return 0 on success, a value >1 if failed.
+ *
+ * Note : (None)
+ */
 static int
 handle_l_option(struct stat sb)
 {
@@ -386,6 +483,15 @@ handle_l_option(struct stat sb)
     return EXIT_SUCCESS;
 }
 
+/*
+ * disp_file : This routine will print information of filename
+ * extracted from it's corresponding file_sb stat structure
+ * depending on option passed in USR_OPT.
+ *
+ * the routine will return 0 on success, a value >1 if failed.
+ *
+ * Note : parentdir is used to resolve filename if it represent a symlink.
+ */
 static int
 disp_file(struct stat file_sb, char *filename, FTSENT *parentdir)
 {
@@ -394,7 +500,7 @@ disp_file(struct stat file_sb, char *filename, FTSENT *parentdir)
         return errno;
     }
 
-    if (handle_s_option(file_sb, 1)) {
+    if (handle_s_option(file_sb)) {
         return errno;
     }
 
@@ -417,9 +523,17 @@ disp_file(struct stat file_sb, char *filename, FTSENT *parentdir)
     return EXIT_SUCCESS;
 }
 
-/* Call disp_file on every file after computing padding necessary */
+/*
+ * listing_printer : This routine will call disp_file on all the files
+ * in the listing list. parentdir is representing the actual parent directory.
+ *
+ * the routine will return 0 on success, a value >1 if failed.
+ *
+ * Note : long_format_printer is the entrypoint of this file and should be the
+ * only function callable outside this file.
+ */
 int
-long_format_printer(FTSENT *parentdir, FTSENT *list)
+listing_printer(FTSENT *parentdir, FTSENT *list)
 {
     FTSENT *saved;
 
@@ -435,8 +549,7 @@ long_format_printer(FTSENT *parentdir, FTSENT *list)
          * message, set errno, and skip to the next file
          */
         if (saved->fts_errno != 0) {
-            warnx("%s: %s", saved->fts_name,
-                    strerror(saved->fts_errno));
+            warnx("%s: %s", saved->fts_name, strerror(saved->fts_errno));
             errno = saved->fts_errno;
             saved = saved->fts_link;
             continue;

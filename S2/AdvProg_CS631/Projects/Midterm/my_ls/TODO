@@ -1,5 +1,5 @@
-## Priority: 1 Tiny debug needed with -atu,
-#Compare ./ls -atu and ls -atu 
+## Priority: 1 
+// Finish commenting the code and CLANG FORMAT before submission
 
 ## Priority: 4
 //TODO: Code Cleaning and Coding_style compliance review
