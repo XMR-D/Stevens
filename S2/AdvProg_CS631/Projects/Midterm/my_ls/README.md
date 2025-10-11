@@ -1,14 +1,14 @@
-# LS(1) - List Directory Contents
+## Ls(1) - List Directory Contents
 
-## SYNOPSIS
+### SYNOPSIS
 **ls** [−AacdFfhiklnqRrSstuw] [file...]
 
-## DESCRIPTION
+### DESCRIPTION
 For each operand that names a file of a type other than directory, **ls** displays its name as well as any requested, associated information. For each operand that names a file of type directory, **ls** displays the names of files contained within that directory, as well as any requested, associated information.
 
 If no operands are given, the contents of the current directory are displayed. If more than one operand is given, non-directory operands are displayed first; directory and non-directory operands are sorted separately and in lexicographical order.
 
-## OPTIONS
+### OPTIONS
 
 **-A**  
   List all entries except for '.' and '..'. Always set for the super-user.
@@ -67,7 +67,7 @@ If no operands are given, the contents of the current directory are displayed. I
 **-w**  
   Force raw printing of non-printable characters. This is the default when output is not to a terminal.
 
-## OPTION INTERACTIONS
+### OPTION INTERACTIONS
 
 - The **-w** and **-q** options override each other; the last one specified determines the format used for non-printable characters.
 - The **-l** and **-n** options override each other; the last one specified determines the format used.
@@ -75,7 +75,7 @@ If no operands are given, the contents of the current directory are displayed. I
 
 By default, **ls** lists one entry per line to standard output. File information is displayed with one or more blanks separating the information associated with the -i, -s, and -l options.
 
-## THE LONG FORMAT
+### THE LONG FORMAT
 
 If the **-l** option is given, the following information is displayed for each file:
 
@@ -95,7 +95,7 @@ If the owner or group names are not a known owner or group name, or the **-n** o
 
 If the file is a character special or block special file, the major and minor device numbers for the file are displayed in the size field. If the file is a symbolic link the pathname of the linked-to file is preceded by "->".
 
-## FILE MODE FORMAT
+### FILE MODE FORMAT
 
 The file mode printed under the **-l** option consists of the entry type, owner permissions, group permissions, and other permissions. The entry type character describes the type of file:
 
@@ -125,30 +125,30 @@ These next two apply only to the third character in the last group (other permis
 - **T** - Sticky bit set but not execute or search permission
 - **t** - Sticky bit set and is searchable or executable
 
-## ENVIRONMENT
+### ENVIRONMENT
 
 The following environment variables affect the execution of **ls**:
 
 - **BLOCKSIZE** - If set, and the -h and -k options are not specified, the block counts (see -s) will be displayed in units of that size block.
 - **TZ** - The timezone to use when displaying dates.
 
-## EXIT STATUS
+### EXIT STATUS
 
 The **ls** utility exits 0 on success, and >0 if an error occurs.
 
-## COMPATIBILITY
+### COMPATIBILITY
 
 The group field is now automatically included in the long listing for files in order to be compatible with the IEEE Std 1003.2 ("POSIX.2") specification.
 
-## SEE ALSO
+### SEE ALSO
 
 chmod(1), stat(2), strmode(3), getbsize(3), dir(5), sticky(7), symlink(7)
 
-## STANDARDS
+### STANDARDS
 
 This **ls** utility is a superset of the IEEE Std 1003.2 ("POSIX.2") specification.
 
-## HISTORY
+### HISTORY
 
 An **ls** utility appeared in Version 5 AT&T UNIX.
 
