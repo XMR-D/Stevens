@@ -227,8 +227,18 @@ print_date(struct stat sb)
     char out_str[MAX_DATE_LEN] = {'\0'};
     struct tm *info;
     char *date_to_print;
+    time_t timemetric;
 
-    info = localtime(&(sb.st_mtime));
+    if (USR_OPT->t && USR_OPT->c) {
+	    timemetric = sb.st_ctime;
+    } else if (USR_OPT->t && USR_OPT->u) {
+	    timemetric = sb.st_atime;
+    } else {
+	    timemetric = sb.st_mtime;
+    }
+
+
+    info = localtime(&(timemetric));
 
     date_to_print = "%b %e %H:%M";
 
@@ -597,6 +607,7 @@ listing_printer(FTSENT *parentdir, FTSENT *list)
         if (!PRINTED) {
             PRINTED = 1;
         }
+	
         list = list->fts_link;
     }
 

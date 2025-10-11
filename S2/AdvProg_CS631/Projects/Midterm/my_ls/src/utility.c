@@ -47,7 +47,7 @@ CompareTimeMetrics(struct timespec t1, struct timespec t2)
      * discriminate using nanoseconds for higher precision.
      *
      * If a time metric for sorting is specificaly
-     * passed it means that this is check is important
+     * passed it means that this check is important
      * to the user so we might as well done it precisely.
      */
     if (t1.tv_sec != t2.tv_sec) {

@@ -94,10 +94,9 @@ fts_compare(const FTSENT **elm1, const FTSENT **elm2)
      * of functions invert the result by multiplying by -1
      */
     if (USR_OPT->r) {
-        return ret * -1;
-    } else {
-        return ret;
-    }
+       ret *= -1;
+    } 
+    return ret;
 }
 
 /*
