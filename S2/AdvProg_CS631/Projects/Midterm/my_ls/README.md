@@ -1,7 +1,45 @@
+<em>Copyright (c) 2025 Guillaume Wantiez (alias XMR)
+Permission is hereby granted, free of charge,
+to any person obtaining a copy of this software and associated documentation
+files, to deal in the software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the software.
+As long as the creator fullname or alias is mentioned.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE./em>
+ 
+ 
+
+
+
 ## Ls(1) - List Directory Contents
 
 ### SYNOPSIS
 **ls** [−AacdFfhiklnqRrSstuw] [file...]
+
+### BUILDING
+
+To build the ls utility, place yourself at the root of the project repository and run :
+
+```sh
+# make
+```
+or
+
+```sh
+# make debug
+```
+
+The debug version add some debugging flags at compilation time, and do not strip the binary from debugging symbol.
+
+The classic version contains some compiler optimizations flags : ```-Ofast```.
+
+**Building and running the utility requires a NetBSD >= 10.0 system**
 
 ### DESCRIPTION
 For each operand that names a file of a type other than directory, **ls** displays its name as well as any requested, associated information. For each operand that names a file of type directory, **ls** displays the names of files contained within that directory, as well as any requested, associated information.
@@ -151,5 +189,3 @@ This **ls** utility is a superset of the IEEE Std 1003.2 ("POSIX.2") specificati
 ### HISTORY
 
 An **ls** utility appeared in Version 5 AT&T UNIX.
-
-BSD September 12, 2019
