@@ -1,0 +1,89 @@
+##############
+# Tool paths #
+##############
+
+# Apporto platform, CPE690 VLSI, 22Fall
+
+QRC_HOME=/data/cadence/installs/QUANTUS201
+CDSHOME=/data/cadence2/IC618
+PVSHOME=/data/cadence/installs/PVS201
+MMSIMHOME=/data/cadence/installs/MMSIM111
+#MMSIMHOME=/home/ykim19_stvn/cadence/installs/MMSIM111
+GF_PDK_HOME=/data/pdk/8XP/V1.8_5.5
+RC_HOME=/data/cadence/installs/GENUS211
+IV_HOME=/data/cadence/installs/INNOVUS201
+EMX_HOME=/data/cadence/installs/INTEGRAND60
+OA_HOME=/data/cadence2/IC618/oa_v22.60.007
+#CDK_DIR=/home/yyuan22_stvn/cadence/ncsu-cdk-1.6.0.beta
+
+export QRC_HOME
+export CDSHOME
+export PVSHOME
+export MMSIMHOME
+export GF_PDK_HOME
+export RC_HOME
+export IV_HOME
+export EMX_HOME
+export OA_HOME
+export CDK_DIR
+
+
+
+####################################
+# Set up ASSURA, IC615, MMSIM, QRC #
+# with QRC first in PATH           #
+####################################
+
+PATH=$GF_PDK_HOME:$PATH
+export PATH
+
+#PATH=$ASSURAHOME/tools/assura/bin:$ASSURAHOME/tools/bin:$PATH
+#PATH=$ASSURAHOME/tools/bin:$PATH
+#export PATH
+
+PATH=$PVSHOME/tools/bin:$PVSHOME/bin:$PATH
+export PATH
+
+PATH=$CDSHOME/bin:$PATH
+export PATH
+
+PATH=$MMSIMHOME/tools.lnx86/bin:$PATH
+export PATH
+
+#PATH=$QRCHOME/bin:$QRCHOME/tools/bin:$QRCHOME/tools/dfII/bin:$PATH
+PATH=$QRC_HOME/bin:$QRC_HOME/tools/bin:$PATH
+export PATH
+
+PATH=$RC_HOME/bin:$PATH
+export PATH
+
+PATH=$IV_HOME/bin:$PATH
+export PATH
+
+PATH=$EMX_HOME/bin:$PATH
+
+## OTHER CAD TOOLS ##
+#source ./SETUP_EXT191
+
+################################
+# Setup path to license server #
+################################
+LM_LICENSE_FILE=5280@lm3server.campus.stevens-tech.edu
+export LM_LICENSE_FILE
+
+################################################################################
+# Use the ALL (NONE) to enable (disable) all 64 bit software for large designs #
+################################################################################
+CDS_LOAD_ENV=CSF
+export CDS_LOAD_ENV
+
+CDS_AUTO_64BIT=ALL
+export CDS_AUTO_64BIT
+
+CDS_Netlisting_Mode=Analog
+export CDS_Netlisting_Mode
+
+SPECTRE_DEFAULTS=-E
+export SPECTRA_DEFAULTS
+
+
