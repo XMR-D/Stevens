@@ -40,12 +40,12 @@ The debug version add some debugging flags at compilation time, and do not strip
 The classic version contains some compiler optimizations flags : ```-Ofast```.
 
 **Building and running the utility requires a NetBSD >= 10.0 system**
-
+___
 ### DESCRIPTION
 For each operand that names a file of a type other than directory, **ls** displays its name as well as any requested, associated information. For each operand that names a file of type directory, **ls** displays the names of files contained within that directory, as well as any requested, associated information.
 
 If no operands are given, the contents of the current directory are displayed. If more than one operand is given, non-directory operands are displayed first; directory and non-directory operands are sorted separately and in lexicographical order.
-
+___
 ### OPTIONS
 
 **-A**  
@@ -162,30 +162,30 @@ These next two apply only to the third character in the last group (other permis
 
 - **T** - Sticky bit set but not execute or search permission
 - **t** - Sticky bit set and is searchable or executable
-
+___
 ### ENVIRONMENT
 
 The following environment variables affect the execution of **ls**:
 
 - **BLOCKSIZE** - If set, and the -h and -k options are not specified, the block counts (see -s) will be displayed in units of that size block.
 - **TZ** - The timezone to use when displaying dates.
-
+___
 ### EXIT STATUS
 
 The **ls** utility exits 0 on success, and >0 if an error occurs.
-
+___
 ### COMPATIBILITY
 
 The group field is now automatically included in the long listing for files in order to be compatible with the IEEE Std 1003.2 ("POSIX.2") specification.
-
+___
 ### SEE ALSO
 
 chmod(1), stat(2), strmode(3), getbsize(3), dir(5), sticky(7), symlink(7)
-
+___
 ### STANDARDS
 
 This **ls** utility is a superset of the IEEE Std 1003.2 ("POSIX.2") specification.
-
+___
 ### HISTORY
 
 An **ls** utility appeared in Version 5 AT&T UNIX.
