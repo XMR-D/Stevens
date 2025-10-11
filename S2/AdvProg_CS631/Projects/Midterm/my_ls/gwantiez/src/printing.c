@@ -112,8 +112,12 @@ print_int_value(int padding_order, long int val, long int max_len)
     int val_size = NbDigitFromInt(val) + 1;
     char *val_str = calloc(sizeof(char), val_size);
     if (!val_str) {
-        warnx("ls: memory error: %s\n", strerror(errno));
-        return errno;
+	/* free all alloced structures and variables in usage at that point*/
+	free(val_str);
+	free(USR_OPT);
+	free(PINFOS);
+	/* will exit the program if called, no return needed */
+        errx(1, "ls: memory error: %s\n", strerror(errno));
     }
 
     snprintf(val_str, val_size, "%ld", val);
@@ -127,6 +131,7 @@ print_int_value(int padding_order, long int val, long int max_len)
     if (padding_order == 0) {
         print_padding(val_str, max_len);
     }
+        return errno;
 
     free(val_str);
     return EXIT_SUCCESS;
@@ -404,7 +409,10 @@ handle_i_option(struct stat sb)
  * handle_s_option : This routine will print the size extracted
  * from sb stat structure depending on the options passed in USR_OPT.
  *
- * Note : (None)
+ * Note : This routine will always use the size from the blocks
+ * if -h is not specified, and the size from the sizes if -h is specified
+ * regardless of if -l is passed or not. That way we are in accordance
+ * with the given man page.
  */
 static int
 handle_s_option(struct stat sb)
@@ -505,7 +513,6 @@ handle_l_option(struct stat sb)
 static int
 disp_file(struct stat file_sb, char *filename, FTSENT *parentdir)
 {
-
     if (handle_i_option(file_sb)) {
         return errno;
     }
@@ -550,7 +557,7 @@ listing_printer(FTSENT *parentdir, FTSENT *list)
     if (list == NULL) {
         return EXIT_SUCCESS;
     }
-
+    
     saved = list;
     while (saved != NULL) {
 
@@ -558,13 +565,12 @@ listing_printer(FTSENT *parentdir, FTSENT *list)
          * If the current file created an error, throw the corresponding error
          * message, set errno, and skip to the next file
          */
-        if (saved->fts_errno != 0) {
+        if (saved->fts_errno != 0) { 
             warnx("%s: %s", saved->fts_name, strerror(saved->fts_errno));
             errno = saved->fts_errno;
             saved = saved->fts_link;
             continue;
         }
-
         compute_padding_needed(*(saved->fts_statp), USR_OPT);
         saved = saved->fts_link;
     }

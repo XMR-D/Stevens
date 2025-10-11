@@ -125,14 +125,14 @@ main(int argc, char **argv)
      */
     USR_OPT = calloc(1, sizeof(UsrOptions));
     if (!USR_OPT) {
+	/* will exit if called, no return needed */
         errx(1, "ls: memory error: %s\n", strerror(errno));
-        return errno;
     }
 
     PINFOS = calloc(1, sizeof(PaddingInfos));
     if (!PINFOS) {
+	/* will exit if called, no return needed */
         errx(1, "ls: memory error: %s\n", strerror(errno));
-        return errno;
     }
 
     errcode = ls_main(argc, argv);

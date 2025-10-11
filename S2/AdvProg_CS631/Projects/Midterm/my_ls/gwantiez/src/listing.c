@@ -120,6 +120,7 @@ tree_traversal(int argc, char *argv[])
 
     int fts_flags;
     int retcode;
+    int tmpint;
     FTS *ftsp = NULL;
     FTSENT *entry;
     FTSENT *children_dir;
@@ -139,7 +140,6 @@ tree_traversal(int argc, char *argv[])
      * if an error is encountered
      */
     retcode = listing_printer(NULL, fts_children(ftsp, 0));
-
     /*
      * if we need to list directories as plain files
      * we can return as going through them is not necessary.
@@ -181,7 +181,10 @@ tree_traversal(int argc, char *argv[])
              */
             children_dir = fts_children(ftsp, 0);
 
-            listing_printer(entry, children_dir);
+            tmpint = listing_printer(entry, children_dir);
+	    if (tmpint != 0) {
+		    retcode = tmpint;
+	    }
 
             /*
              * If -R is NOT specified and that
@@ -198,7 +201,7 @@ tree_traversal(int argc, char *argv[])
              * In case of error, throw a warning and try to continue
              */
             warnx("%s: %s", entry->fts_name, strerror(entry->fts_errno));
-            errno = entry->fts_errno;
+            retcode = entry->fts_errno;
             break;
         case FTS_DC:
             /*
@@ -207,7 +210,7 @@ tree_traversal(int argc, char *argv[])
              */
             warnx("ls: %s: this directory is creating a circle",
                   entry->fts_name);
-            errno = entry->fts_errno;
+            retcode = entry->fts_errno;
             break;
         default:
             break;
