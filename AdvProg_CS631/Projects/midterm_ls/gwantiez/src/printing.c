@@ -234,9 +234,9 @@ print_date(struct stat sb)
     char *date_to_print;
     time_t timemetric;
 
-    if (USR_OPT->t && USR_OPT->c) {
+    if (USR_OPT->c) {
 	    timemetric = sb.st_ctime;
-    } else if (USR_OPT->t && USR_OPT->u) {
+    } else if (USR_OPT->u) {
 	    timemetric = sb.st_atime;
     } else {
 	    timemetric = sb.st_mtime;
