@@ -219,8 +219,8 @@ OutputOptionSet(UsrOptions *opt)
         }
     }
 
-    /* If l is specified print the total anyway */
-    if (opt->l) {
+    /* If l or n is specified print the total anyway */
+    if (opt->l || opt->n) {
         PRINT_TOTAL++;
     }
 }

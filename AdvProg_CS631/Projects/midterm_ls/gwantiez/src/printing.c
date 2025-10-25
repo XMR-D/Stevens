@@ -443,9 +443,9 @@ handle_s_option(struct stat sb)
  * Note : (None)
  */
 static int
-handle_l_option(struct stat sb)
+handle_l_n_option(struct stat sb)
 {
-    if (USR_OPT->l) {
+    if (USR_OPT->l || USR_OPT->n) {
         /* Print the file mode */
         char res[MAX_MODE_LEN] = {'\0'};
         int padding_size;
@@ -521,7 +521,7 @@ disp_file(struct stat file_sb, char *filename, FTSENT *parentdir)
         return errno;
     }
 
-    if (handle_l_option(file_sb)) {
+    if (handle_l_n_option(file_sb)) {
         return errno;
     }
 
