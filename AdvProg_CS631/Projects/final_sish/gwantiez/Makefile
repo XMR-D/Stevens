@@ -49,4 +49,4 @@ ${OBJS}:
 clean:
 	@echo "Cleaning builtin..."
 	@make clean -C builtins	
-	rm -rdf sish debug_sish *.o valgrind-out.txt
+	rm -rdf sish debug_sish *.o valgrind-out.txt *.core
