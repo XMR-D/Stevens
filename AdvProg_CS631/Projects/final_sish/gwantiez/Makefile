@@ -41,12 +41,12 @@ ${OBJS}:
 	@echo "Builtin compilation success, Compiling shell sources..."
 	${CC} ${CFLAGS} ${LDFLAGS} ${INCLUDE} -c ${@:.o=.c} -o ${@:.c=.o}
 	@echo ""
-	@echo "Linking shell..."
+	@echo "Linking shell source code and builtins..."
 	${CC} ${CFLAGS} -I${INCLUDE} ${OBJS} -o ${PROG_NAME}
 
 # Specify that "clean" is not a file and rather a command.
 .PHONY: clean
 clean:
-	@echo "Cleaning builtin.."
+	@echo "Cleaning builtin..."
 	@make clean -C builtins	
 	rm -rdf sish debug_sish *.o valgrind-out.txt

@@ -7,7 +7,10 @@ BUILTINS+= echo
 
 
 all:	
-	@for builtin in ${BUILTINS}; do \
+	@i=0; \
+	 for builtin in ${BUILTINS}; do \
+		i=$$((i+1)); \
+		echo [$$i/${NB_BUILTINS}]: Compiling $$builtin; \
 		make -C $$builtin; \
 	done
 

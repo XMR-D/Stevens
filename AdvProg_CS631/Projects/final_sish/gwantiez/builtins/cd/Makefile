@@ -15,7 +15,6 @@ all: ${OBJS}
 
 #generate all object files from sources + print a compile info message to user.
 ${OBJS}:
-	@echo "Compiling $(BUILTIN_NAME) [${BUILTIN_NB}/${NB_BUILTINS}]"
 	${CC} ${CFLAGS} ${LDFLAGS} -Iinclude -c ${@:.o=.c} -o ${@:.c=.o}
 
 clean:
