@@ -1,3 +1,105 @@
+commit 09d0063eeab1edc2789f639ab26acaa30dd264e3
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Sat Oct 25 20:10:11 2025 +0000
+
+    Fix(Fixing -n bug)
+
+commit 0ed58cf714b7932551b46c1f5a451ceae4c193eb
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Fri Oct 24 16:27:09 2025 +0000
+
+    Fix(Fixing how -c -u behave without t)
+
+commit f50fdeca727e4677eb89ea1fb76eb8a32b598628
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Tue Oct 21 21:06:22 2025 -0400
+
+    Done()
+
+commit f4622b14677a3cb463ba0e5d5fd7d1b4e7017f5e
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Tue Oct 21 20:50:36 2025 -0400
+
+    Delete EE_517-Arch_and_comp_design directory
+
+commit a8e8bcc03e3038baf596c59ebc0f328c73ef61bd
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Tue Oct 21 20:50:18 2025 -0400
+
+    Delete CPE_690-VLSI directory
+
+commit 49717c953b5024123074d4c3fb96b88d718d25a3
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Tue Oct 21 20:48:31 2025 -0400
+
+    Delete S2 directory
+
+commit 14756fbad7bb479bb7810c90cff0fc686e7d3358
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Tue Oct 21 20:48:22 2025 -0400
+
+    Delete S1 directory
+
+commit 92be54ba1f2d09d76fba8ca1bc4bac0428b3ea52
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Sat Oct 11 10:08:04 2025 +0000
+
+    Still preparing on Netbsd 3/3
+
+commit 8387cdb4be92443d1076f5afe1a59fc8c7f6340a
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Sat Oct 11 10:04:39 2025 +0000
+
+    Preparing and pushing first half of S2 2/3
+
+commit 703ecc4cae2caa96d6562ba7e1f121033fa8bb23
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Sat Oct 11 10:01:12 2025 +0000
+
+    Preparing for next Project, Uploading first half of the 2nd semester
+
+commit dcb3e891e03206f61d290c0232d7b7510e5fd92c
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Sat Oct 11 09:51:41 2025 +0000
+
+    Submission(Midterm Submited on this commit release)
+
+commit bc10c10e0ff9408b408b6ea201ec712540794cd4
+Author: XMR-D <88503168+XMR-D@users.noreply.github.com>
+Date:   Tue Oct 21 15:35:00 2025 -0400
+
+    Delete S2/AdvProg_CS631/Projects/Midterm/my_ls/gwantiez/TODO
+
+commit 7b6887d6d4a09f0b858274eab0a0c7192d18dfba
+Author: XMR <guillaume.wantiez@epita.fr>
+Date:   Tue Oct 21 15:32:32 2025 -0400
+
+    Deletion of unnecessary files
+
+commit 8508534292559f95bf003223d6744d736eedb560
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Sat Oct 11 06:45:03 2025 +0000
+
+    Submission(Submission of CS631 Midterm)
+
+commit 28d03b3f2d3b9daded23187d8209d4131276342e
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Sat Oct 11 06:38:22 2025 +0000
+
+    Clean(Cleaning some swapfiles)
+
+commit 054f43306551487127c73788e60623c5d16199a6
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Sat Oct 11 06:37:51 2025 +0000
+
+    Fix(Find a bug on -c -u options, I was not printing the right date, fixed it by adding a little check into print_date so that the time metric used to print is correct and matching)
+
+commit eccdbd996dfecc3cea94a9fa55f4078e3a733b47
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Fri Oct 10 19:58:22 2025 +0000
+
+    Fix/Clean(Last clean/refactoring of functions): finished adding comments on routines on all files + refacto of blocksize computation to gain space and clarity + testing with some common cases and advanced case
+
 commit e18cb628066ba3636251bc66a181ac644816ccab
 Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
 Date:   Thu Oct 9 22:07:13 2025 +0000
