@@ -110,6 +110,8 @@ print_int_value(int padding_order, long int val, long int max_len)
 {
     /* +1 to account for the '\0' */
     int val_size = NbDigitFromInt(val) + 1;
+
+
     char *val_str = calloc(sizeof(char), val_size);
     if (!val_str) {
         /* free all alloced structures and variables in usage at that point*/
@@ -131,10 +133,9 @@ print_int_value(int padding_order, long int val, long int max_len)
     if (padding_order == 0) {
         print_padding(val_str, max_len);
     }
-    return errno;
 
     free(val_str);
-    return EXIT_SUCCESS;
+    return errno;
 }
 
 /*
@@ -229,6 +230,7 @@ print_group(struct stat sb)
 static void
 print_date(struct stat sb)
 {
+
     char out_str[MAX_DATE_LEN] = {'\0'};
     struct tm *info;
     char *date_to_print;
@@ -242,6 +244,18 @@ print_date(struct stat sb)
         timemetric = sb.st_mtime;
     }
 
+    /*
+     * try to set tz env variable, if the value is invalid
+     * silence the error and fall back to default timezone
+     * by reseting TZ to nothing, that way the default timezone
+     * will be picked. specify 1 to overwrite to be sure
+     * the variable is propery reset.
+     */
+    tzset();
+    if (errno == EINVAL) {
+        errno = 0;
+        setenv("TZ", "", 1);
+    }
 
     info = localtime(&(timemetric));
 
@@ -452,6 +466,7 @@ handle_l_n_option(struct stat sb)
 
         strmode(sb.st_mode, res);
         printf("%s ", res);
+
 
         /* Print the number of links */
         if (print_int_value(1, sb.st_nlink, PINFOS->max_link_nb_len)) {
