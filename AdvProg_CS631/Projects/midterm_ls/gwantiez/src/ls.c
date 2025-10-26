@@ -47,7 +47,7 @@ parse_cmd(int *argc, char **input[], UsrOptions *usr_opt)
 
     while ((opt_found = getopt(*argc, *input, "AacdFfhiklnqRrSstuw")) != -1) {
         /* If an option is invalid stop exec and return the error */
-        opt_err = OptSet((char)opt_found, usr_opt);
+        opt_err = option_set((char)opt_found, usr_opt);
         if (opt_err) {
             warnx("usage : ls [-AacdFfhiklnqRrSstuw] [file ...]");
 
@@ -74,14 +74,15 @@ parse_cmd(int *argc, char **input[], UsrOptions *usr_opt)
 int
 ls_main(int argc, char *argv[])
 {
-    /* Set default options for non printable characters and root */
-    RootOptionSet(USR_OPT);
+    /* Set default options when root */
+    root_option_set(USR_OPT);
 
     if (parse_cmd(&argc, &argv, USR_OPT)) {
         return EXIT_FAILURE;
     }
 
-    OutputOptionSet(USR_OPT);
+    /* Sete default option for non printable characters */
+    nonprintable_option_set(USR_OPT);
 
     /*
      * If no argument other than options are found during tokenization
@@ -125,13 +126,13 @@ main(int argc, char **argv)
      */
     USR_OPT = calloc(1, sizeof(UsrOptions));
     if (!USR_OPT) {
-	/* will exit if called, no return needed */
+        /* will exit if called, no return needed */
         errx(1, "ls: memory error: %s\n", strerror(errno));
     }
 
     PINFOS = calloc(1, sizeof(PaddingInfos));
     if (!PINFOS) {
-	/* will exit if called, no return needed */
+        /* will exit if called, no return needed */
         errx(1, "ls: memory error: %s\n", strerror(errno));
     }
 

@@ -112,11 +112,11 @@ print_int_value(int padding_order, long int val, long int max_len)
     int val_size = NbDigitFromInt(val) + 1;
     char *val_str = calloc(sizeof(char), val_size);
     if (!val_str) {
-	/* free all alloced structures and variables in usage at that point*/
-	free(val_str);
-	free(USR_OPT);
-	free(PINFOS);
-	/* will exit the program if called, no return needed */
+        /* free all alloced structures and variables in usage at that point*/
+        free(val_str);
+        free(USR_OPT);
+        free(PINFOS);
+        /* will exit the program if called, no return needed */
         errx(1, "ls: memory error: %s\n", strerror(errno));
     }
 
@@ -131,7 +131,7 @@ print_int_value(int padding_order, long int val, long int max_len)
     if (padding_order == 0) {
         print_padding(val_str, max_len);
     }
-        return errno;
+    return errno;
 
     free(val_str);
     return EXIT_SUCCESS;
@@ -235,11 +235,11 @@ print_date(struct stat sb)
     time_t timemetric;
 
     if (USR_OPT->c) {
-	    timemetric = sb.st_ctime;
+        timemetric = sb.st_ctime;
     } else if (USR_OPT->u) {
-	    timemetric = sb.st_atime;
+        timemetric = sb.st_atime;
     } else {
-	    timemetric = sb.st_mtime;
+        timemetric = sb.st_mtime;
     }
 
 
@@ -557,7 +557,7 @@ listing_printer(FTSENT *parentdir, FTSENT *list)
     if (list == NULL) {
         return EXIT_SUCCESS;
     }
-    
+
     saved = list;
     while (saved != NULL) {
 
@@ -565,7 +565,7 @@ listing_printer(FTSENT *parentdir, FTSENT *list)
          * If the current file created an error, throw the corresponding error
          * message, set errno, and skip to the next file
          */
-        if (saved->fts_errno != 0) { 
+        if (saved->fts_errno != 0) {
             warnx("%s: %s", saved->fts_name, strerror(saved->fts_errno));
             errno = saved->fts_errno;
             saved = saved->fts_link;
@@ -613,7 +613,7 @@ listing_printer(FTSENT *parentdir, FTSENT *list)
         if (!PRINTED) {
             PRINTED = 1;
         }
-	
+
         list = list->fts_link;
     }
 

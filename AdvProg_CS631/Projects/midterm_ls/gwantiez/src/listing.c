@@ -94,8 +94,8 @@ fts_compare(const FTSENT **elm1, const FTSENT **elm2)
      * of functions invert the result by multiplying by -1
      */
     if (USR_OPT->r) {
-       ret *= -1;
-    } 
+        ret *= -1;
+    }
     return ret;
 }
 
@@ -182,9 +182,9 @@ tree_traversal(int argc, char *argv[])
             children_dir = fts_children(ftsp, 0);
 
             tmpint = listing_printer(entry, children_dir);
-	    if (tmpint != 0) {
-		    retcode = tmpint;
-	    }
+            if (tmpint != 0) {
+                retcode = tmpint;
+            }
 
             /*
              * If -R is NOT specified and that

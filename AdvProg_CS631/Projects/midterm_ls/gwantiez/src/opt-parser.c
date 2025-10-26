@@ -13,7 +13,7 @@
 int PRINT_TOTAL = 0;
 
 int
-OptSet(char opt, UsrOptions *usr_opt)
+option_set(char opt, UsrOptions *usr_opt)
 {
     switch (opt) {
     /* Scope Option detected */
@@ -184,7 +184,7 @@ OptSet(char opt, UsrOptions *usr_opt)
 }
 
 void
-RootOptionSet(UsrOptions *opt)
+root_option_set(UsrOptions *opt)
 {
     uid_t euid = geteuid();
 
@@ -199,7 +199,7 @@ RootOptionSet(UsrOptions *opt)
  * for non printable characters
  */
 void
-OutputOptionSet(UsrOptions *opt)
+nonprintable_option_set(UsrOptions *opt)
 {
     /*
      * If the stdout used is a tty (a terminal) then set q
@@ -223,16 +223,4 @@ OutputOptionSet(UsrOptions *opt)
     if (opt->l || opt->n) {
         PRINT_TOTAL++;
     }
-}
-
-void
-OptionLog(UsrOptions *opt)
-{
-    printf("Option activated:\n"
-           "A=%i a=%i R=%i d=%i\n"
-           "f=%i r=%i t=%i S=%i c=%i u=%i\n"
-           "F=%i l=%i n=%i q=%i w=%i h=%i s=%i i=%i\n",
-           opt->A, opt->a, opt->R, opt->d, opt->f, opt->r, opt->t, opt->S,
-           opt->c, opt->u, opt->F, opt->l, opt->n, opt->q, opt->w, opt->h,
-           opt->s, opt->i);
 }

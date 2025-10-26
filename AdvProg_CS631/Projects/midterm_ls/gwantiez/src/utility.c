@@ -8,8 +8,8 @@
 extern UsrOptions *USR_OPT;
 extern int BLOCKSIZE;
 
-/* CompareMetrics : Utility routine that compare two integer value 
- * representing two metrics 
+/* CompareMetrics : Utility routine that compare two integer value
+ * representing two metrics
  *
  * return -1 if the first one is bigger than the second one
  * return 1 if the first one is smaller than the second one
@@ -30,7 +30,7 @@ CompareMetrics(int metric1, int metric2)
     }
 }
 
-/* CompareTimeMetrics : Utility routine that compare two integer value 
+/* CompareTimeMetrics : Utility routine that compare two integer value
  * representing two time metrics
  *
  * return -1 if the first one is bigger than the second one
@@ -94,7 +94,7 @@ NbDigitFromInt(int val)
 
 /*
  * ComputeBlock : Utility routine that convert a number of blocks of 512B
- * into blocks of BLOCKSIZE  or in blocks of KBSIZE if k is specified. 
+ * into blocks of BLOCKSIZE  or in blocks of KBSIZE if k is specified.
  *
  * Note : (None)
  */

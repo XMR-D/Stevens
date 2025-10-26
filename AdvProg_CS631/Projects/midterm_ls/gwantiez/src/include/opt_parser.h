@@ -88,12 +88,10 @@ typedef struct UsrOptions {
  * If any error is encountered, it will be immediatly thrown
  * and all structures will be freed.
  */
-int OptSet(char token, UsrOptions *usr_opt);
+int option_set(char token, UsrOptions *usr_opt);
 
-void OutputOptionSet(UsrOptions *opt);
+void nonprintable_option_set(UsrOptions *opt);
 
-void RootOptionSet(UsrOptions *opt);
+void root_option_set(UsrOptions *opt);
 
-/* Simple UsrOptions struct logging function for debug */
-void OptionLog(UsrOptions *opt);
 #endif /* !_OPT_PARSER_H */
