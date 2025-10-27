@@ -5,14 +5,14 @@ NB_BUILTINS=2
 
 #define all sources files in builtins using find
 #and all source files in src/ that correspond to sish source code
-SRC_DIR=src builtins/cd builtins/echo
+SRC_DIR=shell-src builtins/cd builtins/echo
 SRC_FILES!=find ${SRC_DIR} -name "*.c"
 
 #Here, due to limitations of BSD make, we need to manually place
 #all the linker flags and potential include directories for
 #the whole project (builtins included)
 LDFLAGS=
-INCLUDE=-Isrc/include -Ibuiltins/cd/include -Ibuiltins/echo/include
+INCLUDE=-Ishell-src/include -Ibuiltins/cd/include -Ibuiltins/echo/include
 
 # Create all objects files from C source files
 OBJS+= ${SRC_FILES:.c=.o}
@@ -39,7 +39,7 @@ ${OBJS}:
 	@make -C builtins
 	@echo ""
 	@echo "=> Builtin compilation success, Compiling shell sources..."
-	@make -C src
+	@make -C shell-src
 	@echo ""
 	@echo "=> Linking shell source code and builtins..."
 	${CC} ${CFLAGS} -I${INCLUDE} ${OBJS} -o ${PROG_NAME}
@@ -50,4 +50,4 @@ clean:
 	@echo "=> Cleaning builtin..."
 	@make clean -C builtins
 	@echo "=> Cleaning sish sources..."	
-	rm -rdf sish debug_sish src/*.o valgrind-out.txt *.core
+	rm -rdf sish debug_sish shell-src/*.o valgrind-out.txt *.core
