@@ -12,6 +12,7 @@ all:
 		i=$$((i+1)); \
 		echo [$$i/${NB_BUILTINS}]: Compiling $$builtin; \
 		make -C $$builtin; \
+		echo ""; \
 	done
 
 clean:	

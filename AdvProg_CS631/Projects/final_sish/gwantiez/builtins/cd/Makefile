@@ -18,4 +18,5 @@ ${OBJS}:
 	${CC} ${CFLAGS} ${LDFLAGS} -Iinclude -c ${@:.o=.c} -o ${@:.c=.o}
 
 clean:
+	@echo "Cleaning builtin: cd"
 	rm *.o 

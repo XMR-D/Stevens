@@ -15,7 +15,7 @@ LDFLAGS=
 INCLUDE=-Isrc/include -Ibuiltins/cd/include -Ibuiltins/echo/include
 
 # Create all objects files from C source files
-OBJS+= ${SRC_FILES:.c=.o} 
+OBJS+= ${SRC_FILES:.c=.o}
 
 PROG_NAME= sish
 
@@ -34,19 +34,20 @@ debug_compil: ${OBJS}
 
 #C source file compilation with C flags
 ${OBJS}:
-	@echo "Starting to compile Builtins..."
+	@echo "=> Starting to compile Builtins..."
 	@echo ""
 	@make -C builtins
 	@echo ""
-	@echo "Builtin compilation success, Compiling shell sources..."
-	${CC} ${CFLAGS} ${LDFLAGS} ${INCLUDE} -c ${@:.o=.c} -o ${@:.c=.o}
+	@echo "=> Builtin compilation success, Compiling shell sources..."
+	@make -C src
 	@echo ""
-	@echo "Linking shell source code and builtins..."
+	@echo "=> Linking shell source code and builtins..."
 	${CC} ${CFLAGS} -I${INCLUDE} ${OBJS} -o ${PROG_NAME}
 
 # Specify that "clean" is not a file and rather a command.
 .PHONY: clean
 clean:
-	@echo "Cleaning builtin..."
-	@make clean -C builtins	
-	rm -rdf sish debug_sish *.o valgrind-out.txt *.core
+	@echo "=> Cleaning builtin..."
+	@make clean -C builtins
+	@echo "=> Cleaning sish sources..."	
+	rm -rdf sish debug_sish src/*.o valgrind-out.txt *.core
