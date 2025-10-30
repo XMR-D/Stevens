@@ -3,8 +3,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
 
+#include "signals-handling.h"
 #include "cmd-parser.h"
 #include "shell.h"
 
@@ -63,8 +63,9 @@ int
 shell(void)
 {
 	char * input_cmd;
-	int retcode = 0;
-	
+
+	ignore_term_suspend_signals();
+
 	pipeline = calloc(1, sizeof(char *));
 	if (pipeline == NULL) {
 		warnx("sish: error: %s", strerror(errno));
@@ -73,26 +74,27 @@ shell(void)
 	pipeline[0] = NULL;
 	nb_tokens = 1;
 
-	/* Ignore Ctrl+C, Ctrl+/ and Ctrl+Z */
-	if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
-		errx(1, "sish: error: %s\n", strerror(errno));
-	};
-	if (signal(SIGQUIT, SIG_IGN) == SIG_ERR) {
-		errx(1, "sish: error: %s\n", strerror(errno));
-	};
-	if (signal(SIGTSTP, SIG_IGN) == SIG_ERR) {
-		errx(1, "sish: error: %s\n", strerror(errno));
-	};
 
+	/* 
+	 * Infinite loop which is the body of the shell, 
+	 * breaked when the user specifically asked for the exit builtin 
+	 * or any memory errors has been encountered. In the second
+	 * case, the cmd_parser break the while, every ressources
+	 * are freed and we return -1 to be sure that no other exit status can
+	 * conflict with it, and we keep a clear output for the user.
+	 */
 	while(1) {
-		printf("sish$ ");
-		
+		printf("sish$ ");	
 		input_cmd = read_terminal();
-		retcode = cmd_parser(input_cmd);
+		if (cmd_parser(input_cmd)) {
+			break;
+		}
 		reset_pipeline();
 		free(input_cmd);
 	}
-	free_pipeline();
-	return retcode;
 
+	restore_term_suspend_signals();
+	reset_pipeline();
+	free(pipeline);
+	return -1;
 }

@@ -22,7 +22,8 @@ sish_main(int argc, char *argv[], UsrOptions * usr_opt)
 		retcode = shell();
 	}
 	else {
-		//Execute a simple command.
+		//Execute a simple command. using command
+		//retcode = command();
 	}	
 	return retcode;
 }

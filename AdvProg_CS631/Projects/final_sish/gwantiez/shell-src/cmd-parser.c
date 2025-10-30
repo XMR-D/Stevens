@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "cmd-parser.h"
-
+#include "signals-handling.h"
 
 extern char ** pipeline;
 extern int nb_tokens;
@@ -37,14 +37,16 @@ push_in_pipeline(char * token)
 {
 	char * tok_dup = strdup(token);
 	if (tok_dup == NULL) {
-		warnx("sish: parsing error: %s", strerror(errno));
+		warnx("sish: parsing error while handling %s: %s", 
+				tok_dup, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	
 	pipeline = realloc(pipeline, ((nb_tokens + 1) * sizeof(char*)));
 	if (pipeline == NULL) {
 		free(tok_dup);
-		warnx("sish: parsing error: %s", strerror(errno));
+		warnx("sish: pipeline error while handling %s: %s", 
+				tok_dup, strerror(errno));
 		return EXIT_FAILURE;
 	}
 
@@ -128,18 +130,6 @@ reset_pipeline(void)
 	nb_tokens = 1;
 }
 
-void
-free_pipeline(void) 
-{
-	char ** ptr = pipeline;
-	while (*ptr != NULL) {
-		free(*ptr);
-           	ptr++;
-        }
-        free(pipeline); 
-	pipeline = NULL;
-}
-
 int 
 cmd_parser(char * input)
 {
@@ -151,23 +141,19 @@ cmd_parser(char * input)
 	//	tokens need to be done.
 	//
 	
-	/* 
-	 * TODO: remove the /n at the end of input 
-	 * TEMP Once parser is done this line will not be
-	 * needeed anymore
-	 */
+	int last_status = 0;
 
 	if (parse_machine(input, input, DELIM)) {
 		return EXIT_FAILURE;	
 	}
 	
-	printf("input passed in parser: %s\n", input);
 	log_pipeline();
 
 	if (strcmp(input, "exit") == 0) {
-		printf("exiting....\n");
-		free_pipeline();
-		exit(0);
+		reset_pipeline();
+		free(pipeline);
+		restore_term_suspend_signals();
+		exit(last_status);
 	}
 
 	return EXIT_SUCCESS;
