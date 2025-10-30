@@ -8,28 +8,9 @@
 #include "cmd-parser.h"
 #include "shell.h"
 
-/* 
- * check_quote_open: Routine that will check in the input
- * if a quote is present and will return the new quote status
- * based on the old one (quote_open passed as argument)
- *
- * Note: None
- */
-static int
-check_quote_open(char * input, int quote_open)
-{
-	while (*input != '\0') {
-		if (*input == '"') {
-			if (quote_open) {
-				quote_open = 0;
-			} else {
-				quote_open = 1;
-			}
-		}
-		input++;
-	}
-	return quote_open;
-}
+
+char ** pipeline;
+int nb_tokens;
 
 /* 
  * read_terminal : Routine that will read the terminal
@@ -51,9 +32,7 @@ read_terminal(void)
 {
 	char * string_read = NULL;
 	char * input_cmd = NULL;
-	char * curr;	
-	size_t size = 0, full_size = 0;
-	int quote_open = 0;
+	size_t size = 0; 
 
 	if (getline(&string_read, &size, stdin) == -1) {
 		if (string_read) {
@@ -62,36 +41,13 @@ read_terminal(void)
 		errx(1, "sish: error: %s\n", strerror(errno));
 	}
 
-
-	curr = string_read;
-	full_size = size;
-	
 	input_cmd = calloc(size, sizeof(char));
 	if (input_cmd == NULL) {
 		free(string_read);
 		errx(1, "sish: error: %s\n", strerror(errno));
 	}
-
 	input_cmd = strcat(input_cmd, string_read);
 	
-	quote_open = check_quote_open(curr, quote_open);
-	
-	while (quote_open) {
-		printf("> ");
-		if (getline(&string_read, &size, stdin) == -1) {
-			free(input_cmd);	
-			if (string_read) {
-				free(string_read);
-			}
-			
-			errx(1, "sish: error: %s\n", strerror(errno));
-		}
-		input_cmd = realloc(input_cmd, full_size + size);
-		input_cmd = strcat(input_cmd, string_read);
-		curr = string_read;
-		quote_open = check_quote_open(curr, quote_open);
-	}
-
 	return input_cmd;
 }
 
@@ -107,6 +63,15 @@ int
 shell(void)
 {
 	char * input_cmd;
+	int retcode = 0;
+	
+	pipeline = calloc(1, sizeof(char *));
+	if (pipeline == NULL) {
+		warnx("sish: error: %s", strerror(errno));
+		return EXIT_FAILURE;
+	}
+	pipeline[0] = NULL;
+	nb_tokens = 1;
 
 	/* Ignore Ctrl+C, Ctrl+/ and Ctrl+Z */
 	if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
@@ -121,9 +86,13 @@ shell(void)
 
 	while(1) {
 		printf("sish$ ");
+		
 		input_cmd = read_terminal();
-		cmd_parser(input_cmd);
+		retcode = cmd_parser(input_cmd);
+		reset_pipeline();
 		free(input_cmd);
 	}
-	return EXIT_SUCCESS;
+	free_pipeline();
+	return retcode;
+
 }

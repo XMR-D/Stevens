@@ -1,3 +1,9 @@
+commit c71197b602ef2684194d1075888557d0db8edffd
+Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
+Date:   Mon Oct 27 10:19:31 2025 +0000
+
+    Feat(Adding quote handling for the shell, and starting to think about how to implement the parser)
+
 commit bae61273a0af81c28fe794b8345457f903fa9ab8
 Author: Guillaume (Netbsd) <gwantiez@stevens.edu>
 Date:   Mon Oct 27 00:44:57 2025 +0000

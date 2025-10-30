@@ -1,11 +1,9 @@
 # Priority 1 : Implement a state machine tokenizer + parser, that will create a
-char * array, that will be walked through to evaluate the command passed.
-Once done integrate exit, cd and echo builtins and test
+char * array, then put the pointer to the array into another array of pointers
 
-# Priority 1 : Implement a data structure that will be able to handle
-tokens that can vary (redirections, control operators, cmd body, cmd options and background operator)
+# Priority 1 :
 
-# Priority 1: Fork exec commands using sh(1) or other ?? => Need to clarify this with teacher.
+# Priority 1: Fork exec commands using sh(1).
 
 # Priority 2 : Add shell tests in README.md
 
