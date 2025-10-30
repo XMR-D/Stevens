@@ -1,9 +1,10 @@
-# Priority 1 : Implement a state machine tokenizer + parser, that will create a
-char * array, then put the pointer to the array into another array of pointers
+# Priority 1: Implement cmd fork exec using sh(1).
 
-# Priority 1 :
+# Priority 1 : Think of the multiple commands forking executing with I/O and Pipes
 
-# Priority 1: Fork exec commands using sh(1).
+# Priority 1 : Test echo builtin then implement cd + test
+
+# Priority 2 : I/O redirections 
 
 # Priority 2 : Add shell tests in README.md
 
