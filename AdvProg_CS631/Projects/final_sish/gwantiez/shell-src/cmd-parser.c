@@ -7,9 +7,8 @@
 #include "cmd-parser.h"
 #include "signals-handling.h"
 
-extern char ** pipeline;
-extern int nb_tokens;
-
+char ** pipeline;
+int nb_tokens;
 
 //TODO: REMOVE WHEN THE PARSER WILL BE FINISHED
 static void
@@ -42,16 +41,18 @@ push_in_pipeline(char * token)
 		return EXIT_FAILURE;
 	}
 	
-	pipeline = realloc(pipeline, ((nb_tokens + 1) * sizeof(char*)));
-	if (pipeline == NULL) {
+	char ** new_pipeline = realloc(pipeline, ((nb_tokens + 1) * sizeof(char*)));
+	if (new_pipeline == NULL) {
 		free(tok_dup);
 		warnx("sish: pipeline error while handling %s: %s", 
 				tok_dup, strerror(errno));
 		return EXIT_FAILURE;
 	}
+	free(pipeline);
 
-	pipeline[nb_tokens -1] = tok_dup;
-	pipeline[nb_tokens] = NULL;
+	new_pipeline[nb_tokens - 1] = tok_dup;
+	new_pipeline[nb_tokens] = NULL;
+	pipeline = new_pipeline;
 	nb_tokens++;
 	return EXIT_SUCCESS;
 }
@@ -122,12 +123,21 @@ parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
 void
 reset_pipeline(void) 
 {
-	char ** ptr = pipeline;
-	while (*ptr != NULL) {
-		free(*ptr);
-		ptr++;
-	}
-	nb_tokens = 1;
+    if (pipeline != NULL) {
+        for (int i = 0; i < nb_tokens - 1; i++) {
+            free(pipeline[i]);
+            pipeline[i] = NULL;
+        }
+        pipeline[nb_tokens - 1] = NULL;
+    }
+    nb_tokens = 1;  // Back to initial state: just NULL terminator
+}
+
+void 
+free_pipeline(void)
+{
+	reset_pipeline();
+	free(pipeline);
 }
 
 int 
@@ -143,6 +153,11 @@ cmd_parser(char * input)
 	
 	int last_status = 0;
 
+
+	pipeline = calloc(1, sizeof(char *));
+	pipeline[0] = NULL;
+	nb_tokens = 1;
+
 	if (parse_machine(input, input, DELIM)) {
 		return EXIT_FAILURE;	
 	}
@@ -150,11 +165,13 @@ cmd_parser(char * input)
 	log_pipeline();
 
 	if (strcmp(input, "exit") == 0) {
-		reset_pipeline();
-		free(pipeline);
+		free_pipeline();
 		restore_term_suspend_signals();
 		exit(last_status);
 	}
+
+	free_pipeline();
+
 
 	return EXIT_SUCCESS;
 }

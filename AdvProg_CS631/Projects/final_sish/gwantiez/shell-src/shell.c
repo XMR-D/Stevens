@@ -8,10 +8,6 @@
 #include "cmd-parser.h"
 #include "shell.h"
 
-
-char ** pipeline;
-int nb_tokens;
-
 /* 
  * read_terminal : Routine that will read the terminal
  * handling quote characters and re-reading if a unclosed quote
@@ -41,13 +37,16 @@ read_terminal(void)
 		errx(1, "sish: error: %s\n", strerror(errno));
 	}
 
-	input_cmd = calloc(size, sizeof(char));
-	if (input_cmd == NULL) {
+	char * tmp_cmd = calloc(size, sizeof(char));
+	if (tmp_cmd == NULL) {
 		free(string_read);
 		errx(1, "sish: error: %s\n", strerror(errno));
 	}
-	input_cmd = strcat(input_cmd, string_read);
 	
+	input_cmd = strcat(tmp_cmd, string_read);
+	
+	free(string_read);
+	free(tmp_cmd);
 	return input_cmd;
 }
 
@@ -66,15 +65,6 @@ shell(void)
 
 	ignore_term_suspend_signals();
 
-	pipeline = calloc(1, sizeof(char *));
-	if (pipeline == NULL) {
-		warnx("sish: error: %s", strerror(errno));
-		return EXIT_FAILURE;
-	}
-	pipeline[0] = NULL;
-	nb_tokens = 1;
-
-
 	/* 
 	 * Infinite loop which is the body of the shell, 
 	 * breaked when the user specifically asked for the exit builtin 
@@ -89,12 +79,10 @@ shell(void)
 		if (cmd_parser(input_cmd)) {
 			break;
 		}
-		reset_pipeline();
-		free(input_cmd);
 	}
 
+	free(input_cmd);
+
 	restore_term_suspend_signals();
-	reset_pipeline();
-	free(pipeline);
 	return -1;
 }

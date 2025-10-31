@@ -9,7 +9,5 @@ typedef enum ParseState {
 } ParseState;
 
 int cmd_parser(char * input);
-void reset_pipeline(void); 
-void free_pipeline(void);
 
 /* !CMD_PARSER_H */
