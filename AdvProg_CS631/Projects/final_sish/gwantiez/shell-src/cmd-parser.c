@@ -7,57 +7,126 @@
 #include "cmd-parser.h"
 #include "signals-handling.h"
 
-char ** pipeline;
+char ** cmd;
 int nb_tokens;
 
 //TODO: REMOVE WHEN THE PARSER WILL BE FINISHED
 static void
-log_pipeline(void) {
-	char ** ptr = pipeline;
-	printf("Pipeline after parsing :\n");
-	while (*ptr != NULL) {
-		printf("\"%s\" ", *ptr);
-		ptr++;
+log_cmd(char ** command, int nb_tokens) 
+{
+	int i = 0;
+	if (command == NULL) {
+		printf("(no command)\n");
 	}
-	printf("\n");
+	while (command[i] != NULL) {
+		printf("\"%s\"\n ", command[i]);
+		i++;
+	}
+	printf("\nnb_tokens : %d\n", nb_tokens);
 }
 
+static void
+log_pipeline(Pipeline * pipeline) 
+{
+	Pipeline * curr = pipeline;
+	while (curr != NULL) {
+		printf("Command:\n");
+		log_cmd(curr->cmd, curr->nb_tokens);
+		curr = curr->next;
+	}
+}
+
+
 /*
- * push_in_pipeline: Routine that push a string into the pipeline
- * the pipeline is the array that hold all the tokens
+ * push_in_cmd: Routine that push a string into the cmd
+ * the cmd is the array that hold all the tokens
  *
- * Note: the pipeline always contains one NULL string 
+ * Note: the cmd always contains one NULL string 
  * as a terminating NULL string, to conserve it, 
  * new tokens are pushed at nb_token-2 (the penultimate spot) 
  * and a NULL is pushed at nb_token-1 (the last spot)
  */ 
 static int
-push_in_pipeline(char * token)
+push_in_cmd(char * token)
 {
-	char * tok_dup = strdup(token);
+	int dup_len = strlen(token) + 1;
+	char * tok_dup = calloc(dup_len, sizeof(char));
 	if (tok_dup == NULL) {
-		warnx("sish: parsing error while handling %s: %s", 
-				tok_dup, strerror(errno));
+		warnx("sish: parsing error: %s", strerror(errno));
 		return EXIT_FAILURE;
 	}
-	
-	char ** new_pipeline = realloc(pipeline, ((nb_tokens + 1) * sizeof(char*)));
-	if (new_pipeline == NULL) {
-		free(tok_dup);
-		warnx("sish: pipeline error while handling %s: %s", 
-				tok_dup, strerror(errno));
-		return EXIT_FAILURE;
-	}
-	free(pipeline);
 
-	new_pipeline[nb_tokens - 1] = tok_dup;
-	new_pipeline[nb_tokens] = NULL;
-	pipeline = new_pipeline;
+	strcpy(tok_dup, token);
+	
+	char ** new_cmd = 
+		realloc(cmd, ((nb_tokens + 1) * sizeof(char*)));
+
+	if (new_cmd == NULL) {
+		free(tok_dup);
+		warnx("sish: parsing error: %s\n", strerror(errno));
+		return EXIT_FAILURE;
+	}
+
+	new_cmd[nb_tokens - 1] = tok_dup; 
+	new_cmd[nb_tokens] = NULL;	
+	cmd = new_cmd;
 	nb_tokens++;
 	return EXIT_SUCCESS;
 }
 
-static int 
+static int
+push_in_pipeline(Pipeline ** pipeline, char ** cmd) 
+{
+
+	Pipeline * new_elm = calloc(1, sizeof(Pipeline));
+	if (new_elm == NULL) {
+		warnx("sish: parsing error: %s", strerror(errno));
+		return EXIT_FAILURE;
+	}
+
+	new_elm->cmd = cmd;
+	new_elm->nb_tokens = nb_tokens;
+	new_elm->next = NULL;
+
+	//If the given pipeline is NULL, set new_elm as the pipeline
+	if (*(pipeline) == NULL) {
+		*(pipeline) = new_elm;
+		return EXIT_SUCCESS;
+	}
+
+	Pipeline * curr = *pipeline;
+	while (curr->next != NULL) {
+		curr = curr->next;
+	}
+
+	curr->next = new_elm;
+	return EXIT_SUCCESS;
+}
+	
+static void
+free_cmd(char ** cmd)
+{
+	char ** curr = cmd;
+	while (*curr != NULL) {
+		free(*curr);
+		curr++;
+	}
+	free(cmd);
+}
+
+static void
+free_pipeline(Pipeline * pipeline)
+{
+    Pipeline * curr = pipeline;
+    while (curr != NULL) {
+        Pipeline * next = curr->next;
+	free_cmd(curr->cmd);
+        free(curr);
+        curr = next;
+    }
+}
+
+static char *
 parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
 {	
 	char saved = 0;
@@ -69,19 +138,23 @@ parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
 				curr_char++;
 				next_state = DELIM;
 			}
-			else if (*curr_char == '\0') {
+			else if (*curr_char == '\0'
+					|| *curr_char == '\n'
+						|| *curr_char == '|') {
 				next_state = END;
 			} else {
 				next_state = IN_TOKEN;
 			}
 			break;
-		case IN_TOKEN:
+		case IN_TOKEN:	
 			/* 
 			 * If the character is anything else than a space
 			 * or a \n char, it's a token char so go into the
 			 * token state
 			 */
-			if (*curr_char != ' ' && *curr_char != '\n') {
+			if (*curr_char != ' ' 
+					&& *curr_char != '\n' 
+						&& *curr_char != '|') {
 				curr_char++;
 				next_state = IN_TOKEN;
 				break;
@@ -90,13 +163,13 @@ parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
 			/* 
 			 * Else we reached either the end or a delim
 			 * in this case, push the token into
-			 * the pipeline and go to the appropriate state
+			 * the token array and go to the appropriate state
 			 */
 			saved = *curr_char;
 			*curr_char = '\0';
 
-			if (push_in_pipeline(curr_tok)) {
-				return EXIT_FAILURE;
+			if (push_in_cmd(curr_tok)) {
+				return NULL;
 			}
 			*curr_char = saved;
 
@@ -109,10 +182,12 @@ parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
 			}
 			break;
 		case END:
-			
-			*curr_char = '\0';
-			return EXIT_SUCCESS;
-			break;
+			if (*curr_char == '\n') {
+				*curr_char = '\0';
+			} else {
+				curr_char++;
+			}	
+			return curr_char;
 		default:
 			/* NEVER REACHED */
 			break;
@@ -120,57 +195,49 @@ parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
 	return parse_machine(curr_char, curr_tok, next_state);
 }
 
-void
-reset_pipeline(void) 
-{
-    if (pipeline != NULL) {
-        for (int i = 0; i < nb_tokens - 1; i++) {
-            free(pipeline[i]);
-            pipeline[i] = NULL;
-        }
-        pipeline[nb_tokens - 1] = NULL;
-    }
-    nb_tokens = 1;  // Back to initial state: just NULL terminator
-}
-
-void 
-free_pipeline(void)
-{
-	reset_pipeline();
-	free(pipeline);
-}
-
 int 
 cmd_parser(char * input)
 {
-	//TODO: tokenize.
-	//	parse the input and call the cmd execution.
-	//
-	//	the parser structures need to be adapted to redirections.
-	//	or a specific data structure for redirections and pipes
-	//	tokens need to be done.
-	//
-	
 	int last_status = 0;
-
-
-	pipeline = calloc(1, sizeof(char *));
-	pipeline[0] = NULL;
-	nb_tokens = 1;
-
-	if (parse_machine(input, input, DELIM)) {
-		return EXIT_FAILURE;	
-	}
+	Pipeline * pipeline = NULL;
+	char * in = NULL;
+	char * free_ptr = NULL;
 	
-	log_pipeline();
+	in = strdup(input);
+	free_ptr = in;
 
-	if (strcmp(input, "exit") == 0) {
-		free_pipeline();
+	while (*in != '\0') {
+		
+		cmd = calloc(1, sizeof(char *));
+		cmd[0] = NULL;
+		nb_tokens = 1;
+
+		in = parse_machine(in, in, DELIM);
+		printf("in: %s\n", in);
+		
+		if (in == NULL) {
+			free(free_ptr);
+			free_pipeline(pipeline);
+			return EXIT_FAILURE;	
+		}
+
+		push_in_pipeline(&pipeline, cmd);
+		cmd = NULL;
+
+	}
+
+	free(free_ptr);
+	printf("Pipeline after parsing :\n");
+	log_pipeline(pipeline);
+
+	/* TODO: Change it for a proper command_handler that handle exit*/
+	if  (((pipeline->cmd[0]) != NULL) && strcmp((pipeline->cmd)[0], "exit") == 0) {
+		free_pipeline(pipeline);
 		restore_term_suspend_signals();
 		exit(last_status);
 	}
 
-	free_pipeline();
+	free_pipeline(pipeline);
 
 
 	return EXIT_SUCCESS;

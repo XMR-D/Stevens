@@ -23,8 +23,13 @@ PROG_NAME= sish
 .PHONY: all sish sish_debug clean
 
 # Generic receipe when make is invoked without arguments
-all: ${OBJS}
+all:
+	@echo "Following receipes are available:"
+	@echo "sish : Build the project without debugging flags"
+	@echo "debug : Build the project with debugging flags"
+	@echo "clean : Delete all the files except from source or build files"
 
+sish: ${OBJS}
 
 # When debug is invoke it will call a sub_receipe to add 
 # debug flags to C flags using the environement and then compile

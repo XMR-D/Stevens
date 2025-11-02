@@ -13,41 +13,22 @@
  * handling quote characters and re-reading if a unclosed quote
  * statement is found.
  *
- * Note : the routine works like the following : 
+ * Note : None
  *
- * Place the read string into the input buffer
- *
- * then check if re-reading is necessary (if a '"' has been
- * passed without a closing one) using check_quote_open.
- *
- * while re-reading is necessary, re-read and concat the readline
- * to the input buffer. once done pass it to the parser.
  */
 static char*
 read_terminal(void)
 {
 	char * string_read = NULL;
-	char * input_cmd = NULL;
 	size_t size = 0; 
 
-	if (getline(&string_read, &size, stdin) == -1) {
+	if(getline(&string_read, &size, stdin) == -1) {
 		if (string_read) {
 			free(string_read);
 		}
 		errx(1, "sish: error: %s\n", strerror(errno));
 	}
-
-	char * tmp_cmd = calloc(size, sizeof(char));
-	if (tmp_cmd == NULL) {
-		free(string_read);
-		errx(1, "sish: error: %s\n", strerror(errno));
-	}
-	
-	input_cmd = strcat(tmp_cmd, string_read);
-	
-	free(string_read);
-	free(tmp_cmd);
-	return input_cmd;
+	return string_read;
 }
 
 /*
@@ -63,7 +44,7 @@ shell(void)
 {
 	char * input_cmd;
 
-	ignore_term_suspend_signals();
+	//ignore_term_suspend_signals();
 
 	/* 
 	 * Infinite loop which is the body of the shell, 
@@ -79,8 +60,8 @@ shell(void)
 		if (cmd_parser(input_cmd)) {
 			break;
 		}
+		free(input_cmd);
 	}
-
 	free(input_cmd);
 
 	restore_term_suspend_signals();
