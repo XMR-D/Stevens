@@ -57,9 +57,19 @@ shell(void)
 	while(1) {
 		printf("sish$ ");	
 		input_cmd = read_terminal();
-		if (cmd_parser(input_cmd)) {
-			break;
+		Pipeline * p = cmd_parser(input_cmd);
+		
+		/* TODO: Change it for a proper command_handler that handle exit*/
+		if  (((p->cmd[0]) != NULL) && strcmp((p->cmd)[0], "exit") == 0) {
+			free_pipeline(p);
+			restore_term_suspend_signals();
+			exit(0);
 		}
+
+		printf("Pipeline after parsing :\n");
+		log_pipeline(p);
+
+		free_pipeline(p);
 		free(input_cmd);
 	}
 	free(input_cmd);

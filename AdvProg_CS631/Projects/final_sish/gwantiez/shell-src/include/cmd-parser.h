@@ -11,8 +11,8 @@
  *
  *
  * IN_TOKEN State :
- * trigger : if the current char is different from any DELIM char
- * and that the last state was different from IN_REDIRECTION.
+ * trigger : if the current char is different from any control character 
+ * or a redirection character.
  *
  * effect: when in this state, curr_tok is no longer updated while the 
  * IN_TOKEN state is in effect. Upon reaching a delim char, a new token
@@ -25,9 +25,7 @@
  * trigger : if the char handled is '<' or '>' and the last state
  * is different than IN_REDIRECTION.
  * if last state is IN_REDIRECTION an invalid state occurs if : 
- * 	'>' is immediately followed by '<'
- * 	'<' is immediately followed by '<' or '>'
- * 	'>' or '<' is followed by '|' or '\n' and no token have
+ * 	'>' or '<' is followed by '<', '>', '|', '\n' and no token have
  * 	been found upon reaching them.
  *
  * 	in this case, if in shell mode, the parsing stop an error
@@ -64,10 +62,15 @@ typedef enum ParseState {
 
 typedef struct Pipeline {
 	char ** cmd;
+	char * in_redir_target;
+	char * out_redir_target;
+	int append;
 	int nb_tokens;
 	struct Pipeline * next;
 } Pipeline;
 
-int cmd_parser(char * input);
+void free_pipeline(Pipeline * pipeline);
+void log_pipeline(Pipeline * pipeline); 
+Pipeline * cmd_parser(char * input);
 
 /* !CMD_PARSER_H */
