@@ -7,8 +7,9 @@
 #include "cmd-parser.h"
 #include "signals-handling.h"
 
-char ** cmd;
-int nb_tokens;
+char ** cmd = NULL;
+int nb_tokens = 0;
+int cmd_fnd = 0;
 
 /* Redirection handling globals */
 int redir_targ_found = 0;
@@ -42,9 +43,11 @@ log_pipeline(Pipeline * pipeline)
 	while (curr != NULL) {
 		printf("Command:\n");
 		log_cmd(curr->cmd, curr->nb_tokens);
-		printf("in redirection : %s\n", curr->in_redir_target);
-		printf("out redirection : %s\n", curr->out_redir_target);
+		printf("In redirection : %s\n", curr->in_redir_target);
+		printf("Out redirection : %s\n", curr->out_redir_target);
+		printf("Append flag : %i\n", curr->append);
 		curr = curr->next;
+		printf("\n\n");
 	}
 }
 
@@ -137,9 +140,11 @@ free_redirect_globals(void)
 {
 	if (in_target) {
 		free(in_target);
+		in_target = NULL;
 	}
 	if (out_target) {
 		free(out_target);
+		out_target = NULL;
 	}
 	return;
 }
@@ -297,14 +302,30 @@ parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
 				curr_tok++;
 				curr_char++;
 				next_state = DELIM;
+				break;
 			}
 			
 			if (*curr_char == '\0'
 					|| *curr_char == '\n'
 						|| *curr_char == '|') {
+				/* 
+				 * If we did not find any cmd before a pipeline
+				 * then it's an invalid prompt
+				 */
+				if (!cmd_fnd) {
+					warnx("sish: Syntax error:"
+					" unexpected delimiter.\n");
+					return NULL;
+				}
 				next_state = END;
+				break;
 			}
 
+			/* 
+			 * shift indicate the number of char to skip in case we
+			 * encounter a redirection char, if shift is 0 it's not a
+			 * redirection char.
+			 */
 			shift = is_redirection(curr_char);
 			if (shift) {
 				curr_char += shift;
@@ -333,7 +354,7 @@ parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
 			 */
 			saved = *curr_char;
 			*curr_char = '\0';
-
+			cmd_fnd = 1;
 			if (push_in_cmd(curr_tok)) {
 				return NULL;
 			}
@@ -425,6 +446,7 @@ cmd_parser(char * input)
 		in = parse_machine(in, in, DELIM);
 		
 		if (in == NULL) {
+			free(cmd);
 			free_redirect_globals();
 			free(saved_in);
 			free_pipeline(pipeline);
@@ -432,16 +454,19 @@ cmd_parser(char * input)
 		}
 
 		push_in_pipeline(&pipeline, cmd, in_target, out_target, append);
+			
+		/* 
+		 * Reinitialize parsing environment 
+		 * all the data that is freed here has been dupplicated
+		 * and placed in the proper data structure
+		 */
 		free_redirect_globals();
-		free(in_target);
-		free(out_target);
 		append = 0;
-		cmd = NULL;
+		cmd_fnd = 0;
 
 	}
 
 	free(saved_in);
-
 
 	return pipeline;
 }
