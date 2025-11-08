@@ -1,0 +1,239 @@
+#include <sys/stat.h>
+#include <sys/wait.h>
+
+#include <err.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include "builtins.h"
+#include "cmd-parser.h"
+
+#include "pipeline-exec.h"
+
+
+int last_status = 0;
+
+static int
+handle_execution(char * cmd_bin, Pipeline * pipeline) 
+{
+	/* handle builtins */
+	if (strcmp(cmd_bin, "echo") == 0) {
+		printf("echo called !\n");
+		return echo_main(pipeline->nb_tokens - 1, 
+				pipeline->cmd, last_status);	
+	}
+
+	if (strcmp(cmd_bin, "cd") == 0) {
+		printf("cd called !\n");
+		return cd_main();
+	}
+
+	if (strcmp(cmd_bin, "exit") == 0) {
+		printf("exit called !\n");
+		exit_main();
+	}
+
+	/* If successful does not return */
+	execvp(cmd_bin, pipeline->cmd);
+
+	/* 
+	 * if this code is reached 
+	 * it means the execution failed.
+	 */
+
+	errx(127, "error while executing command \"%s\" : %s\n", cmd_bin, 
+			strerror(errno));
+}
+
+static int 
+handle_redirections(Pipeline * pipeline) 
+{
+
+	/* craft the flags */
+	int open_flags_read = O_RDONLY;
+	int open_flags_write = O_WRONLY | O_CREAT;
+	int write_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+	int fd_r, fd_w;
+
+	/* If append flag is needed set it */
+	if (pipeline->append) {
+		open_flags_write |= O_APPEND;
+	} else {
+		open_flags_write |= O_TRUNC;
+	}
+
+	/* 
+	 * If there is an input redirection set it
+	 * open the descriptor dup it to the STDIN
+	 * and close it.
+	 */
+	if (pipeline->in_redir_target) {
+		fd_r = open(pipeline->in_redir_target, 
+			open_flags_read);
+		if (fd_r == -1) {
+			warnx("could not open %s: %s\n",
+				pipeline->in_redir_target,
+				strerror(errno));
+			return EXIT_FAILURE;
+		}
+
+		if (dup2(fd_r, STDIN_FILENO) == -1)
+		{
+			warnx("could not dupplicate"
+			      "file desriptor for %s: %s\n",
+					pipeline->in_redir_target,
+					strerror(errno));
+			return EXIT_FAILURE;
+
+		}
+		close(fd_r);
+	}
+
+	/* 
+	 * If there is an output redirection set it
+	 * open the descriptor dup it to the STDOUT
+	 * and close it.
+	 */
+	if (pipeline->out_redir_target) {
+		fd_w = open(pipeline->out_redir_target, 
+			open_flags_write, write_mode);
+		if (fd_w == -1) {
+			warnx("could not open %s: %s\n",
+					pipeline->out_redir_target,
+					strerror(errno));
+			return EXIT_FAILURE;
+		}
+		
+		if (dup2(fd_w, STDOUT_FILENO) == -1) 
+		{
+			warnx("sish: could not dupplicate"
+			      "file descriptor for %s: %s\n",
+					pipeline->out_redir_target,
+					strerror(errno));
+			return EXIT_FAILURE;
+		}
+
+		close(fd_w);
+	}
+	return EXIT_SUCCESS;
+}
+
+
+/*
+ * exec_pipeline: entry point routine of all the cmd exuction logic
+ * this function take a pointer to a pipeline object, and will execute it
+ * handling pipeline and I/O redirections
+ *
+ * Note: This function is called within the shell logic after the command has
+ * been parsed into a pipeline, it will also be called when the -c flag will be
+ * passed to sish.
+ *
+ */
+int 
+exec_pipeline(Pipeline * pipeline, int nb_commands) 
+{
+	/* Table of pipes that will be populated by pipes() calls*/
+	int p_fd[nb_commands-1][2];
+	/* Table of Pids that will be populated by fork() calls*/
+	pid_t pids[nb_commands];
+
+	for (int i = 0; i < nb_commands-1; i++) {
+		pipe(p_fd[i]);
+	}
+
+	//for each cmd within the pipelines
+	for (int i = 0; i < nb_commands; i++) {
+
+		/* For each command fork and connect the pipes */
+		pids[i] = fork();
+
+		/* Child (one of the subcommand) */
+		if (pids[i] == 0) {
+			
+			/* 
+			 * If on a command different than the first one
+			 * connect the stdin of the cmd to the output of 
+			 * the previous command
+			 */
+			if (i > 0) {
+				dup2(p_fd[i-1][0], STDIN_FILENO);	
+			}
+
+			/*
+			 * If on a command different than the last one
+			 * connect it's output to it's associate pipe
+			 */
+			if (i < nb_commands - 1) {
+				dup2(p_fd[i][1], STDOUT_FILENO);
+			}
+
+			/* Close all the old fds */
+        		for (int j = 0; j < nb_commands-1; j++) {
+    				close(p_fd[j][0]);
+    				close(p_fd[j][1]);
+            		}
+
+			if (handle_redirections(pipeline)) {
+				return EXIT_FAILURE;
+			}
+	
+			char * cmd_bin = pipeline->cmd[0];
+			handle_execution(cmd_bin, pipeline);
+		}
+
+		pipeline = pipeline->next;
+	}
+
+	/* Parent */
+	
+	/*
+	 * close all pipes for the parent process
+	 * since he will not need them
+	 */
+	for (int i = 0; i < nb_commands-1; i++) {
+        	close(p_fd[i][0]);
+        	close(p_fd[i][1]);
+    	}
+
+	/* 
+ 	 * Wait for all the childrens and retreive the last
+	 * exit status.
+	 */
+
+	int child_status = 0;
+
+    	for (int i = 0; i < nb_commands; i++) {
+        	waitpid(pids[i], &child_status, 0);
+        	if (i == nb_commands-1) {
+			if (WIFEXITED(child_status)) {
+				/*
+				 * If the child exited normally just set the
+				 * last_status as the exiting status.
+				 */
+                		last_status = WEXITSTATUS(child_status);
+            		} else if (WIFSIGNALED(child_status)) {
+
+				/* 
+				 * If for any reason a child is signaled to terminate
+				 * the status returned is 128 + signal value 
+				 * this choice follow many shell standards 
+				 * (bash, zsh, dash...).
+				 */
+                		last_status = 128 + WTERMSIG(child_status);
+            		} else if (WIFSTOPPED(child_status)) {
+				/* 
+				 * Again for the same reasons (shell standards)
+				 * if a child is signaled to stopped return 
+				 * 128 + stop signal value.
+				 */
+				last_status = 128 + WSTOPSIG(child_status);
+			}
+        	}
+    	}
+    	return last_status;
+		
+}

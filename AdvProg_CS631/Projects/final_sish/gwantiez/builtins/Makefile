@@ -3,8 +3,8 @@ include ../generic_flags.mk
 BUILTINS=
 
 BUILTINS+=cd
-BUILTINS+= echo
-
+BUILTINS+=echo
+BUILTINS+=exit
 
 all:	
 	@i=0; \

@@ -1,18 +1,9 @@
 include generic_flags.mk
 
-NB_BUILTINS=2
-.export NB_BUILTINS
-
 #define all sources files in builtins using find
 #and all source files in src/ that correspond to sish source code
-SRC_DIR=shell-src builtins/cd builtins/echo
+SRC_DIR=sish-src builtins/cd builtins/echo builtins/exit
 SRC_FILES!=find ${SRC_DIR} -name "*.c"
-
-#Here, due to limitations of BSD make, we need to manually place
-#all the linker flags and potential include directories for
-#the whole project (builtins included)
-LDFLAGS=
-INCLUDE=-Ishell-src/include -Ibuiltins/cd/include -Ibuiltins/echo/include
 
 # Create all objects files from C source files
 OBJS+= ${SRC_FILES:.c=.o}
@@ -44,7 +35,7 @@ ${OBJS}:
 	@make -C builtins
 	@echo ""
 	@echo "=> Builtin compilation success, Compiling shell sources..."
-	@make -C shell-src
+	@make -C sish-src
 	@echo ""
 	@echo "=> Linking shell source code and builtins..."
 	${CC} ${CFLAGS} -I${INCLUDE} ${OBJS} -o ${PROG_NAME}
@@ -55,4 +46,4 @@ clean:
 	@echo "=> Cleaning builtin..."
 	@make clean -C builtins
 	@echo "=> Cleaning sish sources..."	
-	rm -rdf sish debug_sish shell-src/*.o valgrind-out.txt *.core
+	rm -rdf sish debug_sish sish-src/*.o valgrind-out.txt *.core
