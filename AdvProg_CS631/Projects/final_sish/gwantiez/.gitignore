@@ -1,0 +1,6 @@
+*.o
+debug_sish
+sish
+*.swp
+ls
+.clang-format
