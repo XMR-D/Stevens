@@ -14,7 +14,6 @@
 
 #include "pipeline-exec.h"
 
-
 int last_status = 0;
 
 static int
@@ -32,9 +31,12 @@ handle_execution(char * cmd_bin, Pipeline * pipeline)
 		return cd_main();
 	}
 
+	/* 
+	 * if exit is found on the pipeline of execution
+	 * just exit but it will not affect the shell
+	 */
 	if (strcmp(cmd_bin, "exit") == 0) {
-		printf("exit called !\n");
-		exit_main();
+		exit(0);
 	}
 
 	/* If successful does not return */

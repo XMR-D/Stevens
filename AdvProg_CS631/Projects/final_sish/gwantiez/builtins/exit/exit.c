@@ -2,7 +2,8 @@
 
 #include "exit.h"
 
-int exit_main(void)
+
+void exit_main(void)
 {
-	exit(0);
+	return; 
 }

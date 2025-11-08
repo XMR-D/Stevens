@@ -10,6 +10,7 @@
 #include "signals-handling.h"
 
 #include "shell.h"
+
 /* 
  * read_terminal : Routine that will read the terminal
  * handling quote characters and re-reading if a unclosed quote
@@ -68,8 +69,21 @@ shell(void)
 			restore_term_suspend_signals();	
 			return EXIT_FAILURE;
 		}
+
+		/* 
+		 * handle exit as a special builtin 
+		 * if it's the only command passed kill the terminal, 
+		 * otherwise other commands can be executed and exit 
+		 * will affect only the process that has been forked
+		 * to execute it, showing no difference for the user.
+		 */
+		if (strcmp(p->cmd[0], "exit") == 0 && !(p->next)) {
+			free_pipeline(p);
+			break;
+		}
 		
 		last_status = exec_pipeline(p, nb_commands);
+
 
 		free_pipeline(p);
 		free(input_cmd);

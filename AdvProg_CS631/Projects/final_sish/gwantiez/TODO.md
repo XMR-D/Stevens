@@ -1,10 +1,4 @@
-# Priority 1: Implement cmd fork exec using sh(1).
-
-# Priority 1 : Think of the multiple commands forking executing with I/O and Pipes
-
-# Priority 1 : Test echo builtin then implement cd + test
-
-# Priority 2 : I/O redirections 
+# Priority 1 : Add shell login + -c command execution linking
 
 # Priority 2 : Add shell tests in README.md
 
