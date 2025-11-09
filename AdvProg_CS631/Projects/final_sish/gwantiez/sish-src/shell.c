@@ -6,13 +6,12 @@
 
 
 #include "cmd-parser.h"
+#include "opt-parser.h"
 #include "pipeline-exec.h"
 #include "signals-handling.h"
 
 #include "shell.h"
 
-
-int keep_the_shell = 1;
 
 /* 
  * read_terminal : Routine that will read the terminal
@@ -46,7 +45,7 @@ read_terminal(void)
  *
  */
 int 
-shell(void)
+shell(UsrOptions * usr_opt)
 {
 	char * input_cmd;
 	int nb_commands = 0;
@@ -71,7 +70,7 @@ shell(void)
 			continue;
 		}
 			
-		Pipeline * p = cmd_parser(input_cmd, &nb_commands);
+		Pipeline * p = cmd_parser(input_cmd, &nb_commands, usr_opt);
 
 		if (p == NULL) {
 			free(input_cmd);

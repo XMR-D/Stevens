@@ -1,5 +1,7 @@
 #pragma once /* SHELL_H */
 
-int shell(void);
+#include "opt-parser.h"
+
+int shell(UsrOptions * usr_opt);
 
 /* !SHELL_H */

@@ -24,38 +24,6 @@ int append = 0;
 
 extern int keep_the_shell;
 
-
-//TODO: REMOVE WHEN THE PARSER WILL BE FINISHED
-static void
-log_cmd(char ** command) 
-{
-	int i = 0;
-	if (command == NULL) {
-		printf("(no command)\n");
-	}
-	printf(" ");
-	while (command[i] != NULL) {
-		printf("\"%s\"\n ", command[i]);
-		i++;
-	}
-}
-
-void
-log_pipeline(Pipeline * pipeline) 
-{
-	Pipeline * curr = pipeline;
-	while (curr != NULL) {
-		printf("Command:\n");
-		log_cmd(curr->cmd);
-		printf("In redirection : %s\n", curr->in_redir_target);
-		printf("Out redirection : %s\n", curr->out_redir_target);
-		printf("Append flag : %i\n", curr->append);
-		curr = curr->next;
-		printf("\n\n");
-	}
-}
-
-
 /*
  * push_in_cmd: Routine that push a string into the cmd
  * the cmd is the array that hold all the tokens
@@ -199,6 +167,26 @@ is_redirection(char * str)
 		return 1;
 	}
 	return 0;
+}
+
+static void
+log_cmd(char * cmd)
+{
+	char * start = cmd;
+
+	/* skip potential spaces before cmd */
+	while (*start == ' ') {
+		start++;
+	}
+
+	/* remove the trailing '|' */
+	if (start[strlen(start) - 1] == '|') {
+		start[strlen(start) - 1] = '\0';
+	}
+
+	printf("+ %s\n", start);
+
+	return;
 }
 
 static int
@@ -441,14 +429,17 @@ parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
 }
 
 Pipeline *
-cmd_parser(char * input, int * nb_commands) {
+cmd_parser(char * input, int * nb_commands, UsrOptions *usr_opt) {
 	Pipeline * pipeline = NULL;
 	char * in = NULL;
 	char * saved_in = NULL;
+	char * log_cur = NULL;
+	char saved_delim;
 	
 	/* dupplicate the input for easy mem handling */	
 	in = strdup(input);
 	saved_in = in;
+	log_cur = in;
 
 	while (*in != '\0') {
 		
@@ -471,6 +462,16 @@ cmd_parser(char * input, int * nb_commands) {
 			free_pipeline(pipeline);
 			return NULL;	
 		}
+		
+		/* if logging is needed, print the cmd */
+		if (usr_opt->x) {
+			saved_delim = *in;
+			*in = '\0';
+			log_cmd(log_cur);
+			*in = saved_delim;
+			log_cur = in;
+		}
+
 
 		push_in_pipeline(&pipeline, cmd, in_target, out_target, append);
 		*nb_commands = *(nb_commands) + 1;

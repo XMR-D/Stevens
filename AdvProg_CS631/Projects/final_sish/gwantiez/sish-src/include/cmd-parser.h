@@ -1,5 +1,7 @@
 #pragma once /* CMD_PARSER_H */
 
+#include "opt-parser.h"
+
 /* 
  * Parsing State machine enumeration used for input parsing
  *
@@ -70,6 +72,6 @@ typedef struct Pipeline {
 
 void free_pipeline(Pipeline * pipeline);
 void log_pipeline(Pipeline * pipeline); 
-Pipeline * cmd_parser(char * input, int * nb_commands);
+Pipeline * cmd_parser(char * input, int * nb_commands, UsrOptions *usr_opt);
 
 /* !CMD_PARSER_H */

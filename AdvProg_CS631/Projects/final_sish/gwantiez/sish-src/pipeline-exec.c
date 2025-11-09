@@ -22,13 +22,13 @@ handle_execution(char * cmd_bin, Pipeline * pipeline)
 {
 	/* handle builtins */
 	if (strcmp(cmd_bin, "echo") == 0) {
-		return echo_main(pipeline->nb_tokens - 1, 
-				pipeline->cmd, last_status);	
+		exit(echo_main(pipeline->nb_tokens - 1, 
+				pipeline->cmd, last_status));	
 	}
 
 	if (strcmp(cmd_bin, "cd") == 0) {
-		return cd_main(pipeline->nb_tokens - 1, 
-				pipeline->cmd);
+		exit(cd_main(pipeline->nb_tokens - 1, 
+				pipeline->cmd));
 	}
 
 	/* 
@@ -51,6 +51,14 @@ handle_execution(char * cmd_bin, Pipeline * pipeline)
 			strerror(errno));
 }
 
+/*
+ * handle_redirections: routine that will set the global redirection file
+ * descriptors depending on what is in the actual pipeline. In case of
+ * failing the routine return an error and the redirection target is
+ * ignored and the subcommand is not executed.
+ *
+ * Note: None
+ */
 static int 
 handle_redirections(Pipeline * pipeline) 
 {
@@ -208,7 +216,7 @@ exec_pipeline(Pipeline * pipeline, int nb_commands)
     	}
 
 	/* 
- 	 * Wait for all the childrens and retreive the last
+ 	 * Reap all the childrens and retreive the last
 	 * exit status.
 	 */
 

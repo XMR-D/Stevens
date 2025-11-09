@@ -1,9 +1,11 @@
 #include "cd.h"
 
 #include <err.h>
+#include <errno.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <strings.h>
 #include <unistd.h>
 
 int cd_main(int argc, char ** argv)
@@ -25,7 +27,7 @@ int cd_main(int argc, char ** argv)
     			pw = getpwuid(uid);
 
 			if (pw == NULL) {
-				warnx("HOME variable is unset and"
+				warnx("cd: HOME variable is unset and"
 				      "user home directory could "
 				      "not be found");
 				return EXIT_FAILURE;
@@ -37,7 +39,11 @@ int cd_main(int argc, char ** argv)
 		target_path = argv[1];
 	}
 
-        chdir(target_path);
+        if (chdir(target_path) == -1) {
+
+		warnx("cd: error: %s", strerror(errno));
+		return errno;
+	};
 
 	return EXIT_SUCCESS;
 }
