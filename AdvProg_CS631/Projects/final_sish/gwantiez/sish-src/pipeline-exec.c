@@ -65,15 +65,20 @@ handle_redirections(Pipeline * pipeline)
 
 	/* craft the flags */
 	int open_flags_read = O_RDONLY;
-	int open_flags_write = O_WRONLY | O_CREAT;
+	int open_flags_write = 0;
 	int write_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 	int fd_r, fd_w;
 
-	/* If append flag is needed set it */
+	/* 
+	 * If append flag is needed set it
+	 * in any case the file here is guaranted
+	 * to have been created duirng parsing
+	 */
 	if (pipeline->append) {
-		open_flags_write |= O_APPEND;
+		printf("Append\n");
+		open_flags_write = O_WRONLY | O_APPEND | O_CREAT;
 	} else {
-		open_flags_write |= O_TRUNC;
+		open_flags_write = O_WRONLY | O_TRUNC | O_CREAT;
 	}
 
 	/* 

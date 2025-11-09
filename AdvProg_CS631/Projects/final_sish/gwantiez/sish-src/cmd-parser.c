@@ -220,10 +220,6 @@ update_redir_globals(char * redirection_targ, char* type)
 		}
 		return EXIT_SUCCESS;
 	} else {
-		if (out_target) {
-			free(out_target);
-		}
-		out_target = strdup(redirection_targ);
 
 		/* 
 		 * Try to create the output redirection 
@@ -231,11 +227,15 @@ update_redir_globals(char * redirection_targ, char* type)
 		 * as it will be reopen later if needeed
 		 * It comply with option 2.a voted in class
 		 */
-		fd = creat(redirection_targ, O_CREAT|O_WRONLY|O_TRUNC);
+		fd = open(redirection_targ, O_CREAT | O_WRONLY);
 		if (fd != -1) {
 			close(fd);
 		}
-
+		if (out_target) {
+			free(out_target);
+		}
+		
+		out_target = strdup(redirection_targ);
 		if (!out_target) {
 			return EXIT_FAILURE;
 		}
@@ -429,7 +429,8 @@ parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
 }
 
 Pipeline *
-cmd_parser(char * input, int * nb_commands, UsrOptions *usr_opt) {
+cmd_parser(char * input, int * nb_commands, UsrOptions *usr_opt) 
+{
 	Pipeline * pipeline = NULL;
 	char * in = NULL;
 	char * saved_in = NULL;
