@@ -1,8 +1,10 @@
 #include <err.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "signals-handling.h"
 
@@ -19,6 +21,8 @@ char *redir_type = NULL;
 char *in_target = NULL;
 char *out_target = NULL;
 int append = 0;
+
+extern int keep_the_shell;
 
 
 //TODO: REMOVE WHEN THE PARSER WILL BE FINISHED
@@ -198,7 +202,8 @@ is_redirection(char * str)
 }
 
 static int
-is_delim(char c) {
+is_delim(char c) 
+{
 	return (c == ' ' || c == '\n' || c == '|');
 }
 
@@ -206,6 +211,7 @@ static int
 update_redir_globals(char * redirection_targ, char* type)
 {
 	int free_select = 0;
+	int fd = 0;
 
 	if (strcmp(type, ">>") == 0) {
 		append = 1;
@@ -230,7 +236,18 @@ update_redir_globals(char * redirection_targ, char* type)
 			free(out_target);
 		}
 		out_target = strdup(redirection_targ);
-		
+
+		/* 
+		 * Try to create the output redirection 
+		 * if successful close it right away 
+		 * as it will be reopen later if needeed
+		 * It comply with option 2.a voted in class
+		 */
+		fd = creat(redirection_targ, O_CREAT|O_WRONLY|O_TRUNC);
+		if (fd != -1) {
+			close(fd);
+		}
+
 		if (!out_target) {
 			return EXIT_FAILURE;
 		}
@@ -247,7 +264,7 @@ is_invalid_redir_state(char c)
 	 * it's an invalid redirection
 	 */
 	if ((c == '|' || c == '\n') && !redir_intok) {
-		warnx("sish: Syntax error: '%c' unexpected\n", c);
+		warnx("Syntax error: '%c' unexpected", c);
 		return EXIT_FAILURE;
 	}
 
@@ -258,7 +275,7 @@ is_invalid_redir_state(char c)
 	 */
 	if (strcmp(">", redir_type) == 0) {
 		if (c == '<' && !redir_intok) {
-		 	warnx("sish: Syntax error: redirection unexpected\n");
+		 	warnx("Syntax error: redirection unexpected");
 			return EXIT_FAILURE;
 		}
 	}
@@ -270,7 +287,7 @@ is_invalid_redir_state(char c)
 	 */
 	if (strcmp("<", redir_type) == 0) {
 		if (c == '>' && !redir_intok) {
-		 	warnx("sish: Syntax error: redirection unexpected\n");
+		 	warnx("Syntax error: redirection unexpected");
 			return EXIT_FAILURE;
 		}
 	}
@@ -283,7 +300,7 @@ is_invalid_redir_state(char c)
 	if (strcmp(">>", redir_type) == 0) 
 	{
 		if ((c == '>' || c == '<') && !redir_intok) {
-		 	warnx("sish: Syntax error: redirection unexpected\n");
+		 	warnx("Syntax error: redirection unexpected");
 			return EXIT_FAILURE;
 		}
 	}
@@ -313,8 +330,8 @@ parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
 				 * then it's an invalid prompt
 				 */
 				if (!cmd_fnd) {
-					warnx("sish: Syntax error:"
-					" unexpected delimiter.\n");
+					warnx("Syntax error:"
+					" unexpected delimiter.");
 					return NULL;
 				}
 				next_state = END;
@@ -429,7 +446,6 @@ cmd_parser(char * input, int * nb_commands) {
 	char * in = NULL;
 	char * saved_in = NULL;
 	
-
 	/* dupplicate the input for easy mem handling */	
 	in = strdup(input);
 	saved_in = in;

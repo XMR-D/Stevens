@@ -11,6 +11,9 @@
 
 #include "shell.h"
 
+
+int keep_the_shell = 1;
+
 /* 
  * read_terminal : Routine that will read the terminal
  * handling quote characters and re-reading if a unclosed quote
@@ -62,12 +65,17 @@ shell(void)
 	while(1) {
 		printf("sish$ ");	
 		input_cmd = read_terminal();
+
+		if (strcmp(input_cmd, "\n") == 0) {
+			free(input_cmd);
+			continue;
+		}
 			
 		Pipeline * p = cmd_parser(input_cmd, &nb_commands);
 
 		if (p == NULL) {
-			restore_term_suspend_signals();	
-			return EXIT_FAILURE;
+			free(input_cmd);
+			continue;
 		}
 
 		/* 

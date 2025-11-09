@@ -10,4 +10,4 @@ INCLUDE=include -I../builtins
 
 #define the number of builtin we need to compile
 #doing that way allows to have a more modular implementation
-NB_BUILTINS=3
+NB_BUILTINS=2

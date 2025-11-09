@@ -4,7 +4,6 @@ BUILTINS=
 
 BUILTINS+=cd
 BUILTINS+=echo
-BUILTINS+=exit
 
 all:	
 	@i=0; \

@@ -11,6 +11,7 @@
 
 #include "builtins.h"
 #include "cmd-parser.h"
+#include "signals-handling.h"
 
 #include "pipeline-exec.h"
 
@@ -21,14 +22,13 @@ handle_execution(char * cmd_bin, Pipeline * pipeline)
 {
 	/* handle builtins */
 	if (strcmp(cmd_bin, "echo") == 0) {
-		printf("echo called !\n");
 		return echo_main(pipeline->nb_tokens - 1, 
 				pipeline->cmd, last_status);	
 	}
 
 	if (strcmp(cmd_bin, "cd") == 0) {
-		printf("cd called !\n");
-		return cd_main();
+		return cd_main(pipeline->nb_tokens - 1, 
+				pipeline->cmd);
 	}
 
 	/* 
@@ -47,7 +47,7 @@ handle_execution(char * cmd_bin, Pipeline * pipeline)
 	 * it means the execution failed.
 	 */
 
-	errx(127, "error while executing command \"%s\" : %s\n", cmd_bin, 
+	errx(127, "error while executing command \"%s\" : %s", cmd_bin, 
 			strerror(errno));
 }
 
@@ -77,7 +77,7 @@ handle_redirections(Pipeline * pipeline)
 		fd_r = open(pipeline->in_redir_target, 
 			open_flags_read);
 		if (fd_r == -1) {
-			warnx("could not open %s: %s\n",
+			warnx("could not open %s: %s",
 				pipeline->in_redir_target,
 				strerror(errno));
 			return EXIT_FAILURE;
@@ -86,7 +86,7 @@ handle_redirections(Pipeline * pipeline)
 		if (dup2(fd_r, STDIN_FILENO) == -1)
 		{
 			warnx("could not dupplicate"
-			      "file desriptor for %s: %s\n",
+			      "file desriptor for %s: %s",
 					pipeline->in_redir_target,
 					strerror(errno));
 			return EXIT_FAILURE;
@@ -104,7 +104,7 @@ handle_redirections(Pipeline * pipeline)
 		fd_w = open(pipeline->out_redir_target, 
 			open_flags_write, write_mode);
 		if (fd_w == -1) {
-			warnx("could not open %s: %s\n",
+			warnx("could not open %s: %s",
 					pipeline->out_redir_target,
 					strerror(errno));
 			return EXIT_FAILURE;
@@ -112,8 +112,8 @@ handle_redirections(Pipeline * pipeline)
 		
 		if (dup2(fd_w, STDOUT_FILENO) == -1) 
 		{
-			warnx("sish: could not dupplicate"
-			      "file descriptor for %s: %s\n",
+			warnx("could not dupplicate"
+			      "file descriptor for %s: %s",
 					pipeline->out_redir_target,
 					strerror(errno));
 			return EXIT_FAILURE;
@@ -147,19 +147,25 @@ exec_pipeline(Pipeline * pipeline, int nb_commands)
 		pipe(p_fd[i]);
 	}
 
-	//for each cmd within the pipelines
 	for (int i = 0; i < nb_commands; i++) {
 
 		/* For each command fork and connect the pipes */
 		pids[i] = fork();
 
-		/* Child (one of the subcommand) */
 		if (pids[i] == 0) {
+
+			/* Child (one of the subcommand) */
+			
+			/* 
+			 * If on a subcommand restore the signals
+			 * to be able to stop commands.
+			 */
+			restore_term_suspend_signals();
 			
 			/* 
 			 * If on a command different than the first one
 			 * connect the stdin of the cmd to the output of 
-			 * the previous command
+			 * the previous command.
 			 */
 			if (i > 0) {
 				dup2(p_fd[i-1][0], STDIN_FILENO);	
@@ -167,7 +173,7 @@ exec_pipeline(Pipeline * pipeline, int nb_commands)
 
 			/*
 			 * If on a command different than the last one
-			 * connect it's output to it's associate pipe
+			 * connect it's output to it's associate pipe.
 			 */
 			if (i < nb_commands - 1) {
 				dup2(p_fd[i][1], STDOUT_FILENO);

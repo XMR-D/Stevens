@@ -2,7 +2,7 @@ include generic_flags.mk
 
 #define all sources files in builtins using find
 #and all source files in src/ that correspond to sish source code
-SRC_DIR=sish-src builtins/cd builtins/echo builtins/exit
+SRC_DIR=sish-src builtins/cd builtins/echo
 SRC_FILES!=find ${SRC_DIR} -name "*.c"
 
 # Create all objects files from C source files
