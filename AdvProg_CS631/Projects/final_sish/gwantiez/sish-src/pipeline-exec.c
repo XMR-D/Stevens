@@ -52,6 +52,7 @@ handle_execution(char * cmd_bin, Pipeline * pipeline)
 	 * it means the execution failed.
 	 */
 
+	/* command not found */
 	if (errno == ENOENT) {
 		errx(127, "%s: not found", cmd_bin);
 	}

@@ -13,14 +13,30 @@ int redir_intok = 0;
 char *in_target = NULL;
 char *out_target = NULL;
 char *redir_type = NULL;
-	
+
+/*
+ * is_delim: Determine if c is a delimiter, to signal the parser
+ * to stop there
+ *
+ * Note : 
+ * 
+ * This tiny function exist in the sole purpose of 
+ * making the code in cmd_parse easier to read, since it 
+ * does not have real suitable places in the code, it's placed
+ * here since the functions in this file will only be called within the parser
+ */
 int
 is_delim(char c) 
 {
 	return (c == ' ' || c == '\n' || c == '|');
 }
 
-/* no need to free redir_type */
+/* 
+ * free_redirect_globals: freeing mechanism for all the redirection handling
+ * globals above.
+ *
+ * Note : freeing redir_type is not necessary since it's not malloced 
+ */
 void
 free_redirect_globals(void) 
 {

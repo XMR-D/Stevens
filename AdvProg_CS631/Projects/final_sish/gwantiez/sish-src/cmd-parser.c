@@ -8,71 +8,71 @@
 
 #include "handle-redirections.h"
 #include "signals-handling.h"
+#include "state-machine.h"
 
 #include "cmd-parser.h"
+
 
 /* Command parser globals */
 char ** cmd = NULL;
 int nb_tokens = 0;
 int cmd_fnd = 0;
 
+/*  Signal to put current pipeline in background during execution */
+int put_in_background = 0;
+
 /* Redirection handling globals */
 extern int append;
 extern int redir_targ_found;
-extern int redir_intok;
 extern char *in_target;
 extern char *out_target;
 extern char *redir_type;
 
-/* 
- * Signal to specify that the current pipeline
- * needs to be executed in background
- */
-int put_in_background = 0;
-
 /*
- * push_in_cmd: Routine that push a string into the cmd
- * the cmd is the array that hold all the tokens
+ * free_cmd: Freeing mechanism for a char ** object
  *
- * Note: the cmd always contains one NULL string 
- * as a terminating NULL string, to conserve it, 
- * new tokens are pushed at nb_token-2 (the penultimate spot) 
- * and a NULL is pushed at nb_token-1 (the last spot)
- */ 
-static int
-push_in_cmd(char * token)
+ * Note : None
+ */
+static void
+free_cmd(char ** cmd)
 {
-	/* if the token is "" ignore it*/
-	if (*token == 0) {
-		return EXIT_SUCCESS;
+	char ** curr = cmd;
+	while (*curr != NULL) {
+		free(*curr);
+		curr++;
 	}
-
-	/* else dupplicate it and store it by reallocate cmd */
-	int dup_len = strlen(token) + 1;
-	char * tok_dup = calloc(dup_len, sizeof(char));
-	if (tok_dup == NULL) {
-		warnx("parsing error: %s", strerror(errno));
-		return EXIT_FAILURE;
-	}
-
-	strcpy(tok_dup, token);
-	
-	char ** new_cmd = 
-		realloc(cmd, ((nb_tokens + 1) * sizeof(char*)));
-
-	if (new_cmd == NULL) {
-		free(tok_dup);
-		warnx("parsing error: %s", strerror(errno));
-		return EXIT_FAILURE;
-	}
-
-	new_cmd[nb_tokens - 1] = tok_dup; 
-	new_cmd[nb_tokens] = NULL;	
-	cmd = new_cmd;
-	nb_tokens++;
-	return EXIT_SUCCESS;
+	free(cmd);
 }
 
+/*
+ * free_pipeline: Freeing mechanism for the pipeline object
+ *
+ * Note : call free_cmd to free the char ** object
+ */
+void
+free_pipeline(Pipeline * pipeline)
+{
+    Pipeline * curr = pipeline;
+    while (curr != NULL) {
+        Pipeline * next = curr->next;
+	free_cmd(curr->cmd);
+	free(curr->in_redir_target);
+	free(curr->out_redir_target);
+        free(curr);
+        curr = next;
+    }
+}
+
+/*
+ * push_in_pipeline: Routine that push a char ** into the pipeline
+ * it will create a pipeline block out of str_in, str_out and append value
+ *
+ * Note: 
+ * 	Called by cmd_parser after the parse machine successfully 
+ * 	parsed a chunk of the input.
+ * 
+ * 	Return 0 on success and 1 on failure
+ */
 static int
 push_in_pipeline(Pipeline ** pipeline, char ** cmd, 
 		char * str_in, char * str_out, int append) 
@@ -97,7 +97,7 @@ push_in_pipeline(Pipeline ** pipeline, char ** cmd,
 	new_elm->append = append;
 	new_elm->next = NULL;
 
-	//If the given pipeline is NULL, set new_elm as the pipeline
+	/* If the given pipeline is NULL, set new_elm as the pipeline */
 	if (*(pipeline) == NULL) {
 		*(pipeline) = new_elm;
 		return EXIT_SUCCESS;
@@ -112,197 +112,6 @@ push_in_pipeline(Pipeline ** pipeline, char ** cmd,
 	return EXIT_SUCCESS;
 }
 
-
-
-static void
-free_cmd(char ** cmd)
-{
-	char ** curr = cmd;
-	while (*curr != NULL) {
-		free(*curr);
-		curr++;
-	}
-	free(cmd);
-}
-
-void
-free_pipeline(Pipeline * pipeline)
-{
-    Pipeline * curr = pipeline;
-    while (curr != NULL) {
-        Pipeline * next = curr->next;
-	free_cmd(curr->cmd);
-	free(curr->in_redir_target);
-	free(curr->out_redir_target);
-        free(curr);
-        curr = next;
-    }
-}
-
-
-/* return the number of shift we need to apply to skip the redirection token */
-static int
-is_redirection(char * str) 
-{
-	if (strncmp(str, ">>", 2) == 0) {
-		redir_type = ">>";
-		return 2;
-	}
-
-	if (*str == '>') {
-		redir_type = ">";
-		return 1;
-	}
-
-	if (*str == '<') {
-		redir_type = "<";
-		return 1;
-	}
-	return 0;
-}
-
-/*
- * parse_machine: Finite State Machine in charge of parsing the input
- * recalled several times as long as subcommand exist in the user prompt
- *
- * Note : For more details about how the parse machine works,
- * 	  see cmd-parser.h file, everything is detailed here
- *
- * 	  the routine return a string representing the remaining
- * 	  characters to parse, or NULL if an error has been encounter
- */
-static char *
-parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
-{	
-	char saved = 0;
-	int shift = 0;
-	ParseState next_state = -1;
-
-	switch(curr_state) {
-		case DELIM:
-			if (*curr_char == ' ') {
-				curr_tok++;
-				curr_char++;
-				next_state = DELIM;
-				break;
-			}
-
-			if (is_delim(*curr_char)) {
-    				if (!cmd_fnd) {
-        				if (*curr_char == '|'
-						|| *curr_char == '\n') {
-            					warnx("Syntax error:"
-					  "unexpected delimiter.");
-        				 }
-        				return NULL;
-    				}
-    				next_state = END;
-    				break;
-			}
-
-			/* 
-			 * shift indicate the number of char to skip in case we
-			 * encounter a redirection char, 
-			 * if shift is 0 it's not a redirection char.
-			 */
-			shift = is_redirection(curr_char);
-			if (shift) {
-				curr_char += shift;
-				curr_tok = curr_char;
-				next_state = IN_REDIRECTION;
-			} else {
-				next_state = IN_TOKEN;
-			}
-			break;
-		case IN_TOKEN:	
-			/* 
-			 * If the character is anything else than a space
-			 * or a \n char, it's a token char so go into the
-			 * token state
-			 */
-			if (!is_delim(*curr_char)) {
-				curr_char++;
-				next_state = IN_TOKEN;
-				break;
-			}
-
-			/* 
-			 * Else we reached either the end or a delim
-			 * in this case, push the token into
-			 * the token array and go to the appropriate state
-			 */
-			saved = *curr_char;
-			*curr_char = '\0';
-			cmd_fnd = 1;
-			if (push_in_cmd(curr_tok)) {
-				return NULL;
-			}
-			*curr_char = saved;
-
-			if (*curr_char == ' ') {
-				curr_char++;
-				curr_tok = curr_char;
-				next_state = DELIM;
-				break;
-			}
-			next_state = END;
-			break;
-		case IN_REDIRECTION:
-			/* 
-			 * check if the actual character 
-			 * trigger an invalid redirection state 
-			 */	
-			if (is_invalid_redir_state(*curr_char)) {
-				return NULL;
-			}
-			
-			/* 
-			 * if the char is a space and we are not in a redir
-			 * token goto next char until we find a string 
-			 */
-			if (*curr_char == ' ' && !redir_intok) {
-				curr_char++;
-				curr_tok++;
-				next_state = IN_REDIRECTION;
-				break;
-			}
-
-			/* if we found a delim '|', '\n' or ' ' */
-			if (is_delim(*curr_char)) {
-				saved = *curr_char;
-				*curr_char = '\0';
-				if (update_redir_globals(curr_tok,
-							redir_type)){
-					return NULL;
-				}
-				*curr_char = saved;
-				
-				curr_tok = curr_char;
-				redir_intok = 0;
-				redir_type = NULL;
-				next_state = DELIM;
-				break;
-			}
-
-			redir_intok = 1;
-			curr_char++;
-			next_state = IN_REDIRECTION;
-			break;
-		case END:
-			if (*curr_char == '\n') {
-				*curr_char = '\0';
-			} else {
-				curr_char++;
-			}	
-			return curr_char;
-		default:
-			/* NEVER REACHED */
-			break;
-	}
-	return parse_machine(curr_char, curr_tok, next_state);
-}
-
-
 /*
  * cmd_parser: Main parsing routine, handle the calls to the parsing
  * state machine, create the pipeline linked list that will hold
@@ -311,7 +120,6 @@ parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
  *
  * Note : If the parsing fail for any reasons, the function returns
  * NULL, otherwise it returns the newly allocated pipeline.
- *
  */
 Pipeline *
 cmd_parser(char * input, int * nb_commands) 
