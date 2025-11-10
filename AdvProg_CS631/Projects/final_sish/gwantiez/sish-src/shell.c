@@ -3,15 +3,88 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
-
+#include "builtins.h"
 #include "cmd-parser.h"
+#include "logging.h"
 #include "opt-parser.h"
 #include "pipeline-exec.h"
 #include "signals-handling.h"
 
 #include "shell.h"
 
+/* Shell signal used to indicate to procees with the fork-exec process */
+#define SHELL_SIG_PROCEED 0
+
+/*
+ * Shell signal used to indicate that the next action to take is to execute
+ * the next command. ignoring the fork-exec process.
+ */
+#define SHELL_SIG_CONTINUE 1
+	
+/* 
+ * Shell signal used to indicate that the next action to take is to stop
+ * the shell.
+ */
+#define SHELL_SIG_BREAK 2
+
+extern int put_in_background;
+
+static void
+background_process_handler(Pipeline * p, int nb_commands)
+{
+	int back_pid = fork();
+
+	/* background process */
+	if (back_pid == 0) {
+		exec_pipeline(p, nb_commands);
+		/* 
+		* It would not make sense to try to
+	 	* track asynchronous exit status as it
+	 	* could create race conditions on the
+	 	* status error code. so in any case
+	 	* exit with 0, this return code will
+	 	* not be used anyway
+	 	*/
+		exit(0);
+	} else {
+		/* still in parent (the shell) */
+		printf("[%d]\n", back_pid);
+	}
+
+}
+
+/*
+ * handle_builtins : routine to execute the builtins passed by
+ * the user
+ *
+ * Note:
+ * the routine handle cd and exit as special builtins, 
+ *
+ * if it's the only command passed to the terminal, handle it before forking.
+ * if passed within multiple command pipeline (nb_command > 1) 
+ * then the builtin will be ignored here, 
+ * and executed into a child process resulting of changing the child environment
+ * showing no difference for the user who will be in the shell process
+ *
+ * This is Netbsd shell behavior
+ */
+static int
+handle_builtins(Pipeline * p, int nb_commands)
+{
+	if ((strcmp(p->cmd[0], "exit") == 0) && nb_commands == 1) {
+		return SHELL_SIG_BREAK;
+	}
+
+	if ((strcmp(p->cmd[0], "cd") == 0) && nb_commands == 1) {
+		cd_main(p->nb_tokens - 1, p->cmd);
+		return SHELL_SIG_CONTINUE;
+	}
+
+	return SHELL_SIG_PROCEED;
+
+}
 
 /* 
  * read_terminal : Routine that will read the terminal
@@ -50,6 +123,7 @@ shell(UsrOptions * usr_opt)
 	char * input_cmd;
 	int nb_commands = 0;
 	int last_status = 0;
+	int shell_sig = 0;
 
 	ignore_term_suspend_signals();
 
@@ -66,32 +140,42 @@ shell(UsrOptions * usr_opt)
 		input_cmd = read_terminal();
 
 		if (strcmp(input_cmd, "\n") == 0) {
+			nb_commands = 0;
 			free(input_cmd);
 			continue;
-		}
-			
-		Pipeline * p = cmd_parser(input_cmd, &nb_commands, usr_opt);
-
-		if (p == NULL) {
-			free(input_cmd);
-			continue;
-		}
-
-		/* 
-		 * handle exit as a special builtin 
-		 * if it's the only command passed kill the terminal, 
-		 * otherwise other commands can be executed and exit 
-		 * will affect only the process that has been forked
-		 * to execute it, showing no difference for the user.
-		 */
-		if (strcmp(p->cmd[0], "exit") == 0 && !(p->next)) {
-			free_pipeline(p);
-			break;
 		}
 		
-		last_status = exec_pipeline(p, nb_commands);
+		Pipeline * p = cmd_parser(input_cmd, &nb_commands);
+
+		if (p == NULL) {
+			nb_commands = 0;
+			free(input_cmd);
+			continue;
+		}
+
+		/* If logging is needed call logging.c */
+		if (usr_opt->x) {
+			log_pipeline(p);	
+		}
 
 
+		/* 
+		 * handle execution taking into account
+		 * backgrounding and builtins
+		 */
+		shell_sig = handle_builtins(p, nb_commands);
+		
+		if (shell_sig == SHELL_SIG_BREAK) {
+			free_pipeline(p);
+			break;
+		} else if (shell_sig != SHELL_SIG_CONTINUE) {
+			if (put_in_background) {
+				background_process_handler(p, nb_commands);
+			} else {
+				last_status = exec_pipeline(p, nb_commands);
+			}
+		}
+		put_in_background = 0;
 		free_pipeline(p);
 		free(input_cmd);
 		nb_commands = 0;

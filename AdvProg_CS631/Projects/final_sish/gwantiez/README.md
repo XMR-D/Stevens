@@ -21,7 +21,10 @@ Another aproach would have been to compile the builtins as shared libraries
 but it would have been overkill and not really adapted to the "Built-in" 
 fashion.
 
-
+PLEASE NOTE THAT I DESIGNED THE PROJECT SO THAT I CAN REPURPOSE IT LATER
+FOR A FAST SHELL IMPLEM ON A KERNEL IMPLEM (Once everything to handle
+the libc implemented, the only steps will be to include the libc on the
+kernel and import this code onto it)
 
 Problems encountered : 
 

@@ -26,6 +26,11 @@ handle_execution(char * cmd_bin, Pipeline * pipeline)
 				pipeline->cmd, last_status));	
 	}
 
+	/* 
+	 * will likely show no difference but need to
+	 * be handle separatly to avoid execvp
+	 * returning a non existant command error
+	 */
 	if (strcmp(cmd_bin, "cd") == 0) {
 		exit(cd_main(pipeline->nb_tokens - 1, 
 				pipeline->cmd));
@@ -46,6 +51,10 @@ handle_execution(char * cmd_bin, Pipeline * pipeline)
 	 * if this code is reached 
 	 * it means the execution failed.
 	 */
+
+	if (errno == ENOENT) {
+		errx(127, "%s: not found", cmd_bin);
+	}
 
 	errx(127, "error while executing command \"%s\" : %s", cmd_bin, 
 			strerror(errno));
@@ -75,7 +84,6 @@ handle_redirections(Pipeline * pipeline)
 	 * to have been created duirng parsing
 	 */
 	if (pipeline->append) {
-		printf("Append\n");
 		open_flags_write = O_WRONLY | O_APPEND | O_CREAT;
 	} else {
 		open_flags_write = O_WRONLY | O_TRUNC | O_CREAT;
@@ -153,7 +161,7 @@ exec_pipeline(Pipeline * pipeline, int nb_commands)
 {
 	/* Table of pipes that will be populated by pipes() calls*/
 	int p_fd[nb_commands-1][2];
-	/* Table of Pids that will be populated by fork() calls*/
+	/* Table of Pids that will be populated by fork() pids*/
 	pid_t pids[nb_commands];
 
 	for (int i = 0; i < nb_commands-1; i++) {

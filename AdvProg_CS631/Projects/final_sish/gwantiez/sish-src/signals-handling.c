@@ -4,7 +4,13 @@
 #include <signal.h>
 
 #include "signals-handling.h"
-	
+
+/*
+ * ignore_term_suspend_signals: routine that block the interruption,
+ * quitn and stop signal.
+ *
+ * Note : None
+ */
 void
 ignore_term_suspend_signals(void)
 {
@@ -22,7 +28,12 @@ ignore_term_suspend_signals(void)
 	}
 }
 
-
+/*
+ * restore_term_suspend_signals: routine that restore the interruption,
+ * quitn and stop signal.
+ *
+ * Note : None
+ */
 void
 restore_term_suspend_signals(void)
 {

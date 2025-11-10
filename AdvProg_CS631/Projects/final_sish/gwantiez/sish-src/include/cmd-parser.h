@@ -72,6 +72,6 @@ typedef struct Pipeline {
 
 void free_pipeline(Pipeline * pipeline);
 void log_pipeline(Pipeline * pipeline); 
-Pipeline * cmd_parser(char * input, int * nb_commands, UsrOptions *usr_opt);
+Pipeline * cmd_parser(char * input, int * nb_commands);
 
 /* !CMD_PARSER_H */

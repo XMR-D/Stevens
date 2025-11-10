@@ -1,6 +1,6 @@
 include ../generic_flags.mk
 
-SRC=sish.c opt-parser.c shell.c cmd-parser.c signals-handling.c pipeline-exec.c 
+SRC=sish.c opt-parser.c shell.c cmd-parser.c handle-redirections.c signals-handling.c pipeline-exec.c logging.c 
 OBJS= ${SRC:.c=.o}
 
 .PHONY: all, clean

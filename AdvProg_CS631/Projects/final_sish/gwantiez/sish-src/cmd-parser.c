@@ -6,23 +6,29 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "handle-redirections.h"
 #include "signals-handling.h"
 
 #include "cmd-parser.h"
 
+/* Command parser globals */
 char ** cmd = NULL;
 int nb_tokens = 0;
 int cmd_fnd = 0;
 
 /* Redirection handling globals */
-int redir_targ_found = 0;
-int redir_intok = 0;
-char *redir_type = NULL;
-char *in_target = NULL;
-char *out_target = NULL;
-int append = 0;
+extern int append;
+extern int redir_targ_found;
+extern int redir_intok;
+extern char *in_target;
+extern char *out_target;
+extern char *redir_type;
 
-extern int keep_the_shell;
+/* 
+ * Signal to specify that the current pipeline
+ * needs to be executed in background
+ */
+int put_in_background = 0;
 
 /*
  * push_in_cmd: Routine that push a string into the cmd
@@ -56,7 +62,7 @@ push_in_cmd(char * token)
 
 	if (new_cmd == NULL) {
 		free(tok_dup);
-		warnx("parsing error: %s\n", strerror(errno));
+		warnx("parsing error: %s", strerror(errno));
 		return EXIT_FAILURE;
 	}
 
@@ -106,20 +112,7 @@ push_in_pipeline(Pipeline ** pipeline, char ** cmd,
 	return EXIT_SUCCESS;
 }
 
-/* no need to free redir_type */
-static void
-free_redirect_globals(void) 
-{
-	if (in_target) {
-		free(in_target);
-		in_target = NULL;
-	}
-	if (out_target) {
-		free(out_target);
-		out_target = NULL;
-	}
-	return;
-}
+
 
 static void
 free_cmd(char ** cmd)
@@ -147,7 +140,6 @@ free_pipeline(Pipeline * pipeline)
 }
 
 
-
 /* return the number of shift we need to apply to skip the redirection token */
 static int
 is_redirection(char * str) 
@@ -169,138 +161,23 @@ is_redirection(char * str)
 	return 0;
 }
 
-static void
-log_cmd(char * cmd)
-{
-	char * start = cmd;
-
-	/* skip potential spaces before cmd */
-	while (*start == ' ') {
-		start++;
-	}
-
-	/* remove the trailing '|' */
-	if (start[strlen(start) - 1] == '|') {
-		start[strlen(start) - 1] = '\0';
-	}
-
-	printf("+ %s\n", start);
-
-	return;
-}
-
-static int
-is_delim(char c) 
-{
-	return (c == ' ' || c == '\n' || c == '|');
-}
-
-static int
-update_redir_globals(char * redirection_targ, char* type)
-{
-	int free_select = 0;
-	int fd = 0;
-
-	if (strcmp(type, ">>") == 0) {
-		append = 1;
-	} else if (*type == '>') {
-		append = 0;
-	} else if (*type == '<') {
-		free_select = 1;
-	}
-
-	if (free_select) {
-		if (in_target) {
-			free(in_target);
-		}
-		in_target = strdup(redirection_targ);
-		
-		if (!in_target) {
-			return EXIT_FAILURE;
-		}
-		return EXIT_SUCCESS;
-	} else {
-
-		/* 
-		 * Try to create the output redirection 
-		 * if successful close it right away 
-		 * as it will be reopen later if needeed
-		 * It comply with option 2.a voted in class
-		 */
-		fd = open(redirection_targ, O_CREAT | O_WRONLY);
-		if (fd != -1) {
-			close(fd);
-		}
-		if (out_target) {
-			free(out_target);
-		}
-		
-		out_target = strdup(redirection_targ);
-		if (!out_target) {
-			return EXIT_FAILURE;
-		}
-		return EXIT_SUCCESS;
-	}
-
-}
-
-static int
-is_invalid_redir_state(char c)
-{
-	/* 
-	 * If c is a \n or a | and we did not find any token then 
-	 * it's an invalid redirection
-	 */
-	if ((c == '|' || c == '\n') && !redir_intok) {
-		warnx("Syntax error: '%c' unexpected", c);
-		return EXIT_FAILURE;
-	}
-
-	/*
-	 * If we are in a '>' redirection,
-	 * if c is a '<' and no tokens have been found
-	 * then it's an invalid redirection
-	 */
-	if (strcmp(">", redir_type) == 0) {
-		if (c == '<' && !redir_intok) {
-		 	warnx("Syntax error: redirection unexpected");
-			return EXIT_FAILURE;
-		}
-	}
-
-	/*
-	 * If we are in a '<' redirection,
-	 * if c is a '>' and no tokens have been found
-	 * then it's an invalid redirection
-	 */
-	if (strcmp("<", redir_type) == 0) {
-		if (c == '>' && !redir_intok) {
-		 	warnx("Syntax error: redirection unexpected");
-			return EXIT_FAILURE;
-		}
-	}
-
-	/*
-	 * If we are in a ">>" redirection,
-	 * if c is a '<' or '>' and no tokens have been found
-	 * then it's an invalid redirection
-	 */
-	if (strcmp(">>", redir_type) == 0) 
-	{
-		if ((c == '>' || c == '<') && !redir_intok) {
-		 	warnx("Syntax error: redirection unexpected");
-			return EXIT_FAILURE;
-		}
-	}
-	return EXIT_SUCCESS;
-}
-
+/*
+ * parse_machine: Finite State Machine in charge of parsing the input
+ * recalled several times as long as subcommand exist in the user prompt
+ *
+ * Note : For more details about how the parse machine works,
+ * 	  see cmd-parser.h file, everything is detailed here
+ *
+ * 	  the routine return a string representing the remaining
+ * 	  characters to parse, or NULL if an error has been encounter
+ */
 static char *
 parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
 {	
 	char saved = 0;
 	int shift = 0;
 	ParseState next_state = -1;
+
 	switch(curr_state) {
 		case DELIM:
 			if (*curr_char == ' ') {
@@ -309,21 +186,18 @@ parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
 				next_state = DELIM;
 				break;
 			}
-			
-			if (*curr_char == '\0'
-					|| *curr_char == '\n'
-						|| *curr_char == '|') {
-				/* 
-				 * If we did not find any cmd before a pipeline
-				 * then it's an invalid prompt
-				 */
-				if (!cmd_fnd) {
-					warnx("Syntax error:"
-					" unexpected delimiter.");
-					return NULL;
-				}
-				next_state = END;
-				break;
+
+			if (is_delim(*curr_char)) {
+    				if (!cmd_fnd) {
+        				if (*curr_char == '|'
+						|| *curr_char == '\n') {
+            					warnx("Syntax error:"
+					  "unexpected delimiter.");
+        				 }
+        				return NULL;
+    				}
+    				next_state = END;
+    				break;
 			}
 
 			/* 
@@ -384,7 +258,7 @@ parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
 			
 			/* 
 			 * if the char is a space and we are not in a redir
-			 * token goto next char 
+			 * token goto next char until we find a string 
 			 */
 			if (*curr_char == ' ' && !redir_intok) {
 				curr_char++;
@@ -428,19 +302,58 @@ parse_machine(char * curr_char, char * curr_tok, ParseState curr_state)
 	return parse_machine(curr_char, curr_tok, next_state);
 }
 
+
+/*
+ * cmd_parser: Main parsing routine, handle the calls to the parsing
+ * state machine, create the pipeline linked list that will hold
+ * all the necessay informations. the resulting object is meant to
+ * be passed to the pipeline_exec func
+ *
+ * Note : If the parsing fail for any reasons, the function returns
+ * NULL, otherwise it returns the newly allocated pipeline.
+ *
+ */
 Pipeline *
-cmd_parser(char * input, int * nb_commands, UsrOptions *usr_opt) 
+cmd_parser(char * input, int * nb_commands) 
 {
 	Pipeline * pipeline = NULL;
 	char * in = NULL;
+	int in_len = 0;
 	char * saved_in = NULL;
-	char * log_cur = NULL;
-	char saved_delim;
+
+	if (strcmp(input, "\n") == 0) {
+		return NULL;
+	}
 	
-	/* dupplicate the input for easy mem handling */	
+	/* duplicate the input for easy mem handling */	
 	in = strdup(input);
 	saved_in = in;
-	log_cur = in;
+	in_len = strlen(in);
+
+	/* skip potential spaces characters */
+	while (*in == ' ') {
+		in++;
+
+		/* 
+		 * We reached the end of the input
+		 * without finding a cmd
+		 * so exit
+		 */
+		if (*in == '\n') {
+			free(saved_in);
+			return NULL;
+		}
+	}
+
+	/* 
+	* If the command is terminated by &
+	* then signal the exec to put the pipeline
+	* in background.
+	*/
+	if (saved_in[in_len - 2] == '&') {
+		put_in_background = 1;
+		saved_in[in_len - 2] = '\n';
+	}
 
 	while (*in != '\0') {
 		
@@ -461,18 +374,9 @@ cmd_parser(char * input, int * nb_commands, UsrOptions *usr_opt)
 			free_redirect_globals();
 			free(saved_in);
 			free_pipeline(pipeline);
+			put_in_background = 0;
 			return NULL;	
 		}
-		
-		/* if logging is needed, print the cmd */
-		if (usr_opt->x) {
-			saved_delim = *in;
-			*in = '\0';
-			log_cmd(log_cur);
-			*in = saved_delim;
-			log_cur = in;
-		}
-
 
 		push_in_pipeline(&pipeline, cmd, in_target, out_target, append);
 		*nb_commands = *(nb_commands) + 1;
