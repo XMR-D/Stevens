@@ -77,7 +77,7 @@ push_in_cmd(char * token)
  * on the input to skip it before entering IN_REDIRECTION state
  *
  * Note : 
- * 	Does not return magic numbers, just the lenght of each
+ * 	Does not return magic numbers, just the length of each
  * 	char sequence that identify a redirection, done 
  * 	this way to avoid unnecessary calls to strlen.
  */
@@ -103,7 +103,9 @@ is_redirection(char * str)
 
 /*
  * handle_delim_state: Process the DELIM state of the parser
- * Returns next parser state string or NULL on error
+ * 
+ * Note :
+ * 	Returns next parser state string or NULL on error
  */
 static char *
 handle_delim_state(char *curr_char, char *curr_tok)
@@ -143,7 +145,9 @@ handle_delim_state(char *curr_char, char *curr_tok)
 
 /*
  * handle_token_state: Process the IN_TOKEN state of the parser
- * Returns next parser state string or NULL on error
+ * 
+ * Note :
+ * 	Returns next parser state string or NULL on error
  */
 static char *
 handle_token_state(char *curr_char, char *curr_tok)
@@ -183,7 +187,9 @@ handle_token_state(char *curr_char, char *curr_tok)
 
 /*
  * handle_redir_state: Process the IN_REDIRECTION state of the parser
- * Returns next parser state string or NULL on error
+ * 
+ * Note: 
+ * 	Returns next parser state string or NULL on error
  */
 static char *
 handle_redir_state(char *curr_char, char *curr_tok)
