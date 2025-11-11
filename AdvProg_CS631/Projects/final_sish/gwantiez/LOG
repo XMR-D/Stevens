@@ -1,3 +1,4 @@
+c3a89da Fix(Printing the log on stderr, changing a bit the exit status for a better man page compliance, minor comments additions)
 471b0f0 Fix(Refactoring)
 95ba3b4 Feat(Refactoring the state machine to have a more readable output)
 6cc9071 Fix(Refactoring, Splitting functions, hardening &)

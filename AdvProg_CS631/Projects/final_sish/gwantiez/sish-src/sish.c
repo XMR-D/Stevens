@@ -1,8 +1,8 @@
+#include <err.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <err.h>
 #include <string.h>
-#include <errno.h>
 
 #include "cmd-parser.h"
 #include "opt-parser.h"
@@ -20,7 +20,7 @@
  * 	  comply with the man page requirement. last command
  * 	  exit status or 127 if something went wrong while executing
  * 	  the command (I choose not to catch error status code to replace
- * 	  it with 127 as the command successfully runned, but return an 
+ * 	  it with 127 as the command successfully runned, but return an
  * 	  meaningfull error).
  * 	  (the command still completed, just arguments were incorrects, or
  * 	  permission was not granted.....).
@@ -32,77 +32,75 @@
  * 	  if it was understood but execvp failed for some reasons, again
  * 	  127 is returned.
  */
-static int 
-sish_main(int argc, char *argv[], UsrOptions * usr_opt)
+static int
+sish_main(int argc, char *argv[], UsrOptions *usr_opt)
 {
-	int retcode = 0;
+        int retcode = 0;
 
-	retcode = parse_options(&argc, &argv, usr_opt);
+        retcode = parse_options(&argc, &argv, usr_opt);
 
-	/* Based on Options passed by the user, start a shell or not*/
-	if (!usr_opt->c) {
-		if (argc > 0) {
-			errx(1, "invalid argument\nsish [-x] [-c command]");	
-		}
-		retcode = shell(usr_opt);
-	}
-	else {
-		if (argc == 0 || argc > 1) {
-			errx(1, "invalid argument\nsish [-x] [-c command]");	
-		}
-		
-		int nb_commands = 0;
-		int cmd_len = strlen(argv[0]);
+        /* Based on Options passed by the user, start a shell or not*/
+        if (!usr_opt->c) {
+                if (argc > 0) {
+                        errx(1, "invalid argument\nsish [-x] [-c command]");
+                }
+                retcode = shell(usr_opt);
+        } else {
+                if (argc == 0 || argc > 1) {
+                        errx(1, "invalid argument\nsish [-x] [-c command]");
+                }
 
-		/* 
-		 * Place a '\n' at the end of the string to prepare
-		 * it for parsing
-		 */
-		argv[0][cmd_len] = '\n';
+                int nb_commands = 0;
+                int cmd_len = strlen(argv[0]);
 
-		Pipeline * p = cmd_parser(argv[0], &nb_commands);
+                /*
+                 * Place a '\n' at the end of the string to prepare
+                 * it for parsing
+                 */
+                argv[0][cmd_len] = '\n';
 
-		/* Parsing error encounter, according to manpage return 127 */
-		if (p == NULL) {
-			return 127;
-		}
+                Pipeline *p = cmd_parser(argv[0], &nb_commands);
 
-		/* will return 127 if the command couldn't be executed */
-		retcode = exec_pipeline(p, nb_commands);
-		free_pipeline(p);
+                /* Parsing error encounter, according to manpage return 127 */
+                if (p == NULL) {
+                        return 127;
+                }
 
-	}	
-	return retcode;
+                /* will return 127 if the command couldn't be executed */
+                retcode = exec_pipeline(p, nb_commands);
+                free_pipeline(p);
+        }
+        return retcode;
 }
 
 /*
  * main: entry point of the program, set the SHELL env variable
  * calloc the options, and call sish.
  *
- * Note: 
+ * Note:
  * 	return the last command executed status code by sish
  * 	whenever -c is set or not
  */
-int 
-main(int argc, char *argv[]) 
+int
+main(int argc, char *argv[])
 {
-	int retcode = EXIT_SUCCESS;
+        int retcode = EXIT_SUCCESS;
 
-	/* Set SHELL environment variable */
-	char * exe_path = realpath("/proc/self/exe", NULL);
-	if (exe_path) {
-    		setenv("SHELL", exe_path, 1);
-    		free(exe_path); 
-	}
+        /* Set SHELL environment variable */
+        char *exe_path = realpath("/proc/self/exe", NULL);
+        if (exe_path) {
+                setenv("SHELL", exe_path, 1);
+                free(exe_path);
+        }
 
-	UsrOptions * usr_opt = calloc(1, sizeof(UsrOptions));
-	if (usr_opt == NULL) {
-		errx(1, "memory error: %s\n", strerror(errno));
-	}
+        UsrOptions *usr_opt = calloc(1, sizeof(UsrOptions));
+        if (usr_opt == NULL) {
+                errx(1, "memory error: %s\n", strerror(errno));
+        }
 
-	retcode = sish_main(argc, argv, usr_opt);
+        retcode = sish_main(argc, argv, usr_opt);
 
-	free(usr_opt);
+        free(usr_opt);
 
-	return retcode;
+        return retcode;
 }

@@ -2,6 +2,6 @@
 
 #include "opt-parser.h"
 
-int shell(UsrOptions * usr_opt);
+int shell(UsrOptions *usr_opt);
 
 /* !SHELL_H */

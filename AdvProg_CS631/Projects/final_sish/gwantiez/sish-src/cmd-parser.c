@@ -1,8 +1,10 @@
+#include "cmd-parser.h"
+
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -10,11 +12,9 @@
 #include "signals-handling.h"
 #include "state-machine.h"
 
-#include "cmd-parser.h"
-
 
 /* Command parser globals */
-char ** cmd = NULL;
+char **cmd = NULL;
 int nb_tokens = 0;
 int cmd_fnd = 0;
 
@@ -34,14 +34,14 @@ extern char *redir_type;
  * Note : None
  */
 static void
-free_cmd(char ** cmd)
+free_cmd(char **cmd)
 {
-	char ** curr = cmd;
-	while (*curr != NULL) {
-		free(*curr);
-		curr++;
-	}
-	free(cmd);
+        char **curr = cmd;
+        while (*curr != NULL) {
+                free(*curr);
+                curr++;
+        }
+        free(cmd);
 }
 
 /*
@@ -50,66 +50,66 @@ free_cmd(char ** cmd)
  * Note : call free_cmd to free the char ** object
  */
 void
-free_pipeline(Pipeline * pipeline)
+free_pipeline(Pipeline *pipeline)
 {
-    Pipeline * curr = pipeline;
-    while (curr != NULL) {
-        Pipeline * next = curr->next;
-	free_cmd(curr->cmd);
-	free(curr->in_redir_target);
-	free(curr->out_redir_target);
-        free(curr);
-        curr = next;
-    }
+        Pipeline *curr = pipeline;
+        while (curr != NULL) {
+                Pipeline *next = curr->next;
+                free_cmd(curr->cmd);
+                free(curr->in_redir_target);
+                free(curr->out_redir_target);
+                free(curr);
+                curr = next;
+        }
 }
 
 /*
  * push_in_pipeline: Routine that push a char ** into the pipeline
  * it will create a pipeline block out of str_in, str_out and append value
  *
- * Note: 
- * 	Called by cmd_parser after the parse machine successfully 
+ * Note:
+ * 	Called by cmd_parser after the parse machine successfully
  * 	parsed a chunk of the input.
- * 
+ *
  * 	Return 0 on success and 1 on failure
  */
 static int
-push_in_pipeline(Pipeline ** pipeline, char ** cmd, 
-		char * str_in, char * str_out, int append) 
+push_in_pipeline(Pipeline **pipeline, char **cmd, char *str_in, char *str_out,
+                 int append)
 {
 
-	Pipeline * new_elm = calloc(1, sizeof(Pipeline));
-	if (new_elm == NULL) {
-		warnx("parsing error: %s", strerror(errno));
-		return EXIT_FAILURE;
-	}
+        Pipeline *new_elm = calloc(1, sizeof(Pipeline));
+        if (new_elm == NULL) {
+                warnx("parsing error: %s", strerror(errno));
+                return EXIT_FAILURE;
+        }
 
-	new_elm->cmd = cmd;
-	new_elm->nb_tokens = nb_tokens;
+        new_elm->cmd = cmd;
+        new_elm->nb_tokens = nb_tokens;
 
-	if (str_in != NULL) {
-		new_elm->in_redir_target = strdup(str_in);
-	}
-	if (str_out != NULL) {
-		new_elm->out_redir_target = strdup(str_out);
-	}
+        if (str_in != NULL) {
+                new_elm->in_redir_target = strdup(str_in);
+        }
+        if (str_out != NULL) {
+                new_elm->out_redir_target = strdup(str_out);
+        }
 
-	new_elm->append = append;
-	new_elm->next = NULL;
+        new_elm->append = append;
+        new_elm->next = NULL;
 
-	/* If the given pipeline is NULL, set new_elm as the pipeline */
-	if (*(pipeline) == NULL) {
-		*(pipeline) = new_elm;
-		return EXIT_SUCCESS;
-	}
+        /* If the given pipeline is NULL, set new_elm as the pipeline */
+        if (*(pipeline) == NULL) {
+                *(pipeline) = new_elm;
+                return EXIT_SUCCESS;
+        }
 
-	Pipeline * curr = *pipeline;
-	while (curr->next != NULL) {
-		curr = curr->next;
-	}
+        Pipeline *curr = *pipeline;
+        while (curr->next != NULL) {
+                curr = curr->next;
+        }
 
-	curr->next = new_elm;
-	return EXIT_SUCCESS;
+        curr->next = new_elm;
+        return EXIT_SUCCESS;
 }
 
 /*
@@ -122,84 +122,83 @@ push_in_pipeline(Pipeline ** pipeline, char ** cmd,
  * NULL, otherwise it returns the newly allocated pipeline.
  */
 Pipeline *
-cmd_parser(char * input, int * nb_commands) 
+cmd_parser(char *input, int *nb_commands)
 {
-	Pipeline * pipeline = NULL;
-	char * in = NULL;
-	int in_len = 0;
-	char * saved_in = NULL;
+        Pipeline *pipeline = NULL;
+        char *in = NULL;
+        int in_len = 0;
+        char *saved_in = NULL;
 
-	if (strcmp(input, "\n") == 0) {
-		return NULL;
-	}
-	
-	/* duplicate the input for easy mem handling */	
-	in = strdup(input);
-	saved_in = in;
-	in_len = strlen(in);
+        if (strcmp(input, "\n") == 0) {
+                return NULL;
+        }
 
-	/* skip potential spaces characters */
-	while (*in == ' ') {
-		in++;
+        /* duplicate the input for easy mem handling */
+        in = strdup(input);
+        saved_in = in;
+        in_len = strlen(in);
 
-		/* 
-		 * We reached the end of the input
-		 * without finding a cmd
-		 * so exit
-		 */
-		if (*in == '\n') {
-			free(saved_in);
-			return NULL;
-		}
-	}
+        /* skip potential spaces characters */
+        while (*in == ' ') {
+                in++;
 
-	/* 
-	* If the command is terminated by &
-	* then signal the exec to put the pipeline
-	* in background.
-	*/
-	if (saved_in[in_len - 2] == '&') {
-		put_in_background = 1;
-		saved_in[in_len - 2] = '\n';
-	}
+                /*
+                 * We reached the end of the input
+                 * without finding a cmd
+                 * so exit
+                 */
+                if (*in == '\n') {
+                        free(saved_in);
+                        return NULL;
+                }
+        }
 
-	while (*in != '\0') {
-		
-		cmd = calloc(1, sizeof(char *));
-		cmd[0] = NULL;
-		nb_tokens = 1;
+        /*
+         * If the command is terminated by &
+         * then signal the exec to put the pipeline
+         * in background.
+         */
+        if (saved_in[in_len - 2] == '&') {
+                put_in_background = 1;
+                saved_in[in_len - 2] = '\n';
+        }
 
-		/* 
-		 * extract informations from a chunk of the input
-		 * a chunk is a portion of the input that represent
-		 * either a subcommand (command between pipelines)
-		 * or a full command (command with no pipeline)
-		 */
-		in = parse_machine(in, in, DELIM);
-		
-		if (in == NULL) {
-			free(cmd);
-			free_redirect_globals();
-			free(saved_in);
-			free_pipeline(pipeline);
-			put_in_background = 0;
-			return NULL;	
-		}
+        while (*in != '\0') {
 
-		push_in_pipeline(&pipeline, cmd, in_target, out_target, append);
-		*nb_commands = *(nb_commands) + 1;
-			
-		/* 
-		 * Reinitialize parsing environment 
-		 * all the data that is freed here has been dupplicated
-		 * and placed in the proper data structure
-		 */
-		free_redirect_globals();
-		append = 0;
-		cmd_fnd = 0;
+                cmd = calloc(1, sizeof(char *));
+                cmd[0] = NULL;
+                nb_tokens = 1;
 
-	}
+                /*
+                 * extract informations from a chunk of the input
+                 * a chunk is a portion of the input that represent
+                 * either a subcommand (command between pipelines)
+                 * or a full command (command with no pipeline)
+                 */
+                in = parse_machine(in, in, DELIM);
 
-	free(saved_in);
-	return pipeline;
+                if (in == NULL) {
+                        free(cmd);
+                        free_redirect_globals();
+                        free(saved_in);
+                        free_pipeline(pipeline);
+                        put_in_background = 0;
+                        return NULL;
+                }
+
+                push_in_pipeline(&pipeline, cmd, in_target, out_target, append);
+                *nb_commands = *(nb_commands) + 1;
+
+                /*
+                 * Reinitialize parsing environment
+                 * all the data that is freed here has been dupplicated
+                 * and placed in the proper data structure
+                 */
+                free_redirect_globals();
+                append = 0;
+                cmd_fnd = 0;
+        }
+
+        free(saved_in);
+        return pipeline;
 }

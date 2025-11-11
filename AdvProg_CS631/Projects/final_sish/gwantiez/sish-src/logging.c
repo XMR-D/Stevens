@@ -1,8 +1,8 @@
+#include "logging.h"
+
 #include <stdio.h>
 
 #include "cmd-parser.h"
-
-#include "logging.h"
 
 /*
  * log_cmd: Routine that log a char** cmd on one line
@@ -11,21 +11,21 @@
  * Note: None
  */
 static void
-log_cmd(char **cmd, int nb_tok) 
+log_cmd(char **cmd, int nb_tok)
 {
-	for (int i = 0; i < nb_tok; i++) {
-		/* 
-		 * Just to skip the NULL string at 
-		 * the end of the cmd array
-		 */
-		if (cmd[i]) {
-			fprintf(stderr, "%s", cmd[i]);
-		}
+        for (int i = 0; i < nb_tok; i++) {
+                /*
+                 * Just to skip the NULL string at
+                 * the end of the cmd array
+                 */
+                if (cmd[i]) {
+                        fprintf(stderr, "%s", cmd[i]);
+                }
 
-		if (i < nb_tok - 1) {
-			fprintf(stderr, " ");
-		}
-	}
+                if (i < nb_tok - 1) {
+                        fprintf(stderr, " ");
+                }
+        }
 }
 
 /*
@@ -36,15 +36,14 @@ log_cmd(char **cmd, int nb_tok)
  * Note: None
  */
 void
-log_pipeline(Pipeline * p) 
+log_pipeline(Pipeline *p)
 {
-	Pipeline * curr = p;
+        Pipeline *curr = p;
 
-	while (curr != NULL) {
-		fprintf(stderr, "+ ");
-		log_cmd(curr->cmd, curr->nb_tokens);
-		fprintf(stderr, "\n");
-		curr = curr->next;
-	}
-
+        while (curr != NULL) {
+                fprintf(stderr, "+ ");
+                log_cmd(curr->cmd, curr->nb_tokens);
+                fprintf(stderr, "\n");
+                curr = curr->next;
+        }
 }
