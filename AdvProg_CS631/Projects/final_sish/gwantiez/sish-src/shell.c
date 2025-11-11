@@ -182,6 +182,8 @@ shell(UsrOptions * usr_opt)
 	}
 
 	free(input_cmd);
+
+	/* restore the signals if we are exiting */
 	restore_term_suspend_signals();
 	return last_status;
 }

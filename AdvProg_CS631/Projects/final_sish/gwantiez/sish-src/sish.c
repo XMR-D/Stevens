@@ -14,16 +14,28 @@
  * start up a shell or exec a single command depending on the options
  * given
  *
- * Note : return the last command executed status code, or EXIT_FAILURE
- * 	  in case a parsing error as been encountered.
+ * Note : return the last command executed status code, or 127
+ * 	  in case an error has been encountered.
  *
- * 	  comply with the man page requirement. 0 if everything went good
- * 	  >0 if an error has been encountered.
+ * 	  comply with the man page requirement. last command
+ * 	  exit status or 127 if something went wrong while executing
+ * 	  the command (I choose not to catch error status code to replace
+ * 	  it with 127 as the command successfully runned, but return an 
+ * 	  meaningfull error).
+ * 	  (the command still completed, just arguments were incorrects, or
+ * 	  permission was not granted.....).
+ *
+ * 	  127 is used to comply with manpage requirements.
+ *
+ * 	  shell(usr_opt) will return the last command status code
+ * 	  or 127 if the last command failed to be understood by sish
+ * 	  if it was understood but execvp failed for some reasons, again
+ * 	  127 is returned.
  */
 static int 
 sish_main(int argc, char *argv[], UsrOptions * usr_opt)
 {
-	int retcode = EXIT_SUCCESS;
+	int retcode = 0;
 
 	retcode = parse_options(&argc, &argv, usr_opt);
 
@@ -50,11 +62,12 @@ sish_main(int argc, char *argv[], UsrOptions * usr_opt)
 
 		Pipeline * p = cmd_parser(argv[0], &nb_commands);
 
-		/* Parsing error encounter */
+		/* Parsing error encounter, according to manpage return 127 */
 		if (p == NULL) {
-			return EXIT_FAILURE;
+			return 127;
 		}
 
+		/* will return 127 if the command couldn't be executed */
 		retcode = exec_pipeline(p, nb_commands);
 		free_pipeline(p);
 

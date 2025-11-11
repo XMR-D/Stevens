@@ -17,6 +17,19 @@
 
 int last_status = 0;
 
+/*
+ * handle_execution: Routine that will execute a subcommand within
+ * the Pipeline object pipeline, this function is called in parallel
+ * for every subcommand existing in the pipeline. pipeline here
+ * represent a pipeline block rather than the start of a full pipeline.
+ *
+ * if cmd_bin is a builtin, execute it by calling the corresponding
+ * builtin main, exiting with whatever the values they returned.
+ *
+ * Note:
+ * 	Does not return if successfull
+ * 	Return an error in case execvp failed for a reason
+ */
 static int
 handle_execution(char * cmd_bin, Pipeline * pipeline) 
 {
@@ -152,10 +165,16 @@ handle_redirections(Pipeline * pipeline)
  * this function take a pointer to a pipeline object, and will execute it
  * handling pipeline and I/O redirections
  *
- * Note: This function is called within the shell logic after the command has
+ * Note: 
+ * 	This function is called within the shell logic after the command has
  * been parsed into a pipeline, it will also be called when the -c flag will be
  * passed to sish.
+ *	
+ *	Signals are restored within each child process (to be able to terminate
+ *	a command), no need to restore them after the child is finished as
+ *	they will be reaped
  *
+ *	Signals stays suspended in the parent. (the shell flow)
  */
 int 
 exec_pipeline(Pipeline * pipeline, int nb_commands) 
