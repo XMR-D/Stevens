@@ -165,9 +165,15 @@ handle_redirections(Pipeline *pipeline)
  *	they will be reaped
  *
  *	Signals stays suspended in the parent. (the shell flow)
+ *
+ *	to allow the background commands to not block the main process
+ *	"background" is used to determine if the pipeline needs to wait
+ *	or not, if 1 => exec_pipeline is called in background
+ *	if 0 => exec_pipeline is not called in background 
+ *
  */
 int
-exec_pipeline(Pipeline *pipeline, int nb_commands)
+exec_pipeline(Pipeline *pipeline, int nb_commands, int background)
 {
         /* Table of pipes that will be populated by pipes() calls*/
         int p_fd[nb_commands - 1][2];
@@ -245,6 +251,7 @@ exec_pipeline(Pipeline *pipeline, int nb_commands)
 
         int child_status = 0;
 
+	if (!background) {
         for (int i = 0; i < nb_commands; i++) {
                 waitpid(pids[i], &child_status, 0);
                 if (i == nb_commands - 1) {
@@ -273,5 +280,6 @@ exec_pipeline(Pipeline *pipeline, int nb_commands)
                         }
                 }
         }
+	}
         return last_status;
 }

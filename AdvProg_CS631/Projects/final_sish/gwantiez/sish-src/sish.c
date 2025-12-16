@@ -67,7 +67,7 @@ sish_main(int argc, char *argv[], UsrOptions *usr_opt)
                 }
 
                 /* will return 127 if the command couldn't be executed */
-                retcode = exec_pipeline(p, nb_commands);
+                retcode = exec_pipeline(p, nb_commands, 0);
                 free_pipeline(p);
         }
         return retcode;
