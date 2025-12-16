@@ -169,7 +169,7 @@ handle_redirections(Pipeline *pipeline)
  *	to allow the background commands to not block the main process
  *	"background" is used to determine if the pipeline needs to wait
  *	or not, if 1 => exec_pipeline is called in background
- *	if 0 => exec_pipeline is not called in background 
+ *	if 0 => exec_pipeline is not called in background
  *
  */
 int
@@ -251,35 +251,40 @@ exec_pipeline(Pipeline *pipeline, int nb_commands, int background)
 
         int child_status = 0;
 
-	if (!background) {
-        for (int i = 0; i < nb_commands; i++) {
-                waitpid(pids[i], &child_status, 0);
-                if (i == nb_commands - 1) {
-                        if (WIFEXITED(child_status)) {
-                                /*
-                                 * If the child exited normally just set the
-                                 * last_status as the exiting status.
-                                 */
-                                last_status = WEXITSTATUS(child_status);
-                        } else if (WIFSIGNALED(child_status)) {
+        if (!background) {
+                for (int i = 0; i < nb_commands; i++) {
+                        waitpid(pids[i], &child_status, 0);
+                        if (i == nb_commands - 1) {
+                                if (WIFEXITED(child_status)) {
+                                        /*
+                                         * If the child exited normally just set
+                                         * the last_status as the exiting
+                                         * status.
+                                         */
+                                        last_status = WEXITSTATUS(child_status);
+                                } else if (WIFSIGNALED(child_status)) {
 
-                                /*
-                                 * If for any reason a child is signaled to
-                                 * terminate the status returned is 128 + signal
-                                 * value this choice follow many shell standards
-                                 * (bash, zsh, dash...).
-                                 */
-                                last_status = 128 + WTERMSIG(child_status);
-                        } else if (WIFSTOPPED(child_status)) {
-                                /*
-                                 * Again for the same reasons (shell standards)
-                                 * if a child is signaled to stopped return
-                                 * 128 + stop signal value.
-                                 */
-                                last_status = 128 + WSTOPSIG(child_status);
+                                        /*
+                                         * If for any reason a child is signaled
+                                         * to terminate the status returned is
+                                         * 128 + signal value this choice follow
+                                         * many shell standards (bash, zsh,
+                                         * dash...).
+                                         */
+                                        last_status =
+                                         128 + WTERMSIG(child_status);
+                                } else if (WIFSTOPPED(child_status)) {
+                                        /*
+                                         * Again for the same reasons (shell
+                                         * standards) if a child is signaled to
+                                         * stopped return 128 + stop signal
+                                         * value.
+                                         */
+                                        last_status =
+                                         128 + WSTOPSIG(child_status);
+                                }
                         }
                 }
         }
-	}
         return last_status;
 }

@@ -39,12 +39,12 @@ background_process_handler(Pipeline *p, int nb_commands)
 
         /* background process */
         if (back_pid == 0) {
-	
-		/* 
-		 * detach the background process from
-		 * this terminal
-		 */	
-		setsid();
+
+                /*
+                 * detach the background process from
+                 * this terminal
+                 */
+                setsid();
                 exec_pipeline(p, nb_commands, 1);
                 /*
                  * It would not make sense to try to
@@ -56,9 +56,9 @@ background_process_handler(Pipeline *p, int nb_commands)
                  */
                 exit(0);
         } else {
-        
-		/* reap the children */
-		signal(SIGCHLD, SIG_IGN);
+
+                /* reap the children */
+                signal(SIGCHLD, SIG_IGN);
                 /* still in parent (the shell) */
                 printf("[%d]\n", back_pid);
         }
