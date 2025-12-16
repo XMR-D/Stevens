@@ -1,3 +1,4 @@
+MAKE-UTIL=make
 CC= gcc
 CFLAGS=-Wall -Wextra -Werror -pedantic -std=c99 -O0
 DEBUGFLAGS= -g -fsanitize=leak -O0 -Wall -Wextra -Werror -pedantic -std=c99
@@ -11,3 +12,4 @@ INCLUDE=include -I../builtins
 #define the number of builtin we need to compile
 #doing that way allows to have a more modular implementation
 NB_BUILTINS=2
+

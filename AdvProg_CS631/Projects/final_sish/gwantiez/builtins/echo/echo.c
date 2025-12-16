@@ -52,28 +52,35 @@ expand_var(char *env_var)
  * Note: None
  */
 static int
-expand_word(char *word, int last_exit_status)
+expand_word(char *word, int last_exit_status, int last_background_pid)
 {
         int shift = 0;
         word = word + 1;
         switch (*word) {
         case '$':
-                // print current PID
+                /* print current PID */
                 printf("%d", getpid());
                 shift = 2;
                 break;
         case '?':
-                // print last exit status
+                /* print last exit status */
                 printf("%d", last_exit_status);
                 shift = 2;
                 break;
+	case '!':
+		/* print last background pid */
+		if (last_background_pid != -1) {
+			printf("%d", last_background_pid);
+		}
+		shift = 2;
+		break;
         case '\0':
-                // print $ as a char
+                /* print $ as a char */
                 printf("$");
                 shift = 1;
                 break;
         default:
-                // else print word as an env variable
+                /* else print word as an env variable */
                 shift = expand_var(word);
                 break;
         }
@@ -81,12 +88,13 @@ expand_word(char *word, int last_exit_status)
 }
 
 static int
-print_echo_word(char *input, int last_exit_status)
+print_echo_word(char *input, int last_exit_status, int last_background_pid)
 {
         int shift;
         while (*input != '\0') {
                 if (*input == '$') {
-                        shift = expand_word(input, last_exit_status);
+                        shift = expand_word(input, last_exit_status, 
+					last_background_pid);
                 } else {
                         printf("%c", *input);
                         shift = 1;
@@ -98,14 +106,14 @@ print_echo_word(char *input, int last_exit_status)
 }
 
 int
-echo_main(int argc, char **argv, int last_exit_status)
+echo_main(int argc, char **argv, int last_exit_status, int last_background_pid)
 {
         if (argv == NULL) {
                 return EXIT_SUCCESS;
         }
 
         for (int i = 1; i < argc; i++) {
-                print_echo_word(argv[i], last_exit_status);
+                print_echo_word(argv[i], last_exit_status, last_background_pid);
                 if (i != (argc - 1)) {
                         printf(" ");
                 }

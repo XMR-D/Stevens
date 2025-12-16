@@ -1,4 +1,4 @@
-#include "shell.h"
+#include "portability.h"
 
 #include <err.h>
 #include <errno.h>
@@ -14,6 +14,8 @@
 #include "opt-parser.h"
 #include "pipeline-exec.h"
 #include "signals-handling.h"
+
+#include "shell.h"
 
 /* Shell signal used to indicate to procees with the fork-exec process */
 #define SHELL_SIG_PROCEED 0
@@ -31,11 +33,18 @@
 #define SHELL_SIG_BREAK 2
 
 extern int put_in_background;
+int last_back_pid = -1;
 
 static void
 background_process_handler(Pipeline *p, int nb_commands)
 {
         int back_pid = fork();
+
+	/* 
+	 * here we cannot use the fork() call result directly
+	 * it's necessary to avoid potential race conditions 
+	 */
+	last_back_pid = back_pid;
 
         /* background process */
         if (back_pid == 0) {
@@ -54,9 +63,9 @@ background_process_handler(Pipeline *p, int nb_commands)
                  * exit with 0, this return code will
                  * not be used anyway
                  */
+		last_back_pid = 0;
                 exit(0);
         } else {
-
                 /* reap the children */
                 signal(SIGCHLD, SIG_IGN);
                 /* still in parent (the shell) */

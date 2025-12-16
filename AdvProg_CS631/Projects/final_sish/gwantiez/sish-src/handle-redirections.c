@@ -1,4 +1,4 @@
-#include "handle-redirections.h"
+#include "portability.h"
 
 #include <err.h>
 #include <fcntl.h>
@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include "handle-redirections.h"
 
 /* Redirection handling globals */
 int append = 0;

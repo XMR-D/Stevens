@@ -1,4 +1,4 @@
-#include "cmd-parser.h"
+#include "portability.h"
 
 #include <err.h>
 #include <errno.h>
@@ -12,6 +12,7 @@
 #include "signals-handling.h"
 #include "state-machine.h"
 
+#include "cmd-parser.h"
 
 /* Command parser globals */
 char **cmd = NULL;

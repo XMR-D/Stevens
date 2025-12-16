@@ -1,9 +1,12 @@
-#include "signals-handling.h"
+#include "portability.h"
 
 #include <err.h>
 #include <errno.h>
 #include <signal.h>
+#include <string.h>
 #include <strings.h>
+
+#include "signals-handling.h"
 
 /*
  * ignore_term_suspend_signals: routine that block the interruption,

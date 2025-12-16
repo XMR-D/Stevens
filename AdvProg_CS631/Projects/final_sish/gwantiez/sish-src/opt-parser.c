@@ -1,8 +1,10 @@
-#include "opt-parser.h"
+#include "portability.h"
 
 #include <err.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+#include "opt-parser.h"
 
 static int
 option_set(char opt, UsrOptions *usr_opt)

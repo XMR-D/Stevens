@@ -10,7 +10,7 @@ all:
 	 for builtin in ${BUILTINS}; do \
 		i=$$((i+1)); \
 		echo [$$i/${NB_BUILTINS}]: Compiling $$builtin; \
-		make -C $$builtin; \
+		${MAKE-UTIL} -C $$builtin; \
 		echo ""; \
 	done
 

@@ -1,4 +1,4 @@
-#include "state-machine.h"
+#include "portability.h"
 
 #include <err.h>
 #include <errno.h>
@@ -10,6 +10,8 @@
 
 #include "handle-redirections.h"
 #include "signals-handling.h"
+
+#include "state-machine.h"
 
 /* Command parser globals needed from cmd-parser */
 extern char **cmd;

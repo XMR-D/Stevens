@@ -1,10 +1,14 @@
 #include "cd.h"
 
+/* for the program portability across systems */
+#include <sys/types.h>
+
 #include <err.h>
 #include <errno.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 #include <unistd.h>
 

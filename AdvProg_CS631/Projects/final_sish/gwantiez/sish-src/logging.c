@@ -1,8 +1,11 @@
-#include "logging.h"
+#include "portability.h"
 
 #include <stdio.h>
 
 #include "cmd-parser.h"
+
+#include "logging.h"
+
 
 /*
  * log_cmd: Routine that log a char** cmd on one line

@@ -1,4 +1,4 @@
-#include "pipeline-exec.h"
+#include "portability.h"
 
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -15,6 +15,9 @@
 #include "cmd-parser.h"
 #include "signals-handling.h"
 
+#include "pipeline-exec.h"
+
+extern int last_back_pid;
 int last_status = 0;
 
 /*
@@ -36,7 +39,7 @@ handle_execution(char *cmd_bin, Pipeline *pipeline)
         /* handle builtins */
         if (strcmp(cmd_bin, "echo") == 0) {
                 exit(echo_main(pipeline->nb_tokens - 1, pipeline->cmd,
-                               last_status));
+                               last_status, last_back_pid));
         }
 
         /*
