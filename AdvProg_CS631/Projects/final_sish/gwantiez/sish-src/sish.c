@@ -11,6 +11,15 @@
 #include "pipeline-exec.h"
 #include "shell.h"
 
+/* 
+ * Define the default shell environments value for sish
+ * Note that other shells environments values for
+ * the following ints, are ignored (because they
+ * come from another shell implem)
+ */
+int last_back_pid = -1;
+int last_status = 0;
+
 /*
  * sish_main: main sish routine, check on arguments, parse the options
  * start up a shell or exec a single command depending on the options
@@ -65,11 +74,16 @@ sish_main(int argc, char *argv[], UsrOptions *usr_opt)
                 argv[0][cmd_len] = '\n';
 
                 Pipeline *p = cmd_parser(argv[0], &nb_commands);
-
+		
                 /* Parsing error encounter, according to manpage return 127 */
                 if (p == NULL) {
                         return 127;
                 }
+		
+		if(expand_cmds(p, nb_commands)) {
+			free_pipeline(p);
+			return 127;
+		}
 
                 /* will return 127 if the command couldn't be executed */
                 retcode = exec_pipeline(p, nb_commands, 0);

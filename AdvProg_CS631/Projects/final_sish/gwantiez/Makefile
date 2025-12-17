@@ -16,12 +16,15 @@ PROG_NAME= sish
 all:
 	@echo "Following receipes are available:"
 	@echo "sish_gnu_bsd : Build the project for Linux and NetBSD plat"
+	@echo "	       => This receipe work only on Linux or NetBSD"
 	@echo "sish_omnios : Build the project for OmniOS plat"
-	@echo "debug : (unstable) Build the project with debugging flags"
+	@echo "	       => This receipe work only on OmniOS"
+	@echo "debug : Build the project with debugging flags"
+	@echo "	       => This receipe work on NETBSD ONLY"
 	@echo "clean : Delete all the files except from source or build files"
 
 sish_omnios: 
-	@gmake sish 'MAKE-UTIL=gmake'
+	@gmake sish_gnu_bsd 'MAKE-UTIL=gmake'
 
 sish_gnu_bsd: ${OBJS}
 

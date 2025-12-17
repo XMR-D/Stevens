@@ -32,8 +32,9 @@
  */
 #define SHELL_SIG_BREAK 2
 
-int last_back_pid = -1;
-int last_status = 0;
+/* defined in sish.c globals for the whole program */
+extern int last_back_pid;
+extern int last_status;
 
 extern int put_in_background;
 

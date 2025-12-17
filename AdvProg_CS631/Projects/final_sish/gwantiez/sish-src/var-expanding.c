@@ -2,8 +2,11 @@
 
 #include <stdio.h>
 #include <strings.h>
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+#include "var-expanding.h"
 
 /* 
  * data can be at most INT_MAX len which is
@@ -156,18 +159,18 @@ expand_word(char *word, char ** prev_res, int last_exit_status, int last_backgro
 		do_concat = 0;
 		break;
         }
-
-	if (do_concat) {
-		*prev_res = concat_data(res, data);
-	}	
-	if (!res) {
-		return -1;
-	}
-
-	if (data != NULL) {
-		free(data);
-	}
+        if (do_concat) {
+                *prev_res = concat_data(res, data);
+                if (*prev_res == NULL) {
+                        return -1;
+                }
+                return shift;
+        }
+        if (data != NULL) {
+                free(data);
+        }
         return shift;
+
 }
 
 char *

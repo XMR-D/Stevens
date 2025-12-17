@@ -1,5 +1,11 @@
 #include "portability.h"
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <strings.h>
+#include <string.h>
+#include <stddef.h>
+
 /*
  * Code taken from sws for portability
  *
@@ -8,11 +14,6 @@
 
 #ifdef __linux__
 static const char *sws_progname = NULL;
-
-static const char *
-getprogname(void) {
-    return sws_progname;
-}
 
 static void 
 setprogname(const char *progname) {
@@ -23,8 +24,9 @@ setprogname(const char *progname) {
         sws_progname = progname;
     }
 }
+
 #else
-#include <stdlib.h>
+
 #endif
 
 void 
