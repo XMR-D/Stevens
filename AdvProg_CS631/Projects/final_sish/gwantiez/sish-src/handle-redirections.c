@@ -7,7 +7,9 @@
 #include <string.h>
 #include <unistd.h>
 
+
 #include "handle-redirections.h"
+#include "var-expanding.h"
 
 /* Redirection handling globals */
 int append = 0;
@@ -15,6 +17,10 @@ int redir_intok = 0;
 char *in_target = NULL;
 char *out_target = NULL;
 char *redir_type = NULL;
+
+/* Shell environment vars to expand tokens */
+extern int last_back_pid;
+extern int last_status;
 
 /*
  * is_delim: Determine if c is a delimiter, to signal the parser
@@ -68,6 +74,8 @@ update_redir_globals(char *redirection_targ, char *type)
 {
         int free_select = 0;
         int fd = 0;
+	int expanded = 0;
+	char * exp_targ;
 
         if (strcmp(type, ">>") == 0) {
                 append = 1;
@@ -77,11 +85,25 @@ update_redir_globals(char *redirection_targ, char *type)
                 free_select = 1;
         }
 
+	if (redirection_targ[0] == '$') {
+		exp_targ = expand_tok(redirection_targ, last_status, last_back_pid);
+		if (exp_targ[0] == '\0') {
+			free_redirect_globals();
+			warnx("Syntax error: redirection unexpected");
+                        return EXIT_FAILURE;
+		}
+		expanded++;
+	}
+
         if (free_select) {
                 if (in_target) {
                         free(in_target);
                 }
-                in_target = strdup(redirection_targ);
+		if (!expanded) {
+                	in_target = strdup(redirection_targ);
+		} else {
+			in_target = exp_targ;
+		}
 
                 if (!in_target) {
                         return EXIT_FAILURE;
@@ -95,6 +117,10 @@ update_redir_globals(char *redirection_targ, char *type)
                  * as it will be reopen later if needeed
                  * It comply with option 2.a voted in class
                  */
+		if (expanded) {
+			redirection_targ = exp_targ;
+		}
+
                 fd = open(redirection_targ, O_CREAT | O_WRONLY);
                 if (fd != -1) {
                         close(fd);
@@ -102,11 +128,16 @@ update_redir_globals(char *redirection_targ, char *type)
                 if (out_target) {
                         free(out_target);
                 }
+		if (!expanded) {
+                	out_target = strdup(redirection_targ);
+	                if (!out_target) {
+        	                return EXIT_FAILURE;
+               	 	}
+		} else {
+			out_target = exp_targ;
+		}
 
-                out_target = strdup(redirection_targ);
-                if (!out_target) {
-                        return EXIT_FAILURE;
-                }
+
                 return EXIT_SUCCESS;
         }
 }

@@ -11,6 +11,7 @@
 #include "handle-redirections.h"
 #include "signals-handling.h"
 #include "state-machine.h"
+#include "var-expanding.h"
 
 #include "cmd-parser.h"
 
@@ -29,6 +30,10 @@ extern char *in_target;
 extern char *out_target;
 extern char *redir_type;
 
+/* Shell environment vars defined in shell.c */
+extern int last_status;
+extern int last_back_pid;
+
 /*
  * free_cmd: Freeing mechanism for a char ** object
  *
@@ -41,7 +46,7 @@ free_cmd(char **cmd)
         while (*curr != NULL) {
                 free(*curr);
                 curr++;
-        }
+}
         free(cmd);
 }
 
@@ -62,6 +67,64 @@ free_pipeline(Pipeline *pipeline)
                 free(curr);
                 curr = next;
         }
+}
+
+
+static int
+expand_cmd_toks(char ** cmd, int nb_tokens)
+{
+	char * tok;
+	char * exp_tok;
+	int new_tks_nb = nb_tokens;
+
+	for (int i = 0; i < nb_tokens - 1; i++) {
+		tok = cmd[i];
+
+		if (tok[0] == '$') {
+			exp_tok = expand_tok(tok, last_status, last_back_pid);
+			if (exp_tok[0] == '\0') {
+				new_tks_nb -= 1;
+			}
+
+			/*In any case update the token */
+			free(cmd[i]);
+			cmd[i] = exp_tok;
+		}
+	}
+
+	return new_tks_nb;
+}
+
+int
+expand_cmds(Pipeline * p, int nb_commands)
+{
+	Pipeline * curr = p;
+	int new_tks_nb;
+
+	for (int i = 0; i < nb_commands; i++) {
+
+		/* expand and update the datas */
+		new_tks_nb = expand_cmd_toks(curr->cmd, curr->nb_tokens);
+		p->nb_tokens = new_tks_nb;
+
+		/*
+		 * In the following case the pipeline became invalid
+		 * because one of the command disappeared
+		 */
+		if (new_tks_nb == 1) {
+			if (nb_commands > 1) { 
+				warnx("Syntax error: unexpected delimiter");
+                        	return EXIT_FAILURE;
+			}
+
+			if (nb_commands == 1) {
+				return EXIT_FAILURE;
+			}
+		}
+
+		curr = curr->next;
+	}
+	return EXIT_SUCCESS;
 }
 
 /*

@@ -39,6 +39,9 @@ sish_main(int argc, char *argv[], UsrOptions *usr_opt)
 {
         int retcode = 0;
 
+	/* see portability.c for more details */
+	program_name_setter(argv[0]);
+
         retcode = parse_options(&argc, &argv, usr_opt);
 
         /* Based on Options passed by the user, start a shell or not*/

@@ -32,8 +32,10 @@
  */
 #define SHELL_SIG_BREAK 2
 
-extern int put_in_background;
 int last_back_pid = -1;
+int last_status = 0;
+
+extern int put_in_background;
 
 static void
 background_process_handler(Pipeline *p, int nb_commands)
@@ -169,6 +171,19 @@ shell(UsrOptions *usr_opt)
                         free(input_cmd);
                         continue;
                 }
+
+		/* 
+		 * Expand the tokens, redirections are expanded 
+		 * during parsing, cmd tokens here. for easier
+		 * handling
+		 */	
+		if(expand_cmds(p, nb_commands)) {
+			put_in_background = 0;
+			nb_commands = 0;
+			free_pipeline(p);
+			free(input_cmd);
+			continue;
+		}
 
                 /* If logging is needed call logging.c */
                 if (usr_opt->x) {

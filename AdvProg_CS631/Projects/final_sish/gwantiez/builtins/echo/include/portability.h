@@ -15,6 +15,5 @@
 #elif defined(__NetBSD__)
 #endif
 
-void program_name_setter(char * bin);
 
 /* !PORTABILITY_H */

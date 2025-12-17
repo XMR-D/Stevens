@@ -18,7 +18,7 @@
 #include "pipeline-exec.h"
 
 extern int last_back_pid;
-int last_status = 0;
+extern int last_status;
 
 /*
  * handle_execution: Routine that will execute a subcommand within
@@ -38,8 +38,7 @@ handle_execution(char *cmd_bin, Pipeline *pipeline)
 {
         /* handle builtins */
         if (strcmp(cmd_bin, "echo") == 0) {
-                exit(echo_main(pipeline->nb_tokens - 1, pipeline->cmd,
-                               last_status, last_back_pid));
+                exit(echo_main(pipeline->nb_tokens - 1, pipeline->cmd));
         }
 
         /*

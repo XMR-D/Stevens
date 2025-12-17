@@ -13,6 +13,19 @@
 
 #include "state-machine.h"
 
+/* 
+ * define an anti pointer-aliasing size
+ * to avoid allocator to reuse a already used pointer
+ * and provoking data modifications
+ *
+ * 1024 = 1 PAGESIZE / 4
+ *
+ * On most systems a page is 4096 bytes
+ * 1/4 of a page is sufficient, that way we will avoid 
+ * over memory usage as much as possible
+ */
+#define ANTI_ALIASING_PADDING 1024
+
 /* Command parser globals needed from cmd-parser */
 extern char **cmd;
 extern int nb_tokens;
@@ -23,8 +36,13 @@ extern int cmd_fnd;
 extern int redir_intok;
 extern char *redir_type;
 
+/* Shell environment vars to expand tokens */
+extern int last_back_pid;
+extern int last_status;
+
 /* forward declaration of parse_machine */
 char *parse_machine(char *curr_char, char *curr_tok, ParseState curr_state);
+
 
 /*
  * push_in_cmd: Routine that push a string into the cmd an array
@@ -47,7 +65,7 @@ push_in_cmd(char *token)
         }
 
         /* else dupplicate it and store it by reallocate cmd */
-        int dup_len = strlen(token) + 1;
+        int dup_len = strlen(token) + ANTI_ALIASING_PADDING;
         char *tok_dup = calloc(dup_len, sizeof(char));
         if (tok_dup == NULL) {
                 warnx("parsing error: %s", strerror(errno));
