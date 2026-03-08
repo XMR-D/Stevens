@@ -14,8 +14,7 @@ MEM            = 4G
 SMP            = 4
 
 # ON HOST COMPILATION FLAGS
-CROSS-COMPILE=riscv64-linux-gnu-
-CC=$(CROSS-COMPILE)gcc
+CC = ../../thirdparties/permanent/riscv64-lp64d--musl--stable-2025.08-1/bin/riscv64-buildroot-linux-musl-gcc
 AR=$(CROSS-COMPILE)ar
-
-CFLAGS= -static -Iinclude
+INCLUDE=-Iinclude -Ikernel_headers/include 
+CFLAGS = -static -march=rv64gc -march=rv64gc_zihintpause -mabi=lp64d -O0 -g 
