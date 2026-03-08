@@ -47,6 +47,7 @@ echo "Shared projects are available in /src"
 echo "------------------------------------------------"
 
 cd src/
+./nvme_setup.sh
 
 exec /bin/sh
 EOF
