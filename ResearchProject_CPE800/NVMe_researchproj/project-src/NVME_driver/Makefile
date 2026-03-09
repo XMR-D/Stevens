@@ -72,7 +72,7 @@ run_term:
         -numa node,memdev=mem \
         -chardev socket,id=char0,path=/tmp/vfsd.sock \
         -device vhost-user-fs-pci,queue-size=1024,chardev=char0,tag=projectshare,addr=03.0 \
-        -device riscv-iommu-pci,bus=pcie.0,addr=01.0 \
+		-append "iommu=off" \
         -drive format=raw,file=$(NVME_DISK),if=none,id=nvm0 \
         -device nvme,drive=nvm0,serial=deadbeef,bus=pcie.0,addr=02.0
 

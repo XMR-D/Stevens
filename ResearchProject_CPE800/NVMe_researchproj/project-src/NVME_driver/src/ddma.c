@@ -29,7 +29,7 @@ ddma_context_t * init_ddma_ctx(uint64_t pool_size) {
         return NULL;
     }
 
-    uint64_t pagemap_fd = open("/proc/self/pagemap", O_RDONLY);
+    int64_t pagemap_fd = open("/proc/self/pagemap", O_RDONLY);
     if (pagemap_fd < 0) {
         destroy_ddma_ctx(ddma_ctx);
         warn("Error");
@@ -38,7 +38,9 @@ ddma_context_t * init_ddma_ctx(uint64_t pool_size) {
 
     void * ddma_buffer = mmap(NULL, pool_size, PROT_READ | PROT_WRITE, 
                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (ddma_buffer == NULL) {
+    
+    
+                    if (ddma_buffer == NULL || ddma_buffer == MAP_FAILED) {
         destroy_ddma_ctx(ddma_ctx);
         warn("Error");
         return NULL;
@@ -50,7 +52,7 @@ ddma_context_t * init_ddma_ctx(uint64_t pool_size) {
     ddma_ctx->pool_size = pool_size;
     ddma_ctx->pagemap_fd = pagemap_fd;
     ddma_ctx->ddma_buff = ddma_buffer;
-      
+
     return ddma_ctx;
 }
 
@@ -77,13 +79,13 @@ uint64_t ddma_to_phys(ddma_context_t * ddma_ctx, uint64_t virt_addr)
             idx) == -1) {
         warn("Error");
         destroy_ddma_ctx(ddma_ctx);
-        return 0;
+        return EXIT_FAILURE;
     }
     
     if (!IS_PAGE_PRESENT(pagemap_entry)) {
         warnx("Page in RAM is not present");
         destroy_ddma_ctx(ddma_ctx);
-        return 0;
+        return EXIT_FAILURE;
     }
 
     uint64_t phys_pfn = (GET_PFN(pagemap_entry) * ddma_ctx->page_size);

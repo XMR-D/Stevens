@@ -7,7 +7,6 @@ BDF=""
 
 # 1. Scan /sys/bus/pci/devices to find the NVMe controller
 for dev in /sys/bus/pci/devices/*; do
-    # Check if the class matches our NVMe controller identifier
     if [ -f "$dev/class" ] && [ "$(cat "$dev/class")" = "$NVME_CLASS" ]; then
         BDF=$(basename "$dev")
         echo "NVMe controller found at: $BDF"
@@ -21,12 +20,24 @@ if [ -z "$BDF" ]; then
     exit 1
 fi
 
-# 2. Unbind the native kernel driver to take manual control
-# This is required so the kernel does not interfere with our direct MMIO access
+# 2. Unbind the native kernel driver (seulement si nécessaire)
 if [ -d "/sys/bus/pci/devices/$BDF/driver" ]; then
     echo "Unbinding the device from its current kernel driver..."
     echo "$BDF" > "/sys/bus/pci/devices/$BDF/driver/unbind"
+    sleep 0.5 
+fi
+
+# 3. ACTIVATE MEMORY ACCESS (Toujours exécuté)
+# On utilise $BDF au lieu de l'adresse fixe pour éviter les erreurs
+echo "Enabling Memory Space and Bus Master for $BDF..."
+echo -ne "\x06\x00" | dd of="/sys/bus/pci/devices/$BDF/config" bs=1 seek=4 conv=notrunc
+
+# 4. Vérification immédiate
+VAL=$(hexdump -s 4 -n 2 -e '"%x"' "/sys/bus/pci/devices/$BDF/config")
+if [ "$VAL" != "6" ]; then
+    echo "Error : PCI Configuration failed (Valeur lue: $VAL)."
+    exit 1
 fi
 
 echo "Device $BDF is isolated and ready for manual MMIO access."
-echo "please call the driver with : ./nvme_driver $RESOURCE_PATH $BDF"
+echo "Please call the driver with : ./nvme_driver $RESOURCE_PATH $BDF"

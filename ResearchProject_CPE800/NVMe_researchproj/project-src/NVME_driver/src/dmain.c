@@ -21,7 +21,7 @@
 #include "log.h"
 
 
-static int8_t driver_main(Opt_flgs * opts, char * res_path, char * bdf)
+static int8_t driver_main(char * res_path, char * bdf)
 {
     ddma_context_t * ddma;
     volatile void * pci_bar;
@@ -43,7 +43,7 @@ static int8_t driver_main(Opt_flgs * opts, char * res_path, char * bdf)
         return EXIT_FAILURE;
     }
 
-    printf("DMA ==== :\n");
+    printf("DMA after init ==== :\n");
     printf("pagemap_fd : %ld\n", ddma->pagemap_fd);
     printf("page_size : %ld\n", ddma->page_size);
     printf("pool_size : %ld\n", ddma->pool_size);
@@ -53,11 +53,9 @@ static int8_t driver_main(Opt_flgs * opts, char * res_path, char * bdf)
     printf("%lx\n", (uint64_t) pci_bar);
 
     L_SUCC("DDMA context created successfully");
-  
-    nvme_capability_log(pci_bar);
-    nvme_cmbloc_log(pci_bar);
-    
-    if (nvme_init(pci_bar)) {
+    L_INFO("Trying to initialized NVMe controler");
+
+    if (nvme_init(pci_bar, ddma)) {
         bar_unmap(pci_bar);
         destroy_ddma_ctx(ddma);
         return EXIT_FAILURE;
@@ -70,7 +68,7 @@ static int8_t driver_main(Opt_flgs * opts, char * res_path, char * bdf)
 }
 
 
-int8_t main(int argc, char ** argv) {
+int main(int argc, char ** argv) {
 
     int8_t errcode;
     Opt_flgs * opts = NULL;
@@ -84,7 +82,7 @@ int8_t main(int argc, char ** argv) {
         return EXIT_SUCCESS;
     }
 
-    errcode = driver_main(opts, argv[0], argv[1]);
+    errcode = driver_main(argv[0], argv[1]);
     free(opts);
 
     return errcode;

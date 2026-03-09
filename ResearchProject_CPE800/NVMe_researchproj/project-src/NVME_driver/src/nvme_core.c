@@ -12,6 +12,9 @@
 #include "log.h"
 
 #include "nvme_spec.h"
+#include "ddma.h"
+
+#include "nvme_core.h"
 
 /*
 *   bar0_mapping: maps bar0 register into process userspace
@@ -62,20 +65,58 @@ void bar_unmap(volatile void * bar)
 void nvme_capability_log(volatile void * bar)
 {
     volatile Nvme_registers * regs = (volatile Nvme_registers *) bar;
-    volatile Nvme_cap_prop * caps = (volatile Nvme_cap_prop*) &(regs->cap);
+    Nvme_cap_prop caps = (Nvme_cap_prop) regs->cap;
 
     printf("--- NVMe Controller Capabilities (CAP) ---\n");
-    printf("MQES   : %u\n",   (uint16_t)caps->MQES);
-    printf("CQR    : %u\n",   (uint8_t)caps->CQR);
-    printf("AMS    : %u\n",   (uint8_t)caps->AMS);
-    printf("TO     : %u\n",   (uint8_t)caps->TO);
-    printf("DSTRD  : %u\n",   (uint8_t)caps->DSTRD);
-    printf("CSS    : %u\n",   (uint8_t)caps->CSS);
-    printf("MPSMIN : %u\n",   (uint8_t)caps->MPSMIN);
-    printf("MPSMAX : %u\n",   (uint8_t)caps->MPSMAX);
-    printf("PMRS   : %u\n",   (uint8_t)caps->PMRS);
-    printf("CMBS   : %u\n",   (uint8_t)caps->CMBS);
+    printf("MQES   : %u\n",   (uint16_t)caps.fields.MQES);
+    printf("CQR    : %u\n",   (uint8_t)caps.fields.CQR);
+    printf("AMS    : %u\n",   (uint8_t)caps.fields.AMS);
+    printf("TO     : %u\n",   (uint8_t)caps.fields.TO);
+    printf("DSTRD  : %u\n",   (uint8_t)caps.fields.DSTRD);
+    printf("CSS    : %u\n",   (uint8_t)caps.fields.CSS);
+    printf("MPSMIN : %u\n",   (uint8_t)caps.fields.MPSMIN);
+    printf("MPSMAX : %u\n",   (uint8_t)caps.fields.MPSMAX);
+    printf("PMRS   : %u\n",   (uint8_t)caps.fields.PMRS);
+    printf("CMBS   : %u\n",   (uint8_t)caps.fields.CMBS);
     printf("------------------------------------------\n");
+}
+
+/* * nvme_cc_log: print controller configuration
+* Reference: NVM Express® Base Specification, Revision 2.2, Section 3.1.3
+*/
+void nvme_cc_log(volatile void * bar) 
+{
+    volatile Nvme_registers * regs = (volatile Nvme_registers *) bar;
+    Nvme_cc_prop cc = (Nvme_cc_prop) regs->cc;
+
+    printf("--- NVMe Controller Configuration (CC) ---\n");
+    printf("EN      : %u\n", cc.fields.EN);
+    printf("CSS     : %u\n", cc.fields.CSS);
+    printf("MPS     : %u\n", cc.fields.MPS);
+    printf("ARS     : %u\n", cc.fields.ARS);
+    printf("SHN     : %u\n", cc.fields.SHN);
+    printf("IOSQES  : %u\n", cc.fields.IOSQES);
+    printf("IOCQES  : %u\n", cc.fields.IOCQES);
+    printf("------------------------------------------\n");
+}
+
+/* * nvme_aqa_log: print admin queue attributes
+* Reference: NVM Express® Base Specification, Revision 2.2, Section 3.1.5
+*/
+void nvme_csts_log(volatile void * bar) 
+{
+    volatile Nvme_registers * regs = (volatile Nvme_registers *) bar;
+    
+    Nvme_csts_prop csts = (Nvme_csts_prop) regs->csts;
+
+    printf("--- NVMe Controller Status (CSTS) ---\n");
+    printf("RDY     : %u\n", csts.fields.RDY);
+    printf("CFS     : %u\n", csts.fields.CFS);
+    printf("SHST    : %u\n", csts.fields.SHST);
+    printf("NSSRO   : %u\n", csts.fields.NSSRO);
+    printf("PP      : %u\n", csts.fields.PP);
+    printf("ST      : %u\n", csts.fields.ST);
+    printf("-------------------------------------\n");
 }
 
 /* 
@@ -85,60 +126,128 @@ void nvme_capability_log(volatile void * bar)
 void nvme_cmbloc_log(volatile void * bar) 
 {
     volatile Nvme_registers * regs = (volatile Nvme_registers *) bar;
-    volatile Nvme_cmbloc_prop * cmbloc = (volatile Nvme_cmbloc_prop*) &(regs->cmbloc);
 
-    printf("--- NVMe Controller Capabilities (CAP) ---\n");
-    printf("BIR     : %u\n",   (uint32_t) cmbloc->BIR);
-    printf("CQMMS   : %u\n",   (uint32_t) cmbloc->CQMMS);
-    printf("CQPDS   : %u\n",   (uint32_t) cmbloc->CQPDS);
-    printf("CDPMLS  : %u\n",   (uint32_t) cmbloc->CDPMLS);
-    printf("CDPCILS : %u\n",   (uint32_t) cmbloc->CDPCILS);
-    printf("CDMMMS  : %u\n",   (uint32_t) cmbloc->CDMMMS);
-    printf("CQDA    : %u\n",   (uint32_t) cmbloc->CQDA);
-    printf("OFST    : %u\n",   (uint32_t) cmbloc->OFST);
+    Nvme_cmbloc_prop cmbloc = (Nvme_cmbloc_prop) regs->cmbloc;
+
+    printf("--- NVMe Controller memory buffer location  (CMBLOC) ---\n");
+    printf("BIR     : %u\n",   (uint32_t) cmbloc.fields.BIR);
+    printf("CQMMS   : %u\n",   (uint32_t) cmbloc.fields.CQMMS);
+    printf("CQPDS   : %u\n",   (uint32_t) cmbloc.fields.CQPDS);
+    printf("CDPMLS  : %u\n",   (uint32_t) cmbloc.fields.CDPMLS);
+    printf("CDPCILS : %u\n",   (uint32_t) cmbloc.fields.CDPCILS);
+    printf("CDMMMS  : %u\n",   (uint32_t) cmbloc.fields.CDMMMS);
+    printf("CQDA    : %u\n",   (uint32_t) cmbloc.fields.CQDA);
+    printf("OFST    : %u\n",   (uint32_t) cmbloc.fields.OFST);
     printf("------------------------------------------\n");
 
 }
 
-
-
-int8_t nvme_init(volatile void * bar)
+void nvme_log_asq_acq(volatile void * bar) 
 {
-    L_INFO("Inititialization of the NVMe controler");
+    volatile Nvme_registers * regs = (volatile Nvme_registers *) bar;
 
-    Nvme_registers * regs = (Nvme_registers *) bar;
-    volatile Nvme_csts_prop * csts = (volatile Nvme_csts_prop*) &(regs->csts);
+    printf("--- NVMe ASQ and ACQ address---\n");
+    printf("Reg ASQ : %lx\n",   (uint64_t) regs->asq);
+    printf("Reg ACQ : %lx\n",   (uint64_t) regs->acq);
+    printf("------------------------------------------\n");
+
+}
+
+/* * nvme_aqa_log: print admin queue attributes
+* Reference: NVM Express® Base Specification, Revision 2.2, Section 3.1.5
+*/
+void nvme_aqa_log(volatile void * bar) 
+{
+    volatile Nvme_registers * regs = (volatile Nvme_registers *) bar;
+    volatile Nvme_aqa_prop aqa = (Nvme_aqa_prop) regs->aqa;
+
+    printf("--- NVMe Admin Queue Attributes (AQA) ---\n");
+    printf("ASQS    : %u\n", aqa.fields.ASQS);
+    printf("ACQS    : %u\n", aqa.fields.ACQS);
+    printf("------------------------------------------\n");
+}
+
+int8_t nvme_init(volatile void * bar, ddma_context_t * ddma_ctx)
+{
+    L_INFO("Initialization of the NVMe controller");
+
+    /* Accès à la structure des registres */
+    volatile Nvme_registers * regs = (volatile Nvme_registers *) bar;
 
     int bsy_wait_tries = 0;
+    uint8_t* sq_base = NULL;
+    uint8_t* cq_base = NULL;
+    uint64_t sq_phys_addr = 0;
+    uint64_t cq_phys_addr = 0;
 
-    while (!(csts->RDY && 1)) {
-        /* 
-        * Optimized busy waiting using ia32 pause mechanism 
-        * generate the pause instruction that will delay the execution 
-        * of the next instruction.
-        */
+    /* 1. Setup des buffers DDMA */
+    sq_base = (uint8_t *) ddma_ctx->ddma_buff;
+    cq_base = (uint8_t *) ddma_ctx->ddma_buff + PAGESIZE;
+
+    if (ddma_ctx->ddma_buff == NULL) {
+        L_ERR("DDMA buffer is NULL", "Buffer allocation failed");
+        return EXIT_FAILURE;
+    }
+
+    memset(sq_base, 0, PAGESIZE);
+    memset(cq_base, 0, PAGESIZE);
+
+    sq_phys_addr = ddma_to_phys(ddma_ctx, (uint64_t) sq_base);
+    cq_phys_addr = ddma_to_phys(ddma_ctx, (uint64_t) cq_base);
+
+    if (sq_phys_addr == EXIT_FAILURE || cq_phys_addr == EXIT_FAILURE) {
+        L_ERR("Failed to initialize queues", "Address translation failure");
+        return EXIT_FAILURE;
+    }
+
+    /* 2. Configuration des queues (via macros sécurisées) */
+    SET_NVME_REG_64(&(regs->asq), sq_phys_addr);
+    SET_NVME_REG_64(&(regs->acq), cq_phys_addr);
+
+    SET_NVME_PROP_FIELD_32(&(regs->aqa), Nvme_aqa_prop, ASQS, (PAGESIZE / SQ_ENTRY_SIZE) - 1);
+    SET_NVME_PROP_FIELD_32(&(regs->aqa), Nvme_aqa_prop, ACQS, (PAGESIZE / CQ_ENTRY_SIZE) - 1);
+
+    /* 3. Activation du contrôleur */
+    SET_NVME_PROP_FIELD_32(&(regs->cc), Nvme_cc_prop, EN, 1);
+
+
+    L_SUCC("NVMe controller enabled");
+
+    nvme_capability_log(bar);
+    nvme_cc_log(bar);
+    nvme_csts_log(bar);
+    nvme_cmbloc_log(bar);
+    nvme_aqa_log(bar);
+    nvme_log_asq_acq(bar);
+
+    /* 4. Polling sécurisé avec accès Union */
+    while (1) {
+        // Lecture brute pour éviter des accès MMIO multiples sur les champs
+        uint32_t csts_raw = ((Nvme_csts_prop) regs->csts).raw;
+        
+        // Barrière de lecture pour s'assurer que le CPU ne spécule pas sur le status
+        __asm__ volatile ("fence r, r" ::: "memory");
+
+        Nvme_csts_prop csts;
+        csts.raw = csts_raw;
+
+        if (csts.fields.RDY == 1) {
+            break;
+        }
+
         if (bsy_wait_tries < NVME_BUSY_WAIT_THRESHOLD) {
             __asm__ volatile ("pause");
         } else {
-            /* 
-             * If the device is too long to initialize then place the process
-             * in sleep state to ensure driver do not take too much cpu ressources
-             */
-            usleep(NVME_BUSY_WAIT_THRESHOLD);
+            usleep(1000);
         }
 
-        if (bsy_wait_tries > NVME_BUSY_WAIT_THRESHOLD*10) {
-            L_ERR("Critical NVMe Hardware failure", 
-                "bsy_wait threshold reached and driver appears broken");
+        bsy_wait_tries++;
+        if (bsy_wait_tries > NVME_BUSY_WAIT_THRESHOLD * 10) {
+            L_ERR("Critical NVMe Hardware failure", "Controller not ready");
             return EXIT_FAILURE;
         }
     }
 
-    L_INFO("NVMe controler ready");
-
-    L_INFO("Inititialization of the Admin submission queues");
-    /* TODO : INIT queues */
-
-
+    L_INFO("NVMe controller ready");
     return EXIT_SUCCESS;
 }

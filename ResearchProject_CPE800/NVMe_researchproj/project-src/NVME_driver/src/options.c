@@ -34,7 +34,6 @@ void print_help(void)
 Opt_flgs *
 parse_options(int *argc, char ** argv[])
 {
-    int8_t help = 0;
     uint8_t opt_found = 0;
     optind = 1;
     

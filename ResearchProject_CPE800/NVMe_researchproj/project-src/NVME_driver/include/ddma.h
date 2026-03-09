@@ -16,7 +16,7 @@ typedef struct {
 ddma_context_t * init_ddma_ctx(uint64_t pool_size);
 void destroy_ddma_ctx(ddma_context_t * ddma_ctx);
 
-uint64_t from_virt(void *virtual_addr);
+uint64_t ddma_to_phys(ddma_context_t * ddma_ctx, uint64_t virt_addr);
 
 #define PAGEMAP_PFN_MASK    ((1ULL << 55) - 1)
 #define PAGEMAP_PRESENT     (1ULL << 63)
