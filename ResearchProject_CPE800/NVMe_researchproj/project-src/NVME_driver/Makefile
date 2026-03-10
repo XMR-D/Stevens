@@ -106,15 +106,14 @@ launch_targ_fullscreen:
 		-kernel $(VMLINUX) \
 		-initrd $(INITRD) \
 		-bios default \
-		-object memory-backend-memfd,id=mem,size=$(MEM),share=on \
-		-numa node,memdev=mem \
-		-chardev socket,id=char0,path=/tmp/vfsd.sock \
-		-device vhost-user-fs-pci,queue-size=1024,chardev=char0,tag=projectshare,addr=03.0 \
-		-append "console=ttyS0 root=/dev/ram0 rw vfio_iommu_type1.allow_unsafe_interrupts=1" \
-		-device riscv-iommu-pci,addr=01.0 \
-		-drive format=raw,file=$(NVME_DISK),if=none,id=nvm0 \
-		-device nvme,drive=nvm0,serial=deadbeef,bus=pcie.0,addr=02.0,iommu_platform=on
-	
+        -object memory-backend-memfd,id=mem,size=$(MEM),share=on \
+        -numa node,memdev=mem \
+        -chardev socket,id=char0,path=/tmp/vfsd.sock \
+        -device vhost-user-fs-pci,queue-size=1024,chardev=char0,tag=projectshare,addr=03.0 \
+		-append "iommu=off" \
+        -drive format=raw,file=$(NVME_DISK),if=none,id=nvm0 \
+        -device nvme,drive=nvm0,serial=deadbeef,bus=pcie.0,addr=02.0 \
+
 	echo "QEMU closed, signaling terminal to exit..."; \
 	touch /tmp/qemu_stop; \
 	sleep 1; \

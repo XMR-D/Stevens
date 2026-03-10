@@ -54,7 +54,7 @@
 #define CQ_SIZE (NVME_QUEUE_DEPTH * CQ_ENTRY_SIZE) 
 
 /* DDMA buffer size round up to next pagesize just in case */
-#define DEVICE_DDMA_BUFF_SIZE (((SQ_SIZE + CQ_SIZE) + PAGESIZE) & ~PAGESIZE)
+#define DEVICE_NVMEQ_BUFF_SIZE (((SQ_SIZE + CQ_SIZE) + PAGESIZE) & ~PAGESIZE)
 
 
 /* NVME CORE STRUCT */
@@ -217,34 +217,4 @@ typedef union {
     uint32_t raw;
  } Nvme_aqa_prop;
 
-/* NVME SUBMISSION QUEUE ENTRY */
-
-/*
-* Nvme_sqe_t : Definition of the Submission Queue Entry (SQE)
-* Format : 64 bytes total
-* (NVM Express® Base Specification, Revision 2.2)
-*/
-typedef struct nvme_sqe_t {
-    uint32_t opcode : 8;                                 /* Opcode de la commande */
-    uint32_t flags  : 8;                                 /* Flags (FUSE, SGL/PRP) */
-    uint32_t cid    : 16;                                /* Command Identifier */
-    uint32_t nsid   : 32;                                /* Namespace Identifier */
-    uint64_t res0   : 64;                                /* Reserved */
-    uint64_t mptr   : 64;                                /* Metadata Pointer */
-    uint64_t prp1   : 64;                                /* PRP Entry 1 */
-    uint64_t prp2   : 64;                                /* PRP Entry 2 */
-    uint32_t qid    : 16;                                /* Queue Identifier */
-    uint32_t qsize  : 16;                                /* Queue Size */
-    uint32_t pc     : 1;                                 /* Physically Contiguous */
-    uint32_t ien    : 1;                                 /* Interrupt Enable */
-    uint32_t iv     : 14;                                /* Interrupt Vector */
-    uint32_t res1   : 16;                                /* Reserved */
-    uint32_t cdw12  : 32;                                /* Command Dword 12 */
-    uint32_t cdw13  : 32;                                /* Command Dword 13 */
-    uint32_t cdw14  : 32;                                /* Command Dword 14 */
-    uint32_t cdw15  : 32;                                /* Command Dword 15 */
-}  Nvme_sqe_t;
-
-
-
-#endif /* ! nvme_spec_h */
+#endif /* ! NVME_SPEC_H */

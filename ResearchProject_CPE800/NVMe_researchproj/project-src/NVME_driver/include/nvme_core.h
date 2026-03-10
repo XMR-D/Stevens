@@ -1,7 +1,9 @@
 #ifndef NVME_CORE_H
 #define NVME_CORE_H
 
-#include "ddma.h"
+#include <stdint.h>
+
+#include "nvme_q.h"
 
 /* Macros to write fields within nvme structs */
 #define SET_NVME_PROP_FIELD_32(prop_ptr, prop_ty, field, val) do { \
@@ -31,8 +33,6 @@
 } while (0)
 
 
-
-
 /* PCI Base address register mapping */
 void * bar_map(char * ressource_path, char * bdf);
 void bar_unmap(volatile void * bar);
@@ -44,7 +44,7 @@ void nvme_cmbloc_log(volatile void * bar);
 void nvme_aqa_log(volatile void * bar) ;
 
 /* NVMe device control functions */
-int8_t nvme_init(volatile void * bar, ddma_context_t * ddma_ctx);
+int8_t nvme_init(volatile void * bar, Nvmeq_context_t * nvmeq_ctx);
 
 
 #endif /* !NVME_CORE_H */

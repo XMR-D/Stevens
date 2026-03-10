@@ -35,7 +35,7 @@ echo -ne "\x06\x00" | dd of="/sys/bus/pci/devices/$BDF/config" bs=1 seek=4 conv=
 # 4. Vérification immédiate
 VAL=$(hexdump -s 4 -n 2 -e '"%x"' "/sys/bus/pci/devices/$BDF/config")
 if [ "$VAL" != "6" ]; then
-    echo "Error : PCI Configuration failed (Valeur lue: $VAL)."
+    echo "Error : PCI Configuration failed (Value: $VAL)."
     exit 1
 fi
 

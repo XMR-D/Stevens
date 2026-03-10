@@ -16,54 +16,62 @@
 #include "nvme_core.h"
 #include "nvme_spec.h"
 #include "options.h"
-#include "ddma.h"
+#include "nvme_q.h"
 
 #include "log.h"
+
+/* INFO : The idea for the whole implementaion will be : 
+ * Make it work, make it right, then make it fast
+ */
+
+/* INFO: The idea will be to have two mode of command submission after the 
+scheduling, a batching mode and a quick receive send mode, it will optimized the 
+operations regarding onpeak / offpeak situations */
+
+/* INFO: Every sqes will be temporary allocated objects so that handling them is easier
+ * It will be this at the first stage, then a faster mode would be implemented where 
+ * It will change the creation api to directly write in memory commands.
+ *
+ */
 
 
 static int8_t driver_main(char * res_path, char * bdf)
 {
-    ddma_context_t * ddma;
+    Nvmeq_context_t * nvmeq;
     volatile void * pci_bar;
 
     /* 
         Create the direct device memory access context required
         to bridge the userspace driver to the MMIO NVMe controller
     */
-    L_INFO("Creating DDMA and mapping pci bar register mapped to NVMe device into process space");
+    L_INFO("Creating nvmeq and mapping pci bar register mapped to NVMe device into process space");
 
-    ddma = init_ddma_ctx(DEVICE_DDMA_BUFF_SIZE);
-    if (ddma == NULL) {
+    nvmeq = init_nvmeq_ctx(DEVICE_NVMEQ_BUFF_SIZE);
+    if (nvmeq == NULL) {
         return EXIT_FAILURE;
     }
 
     pci_bar = bar_map(res_path, bdf);
     if (pci_bar == NULL) {
-        destroy_ddma_ctx(ddma);
+        destroy_nvmeq_ctx(nvmeq);
         return EXIT_FAILURE;
     }
-
-    printf("DMA after init ==== :\n");
-    printf("pagemap_fd : %ld\n", ddma->pagemap_fd);
-    printf("page_size : %ld\n", ddma->page_size);
-    printf("pool_size : %ld\n", ddma->pool_size);
-    printf("dma_buff : %lx\n", (uint64_t) ddma->ddma_buff);
 
     printf("BAR0 base addr ==== :\n");
     printf("%lx\n", (uint64_t) pci_bar);
 
-    L_SUCC("DDMA context created successfully");
+    L_SUCC("nvmeq context created successfully");
     L_INFO("Trying to initialized NVMe controler");
 
-    if (nvme_init(pci_bar, ddma)) {
+    if (nvme_init(pci_bar, nvmeq)) {
         bar_unmap(pci_bar);
-        destroy_ddma_ctx(ddma);
+        destroy_nvmeq_ctx(nvmeq);
         return EXIT_FAILURE;
     }
 
-    L_INFO("Destroying DDMA context and unmaping pci bar register mapped to NVMe device");
+    L_INFO("Destroying nvmeq context and unmaping pci bar register mapped to NVMe device");
     bar_unmap(pci_bar);
-    destroy_ddma_ctx(ddma);
+    destroy_nvmeq_ctx(nvmeq);
     return EXIT_SUCCESS;
 }
 

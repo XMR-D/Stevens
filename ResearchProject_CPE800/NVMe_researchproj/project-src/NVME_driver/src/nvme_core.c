@@ -12,7 +12,7 @@
 #include "log.h"
 
 #include "nvme_spec.h"
-#include "ddma.h"
+#include "nvme_q.h"
 
 #include "nvme_core.h"
 
@@ -138,7 +138,7 @@ void nvme_cmbloc_log(volatile void * bar)
     printf("CDMMMS  : %u\n",   (uint32_t) cmbloc.fields.CDMMMS);
     printf("CQDA    : %u\n",   (uint32_t) cmbloc.fields.CQDA);
     printf("OFST    : %u\n",   (uint32_t) cmbloc.fields.OFST);
-    printf("------------------------------------------\n");
+    printf("---------------------------------------------------------\n");
 
 }
 
@@ -149,11 +149,12 @@ void nvme_log_asq_acq(volatile void * bar)
     printf("--- NVMe ASQ and ACQ address---\n");
     printf("Reg ASQ : %lx\n",   (uint64_t) regs->asq);
     printf("Reg ACQ : %lx\n",   (uint64_t) regs->acq);
-    printf("------------------------------------------\n");
+    printf("-------------------------------\n");
 
 }
 
-/* * nvme_aqa_log: print admin queue attributes
+/* 
+* nvme_aqa_log: print admin queue attributes
 * Reference: NVM Express® Base Specification, Revision 2.2, Section 3.1.5
 */
 void nvme_aqa_log(volatile void * bar) 
@@ -167,7 +168,12 @@ void nvme_aqa_log(volatile void * bar)
     printf("------------------------------------------\n");
 }
 
-int8_t nvme_init(volatile void * bar, ddma_context_t * ddma_ctx)
+/* 
+* nvme_init: init the nvme controler : create queues into previous nvmeq_ctx
+* and update registers to specify physical address and size
+* of queues to controller, Then enable the controller and wait for it to be ready
+*/
+int8_t nvme_init(volatile void * bar, Nvmeq_context_t * nvmeq_ctx)
 {
     L_INFO("Initialization of the NVMe controller");
 
@@ -180,52 +186,44 @@ int8_t nvme_init(volatile void * bar, ddma_context_t * ddma_ctx)
     uint64_t sq_phys_addr = 0;
     uint64_t cq_phys_addr = 0;
 
-    /* 1. Setup des buffers DDMA */
-    sq_base = (uint8_t *) ddma_ctx->ddma_buff;
-    cq_base = (uint8_t *) ddma_ctx->ddma_buff + PAGESIZE;
+    /* nvmeq Context setup */
+    sq_base = (uint8_t *) nvmeq_ctx->nvmeq_buff;
+    cq_base = (uint8_t *) nvmeq_ctx->nvmeq_buff + PAGESIZE;
 
-    if (ddma_ctx->ddma_buff == NULL) {
-        L_ERR("DDMA buffer is NULL", "Buffer allocation failed");
+    if (nvmeq_ctx->nvmeq_buff == NULL) {
+        L_ERR("nvmeq buffer is NULL", "Buffer allocation failed");
         return EXIT_FAILURE;
     }
 
     memset(sq_base, 0, PAGESIZE);
     memset(cq_base, 0, PAGESIZE);
 
-    sq_phys_addr = ddma_to_phys(ddma_ctx, (uint64_t) sq_base);
-    cq_phys_addr = ddma_to_phys(ddma_ctx, (uint64_t) cq_base);
+    sq_phys_addr = nvmeq_to_phys(nvmeq_ctx, (uint64_t) sq_base);
+    cq_phys_addr = nvmeq_to_phys(nvmeq_ctx, (uint64_t) cq_base);
 
     if (sq_phys_addr == EXIT_FAILURE || cq_phys_addr == EXIT_FAILURE) {
         L_ERR("Failed to initialize queues", "Address translation failure");
         return EXIT_FAILURE;
     }
 
-    /* 2. Configuration des queues (via macros sécurisées) */
+    /* Queue configuration on controler */
     SET_NVME_REG_64(&(regs->asq), sq_phys_addr);
     SET_NVME_REG_64(&(regs->acq), cq_phys_addr);
 
     SET_NVME_PROP_FIELD_32(&(regs->aqa), Nvme_aqa_prop, ASQS, (PAGESIZE / SQ_ENTRY_SIZE) - 1);
     SET_NVME_PROP_FIELD_32(&(regs->aqa), Nvme_aqa_prop, ACQS, (PAGESIZE / CQ_ENTRY_SIZE) - 1);
 
-    /* 3. Activation du contrôleur */
+    /* Enable controler */
     SET_NVME_PROP_FIELD_32(&(regs->cc), Nvme_cc_prop, EN, 1);
-
 
     L_SUCC("NVMe controller enabled");
 
-    nvme_capability_log(bar);
-    nvme_cc_log(bar);
-    nvme_csts_log(bar);
-    nvme_cmbloc_log(bar);
-    nvme_aqa_log(bar);
-    nvme_log_asq_acq(bar);
-
-    /* 4. Polling sécurisé avec accès Union */
+    /* Polling on the controller */
     while (1) {
-        // Lecture brute pour éviter des accès MMIO multiples sur les champs
+        /* Retreive csts register as raw */
         uint32_t csts_raw = ((Nvme_csts_prop) regs->csts).raw;
         
-        // Barrière de lecture pour s'assurer que le CPU ne spécule pas sur le status
+        /* Memory barrier to wait for the read to be completed before any next reads */
         __asm__ volatile ("fence r, r" ::: "memory");
 
         Nvme_csts_prop csts;
@@ -243,11 +241,23 @@ int8_t nvme_init(volatile void * bar, ddma_context_t * ddma_ctx)
 
         bsy_wait_tries++;
         if (bsy_wait_tries > NVME_BUSY_WAIT_THRESHOLD * 10) {
-            L_ERR("Critical NVMe Hardware failure", "Controller not ready");
+            L_ERR("Critical NVMe Hardware failure", "Controller failed to be ready");
             return EXIT_FAILURE;
         }
     }
-
     L_INFO("NVMe controller ready");
+
+    nvmeq_ctx->sq_phys_addr = sq_phys_addr;
+    nvmeq_ctx->cq_phys_addr = cq_phys_addr;
+    nvmeq_ctx->sq_virt_addr = (uint64_t) sq_base;
+    nvmeq_ctx->cq_virt_addr = (uint64_t) cq_base;
+
+    nvme_capability_log(bar);
+    nvme_cc_log(bar);
+    nvme_csts_log(bar);
+    nvme_cmbloc_log(bar);
+    nvme_aqa_log(bar);
+    nvme_log_asq_acq(bar);
+
     return EXIT_SUCCESS;
 }
