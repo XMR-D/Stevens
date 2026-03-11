@@ -10,7 +10,6 @@
 #include <sys/mman.h>
 
 #include "log.h"
-
 #include "nvme_spec.h"
 #include "nvme_q.h"
 
@@ -58,11 +57,127 @@ void bar_unmap(volatile void * bar)
     }
 }
 
+static int8_t nvme_init_queue_ctx(Nvmeq_context_t *nvmeq_ctx, volatile Nvme_registers *regs, int8_t is_admin)
+{
+    uint8_t* sq_base = NULL;
+    uint8_t* cq_base = NULL;
+
+    /* nvmeq Context setup */
+    sq_base = (uint8_t *) nvmeq_ctx->nvmeq_buff;
+    cq_base = (uint8_t *) nvmeq_ctx->nvmeq_buff + PAGESIZE;
+
+    if (nvmeq_ctx->nvmeq_buff == NULL) {
+        L_ERR("nvmeq buffer is NULL", "Buffer allocation failed");
+        return EXIT_FAILURE;
+    }
+
+    memset(sq_base, 0, PAGESIZE);
+    memset(cq_base, 0, PAGESIZE);
+
+    nvmeq_ctx->sq_phys_addr = nvmeq_to_phys(nvmeq_ctx, (uint64_t) sq_base);;
+    nvmeq_ctx->cq_phys_addr = nvmeq_to_phys(nvmeq_ctx, (uint64_t) cq_base);;
+    nvmeq_ctx->sq_virt_addr = (uint64_t) sq_base;
+    nvmeq_ctx->cq_virt_addr = (uint64_t) cq_base;
+
+    if (nvmeq_ctx->sq_phys_addr == 0 || nvmeq_ctx->cq_phys_addr == 0) {
+        L_ERR("Failed to initialize queues", "Address translation failure");
+        return EXIT_FAILURE;
+    }
+
+    /* Queue configuration on controler */
+    if (is_admin) {
+        SET_NVME_REG_64(&(regs->asq), nvmeq_ctx->sq_phys_addr);
+        SET_NVME_REG_64(&(regs->acq), nvmeq_ctx->cq_phys_addr);
+        SET_NVME_PROP_FIELD_32(&(regs->aqa), Nvme_aqa_prop, ASQS, (PAGESIZE / SQ_ENTRY_SIZE) - 1);
+        SET_NVME_PROP_FIELD_32(&(regs->aqa), Nvme_aqa_prop, ACQS, (PAGESIZE / CQ_ENTRY_SIZE) - 1);
+        L_INFO("Admin Queue configured in registers");
+    } else {
+        L_INFO("I/O Queue buffer prepared, pending Admin registration command");
+    }
+
+    return EXIT_SUCCESS;
+}
+
+/* 
+* nvme_init: init the nvme controler : create queues into previous nvmeq_ctx
+* and update registers to specify physical address and size
+* of queues to controller, Then enable the controller and wait for it to be ready
+*/
+int8_t nvme_init_ctx(volatile Nvme_registers *regs, Nvmeq_context_t * admin_ctx, Nvmeq_context_t * io_ctx)
+{
+    L_INFO("Initialization of the NVMe context");
+
+    /* Initialize the contexts */
+    if(nvme_init_queue_ctx(admin_ctx, regs, 1) == EXIT_FAILURE 
+        || nvme_init_queue_ctx(io_ctx, NULL, 0) == EXIT_FAILURE) {
+            return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+int8_t nvme_enable(volatile Nvme_registers *regs)
+{
+    __asm__ volatile ("fence rw, rw" ::: "memory");
+
+    int bsy_wait_tries = 0;
+
+
+    /* Enable controler */
+    SET_NVME_PROP_FIELD_32(&(regs->cc), Nvme_cc_prop, EN, 1);
+
+    L_SUCC("NVMe controller enabled");
+
+    /* Polling on the controller */
+    while (1) {
+        /* Retreive csts register as raw */
+        uint32_t csts_raw = ((Nvme_csts_prop) regs->csts).raw;
+        
+        /* Memory barrier to wait for the read to be completed before any next reads */
+        __asm__ volatile ("fence r, r" ::: "memory");
+
+        Nvme_csts_prop csts;
+        csts.raw = csts_raw;
+
+        if (csts.fields.RDY == 1) {
+            break;
+        }
+
+        if (bsy_wait_tries < NVME_BUSY_WAIT_THRESHOLD) {
+            __asm__ volatile ("pause");
+        } else {
+            usleep(1000);
+        }
+
+        bsy_wait_tries++;
+        if (bsy_wait_tries > NVME_BUSY_WAIT_THRESHOLD * 10) {
+            L_ERR("Critical NVMe Hardware failure", "Controller failed to be ready");
+            return EXIT_FAILURE;
+        }
+    }
+
+    L_INFO("NVMe controller ready");
+
+    return EXIT_SUCCESS;
+}
+
+
+int8_t nvme_io_configure(volatile Nvme_registers * regs, Nvmeq_context_t *admin, Nvmeq_context_t * io) 
+{
+    (void) regs;
+    (void) admin;
+    (void) io;
+
+    /* Create and send to the admin queue an I/O queue creation command */
+    return EXIT_FAILURE;
+}
+
+
 /* 
 *   ctrl_prop_print: print controller capability
 *   to validate device initialization
 */
-void nvme_capability_log(volatile void * bar)
+void nvme_cap_log(volatile void * bar)
 {
     volatile Nvme_registers * regs = (volatile Nvme_registers *) bar;
     Nvme_cap_prop caps = (Nvme_cap_prop) regs->cap;
@@ -166,98 +281,4 @@ void nvme_aqa_log(volatile void * bar)
     printf("ASQS    : %u\n", aqa.fields.ASQS);
     printf("ACQS    : %u\n", aqa.fields.ACQS);
     printf("------------------------------------------\n");
-}
-
-/* 
-* nvme_init: init the nvme controler : create queues into previous nvmeq_ctx
-* and update registers to specify physical address and size
-* of queues to controller, Then enable the controller and wait for it to be ready
-*/
-int8_t nvme_init(volatile void * bar, Nvmeq_context_t * nvmeq_ctx)
-{
-    L_INFO("Initialization of the NVMe controller");
-
-    /* Accès à la structure des registres */
-    volatile Nvme_registers * regs = (volatile Nvme_registers *) bar;
-
-    int bsy_wait_tries = 0;
-    uint8_t* sq_base = NULL;
-    uint8_t* cq_base = NULL;
-    uint64_t sq_phys_addr = 0;
-    uint64_t cq_phys_addr = 0;
-
-    /* nvmeq Context setup */
-    sq_base = (uint8_t *) nvmeq_ctx->nvmeq_buff;
-    cq_base = (uint8_t *) nvmeq_ctx->nvmeq_buff + PAGESIZE;
-
-    if (nvmeq_ctx->nvmeq_buff == NULL) {
-        L_ERR("nvmeq buffer is NULL", "Buffer allocation failed");
-        return EXIT_FAILURE;
-    }
-
-    memset(sq_base, 0, PAGESIZE);
-    memset(cq_base, 0, PAGESIZE);
-
-    sq_phys_addr = nvmeq_to_phys(nvmeq_ctx, (uint64_t) sq_base);
-    cq_phys_addr = nvmeq_to_phys(nvmeq_ctx, (uint64_t) cq_base);
-
-    if (sq_phys_addr == EXIT_FAILURE || cq_phys_addr == EXIT_FAILURE) {
-        L_ERR("Failed to initialize queues", "Address translation failure");
-        return EXIT_FAILURE;
-    }
-
-    /* Queue configuration on controler */
-    SET_NVME_REG_64(&(regs->asq), sq_phys_addr);
-    SET_NVME_REG_64(&(regs->acq), cq_phys_addr);
-
-    SET_NVME_PROP_FIELD_32(&(regs->aqa), Nvme_aqa_prop, ASQS, (PAGESIZE / SQ_ENTRY_SIZE) - 1);
-    SET_NVME_PROP_FIELD_32(&(regs->aqa), Nvme_aqa_prop, ACQS, (PAGESIZE / CQ_ENTRY_SIZE) - 1);
-
-    /* Enable controler */
-    SET_NVME_PROP_FIELD_32(&(regs->cc), Nvme_cc_prop, EN, 1);
-
-    L_SUCC("NVMe controller enabled");
-
-    /* Polling on the controller */
-    while (1) {
-        /* Retreive csts register as raw */
-        uint32_t csts_raw = ((Nvme_csts_prop) regs->csts).raw;
-        
-        /* Memory barrier to wait for the read to be completed before any next reads */
-        __asm__ volatile ("fence r, r" ::: "memory");
-
-        Nvme_csts_prop csts;
-        csts.raw = csts_raw;
-
-        if (csts.fields.RDY == 1) {
-            break;
-        }
-
-        if (bsy_wait_tries < NVME_BUSY_WAIT_THRESHOLD) {
-            __asm__ volatile ("pause");
-        } else {
-            usleep(1000);
-        }
-
-        bsy_wait_tries++;
-        if (bsy_wait_tries > NVME_BUSY_WAIT_THRESHOLD * 10) {
-            L_ERR("Critical NVMe Hardware failure", "Controller failed to be ready");
-            return EXIT_FAILURE;
-        }
-    }
-    L_INFO("NVMe controller ready");
-
-    nvmeq_ctx->sq_phys_addr = sq_phys_addr;
-    nvmeq_ctx->cq_phys_addr = cq_phys_addr;
-    nvmeq_ctx->sq_virt_addr = (uint64_t) sq_base;
-    nvmeq_ctx->cq_virt_addr = (uint64_t) cq_base;
-
-    nvme_capability_log(bar);
-    nvme_cc_log(bar);
-    nvme_csts_log(bar);
-    nvme_cmbloc_log(bar);
-    nvme_aqa_log(bar);
-    nvme_log_asq_acq(bar);
-
-    return EXIT_SUCCESS;
 }

@@ -3,12 +3,10 @@
 
 #include <stdint.h>
 
+#include "nvme_spec.h"
 #include "nvme_q.h"
+
 /* NVME QUEUES ENTRIES FORMAT */
-
-#define NVME_SQE_SIZE 64
-#define NVME_CQE_SIZE 16
-
 
 /*
 * Nvme_sqe_t : Definition of the Submission Queue Entry (SQE)
@@ -50,7 +48,7 @@ typedef struct nvme_sqe_t {
 }  Nvme_sqe_t;
 
 /* assert the size of Nvme_sqe_t at compile tiume to guarantee data alignement */
-_Static_assert(sizeof(Nvme_sqe_t) == NVME_SQE_SIZE);
+_Static_assert(sizeof(Nvme_sqe_t) == SQ_ENTRY_SIZE);
 
 /*
 * Nvme_cqe_t : Definition of the Completion Queue Entry (SQE)
@@ -71,17 +69,16 @@ typedef struct nvme_cqe_t {
     uint16_t p : 1;
     uint16_t sf : 15;
 
-} Nvme_cqe_t ;
+} Nvme_cqe_t;
 
 /* assert the size of Nvme_cqe_t at compile tiume to guarantee data alignement */
-_Static_assert(sizeof(Nvme_cqe_t) == NVME_CQE_SIZE);
+_Static_assert(sizeof(Nvme_cqe_t) == CQ_ENTRY_SIZE);
 
-Nvme_sqe_t * nvme_create_sqe(Nvme_sqe_t * sqe);
-int8_t nvme_send_sqe(Nvme_sqe_t * sqe, Nvmeq_context_t * nvmeq_ctx);
+/* Transport API to sendout commands to the NVMe controller */
+int8_t nvme_send_adm_sqe(Nvme_sqe_t * sqe, Nvmeq_context_t * adm_ctx); 
+int8_t nvme_send_io_sqe(Nvme_sqe_t * sqe, Nvmeq_context_t * io_ctx) ;
 
 Nvme_cqe_t * nvme_read_cqe(Nvmeq_context_t * nvmeq_ctx);
 int8_t nvme_parse_cqe(Nvme_cqe_t * cqe);
-
-static inline void nvme_trigger_doorbell(volatile void * pci_bar);
 
 #endif /* NVME_TRANSPORT_H */

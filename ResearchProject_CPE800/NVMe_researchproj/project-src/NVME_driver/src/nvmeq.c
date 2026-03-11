@@ -19,7 +19,7 @@
 #include "nvme_q.h"
 
 
-Nvmeq_context_t * init_nvmeq_ctx(uint64_t pool_size) {
+Nvmeq_context_t * create_nvmeq_ctx(uint64_t pool_size) {
 
     uint64_t page_size = sysconf(_SC_PAGESIZE);
 

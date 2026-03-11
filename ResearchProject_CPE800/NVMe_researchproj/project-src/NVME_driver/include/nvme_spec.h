@@ -44,7 +44,7 @@
  * Note: If using Controller Memory Buffer (CMB), the actual BAR0 
  * size should be queried via sysfs (resource0_size).
  */
-#define NVME_BAR0_SIZE 0x4000       /* NVME bar0 size */
+#define NVME_BAR0_SIZE 0x4000
 
 #define SQ_ENTRY_SIZE 64
 #define CQ_ENTRY_SIZE 16
@@ -216,5 +216,26 @@ typedef union {
     }  fields;
     uint32_t raw;
  } Nvme_aqa_prop;
+
+
+
+
+/* SQE AND CQE FORMAT SPECIFICATIONS */
+
+/* Opcodes */
+#define IODELETE_SUB_OP 0x0
+#define IOCREATE_SUB_OP 0x1
+#define GETLOG_OP 0x2
+#define IODELETE_COM_OP 0x2
+#define IOCREATE_COM_OP 0x5
+#define IDENTIFY_OP 0x6
+#define ABORT_OP 0x8
+#define SET_FEATURE_OP 0x9
+#define GET_FEATURE_OP 0xA
+#define ASYNC_EVENT_OP 0XC
+
+#define IO_READ_OP 
+#define IO_WRITE_OP
+
 
 #endif /* ! NVME_SPEC_H */

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+#include "nvme_spec.h"
 #include "nvme_q.h"
 
 /* Macros to write fields within nvme structs */
@@ -37,14 +38,16 @@
 void * bar_map(char * ressource_path, char * bdf);
 void bar_unmap(volatile void * bar);
 
+/* NVMe controller initialization routines */
+int8_t nvme_init_ctx(volatile Nvme_registers *regs, Nvmeq_context_t * admin_ctx, Nvmeq_context_t * io_ctx);
+int8_t nvme_enable(volatile Nvme_registers *regs);
+int8_t nvme_io_configure(volatile Nvme_registers *regs, Nvmeq_context_t *admin_ctx, Nvmeq_context_t * io_ctx);
+
 /* Logging functions */
-void nvme_capability_log(volatile void * bar);
+void nvme_cap_log(volatile void * bar);
 void nvme_cc_log(volatile void * bar);
+void nvme_csts_log(volatile void * bar);
 void nvme_cmbloc_log(volatile void * bar);
-void nvme_aqa_log(volatile void * bar) ;
-
-/* NVMe device control functions */
-int8_t nvme_init(volatile void * bar, Nvmeq_context_t * nvmeq_ctx);
-
+void nvme_log_asq_acq(volatile void * bar);
 
 #endif /* !NVME_CORE_H */

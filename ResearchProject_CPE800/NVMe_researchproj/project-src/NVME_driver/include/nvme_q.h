@@ -16,7 +16,7 @@ typedef struct {
 } Nvmeq_context_t;
 
 
-Nvmeq_context_t * init_nvmeq_ctx(uint64_t pool_size);
+Nvmeq_context_t * create_nvmeq_ctx(uint64_t pool_size);
 void destroy_nvmeq_ctx(Nvmeq_context_t * nvmeq_ctx);
 
 uint64_t nvmeq_to_phys(Nvmeq_context_t * nvmeq_ctx, uint64_t virt_addr);
