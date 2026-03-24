@@ -49,9 +49,13 @@
 #define SQ_ENTRY_SIZE 64
 #define CQ_ENTRY_SIZE 16
 
+/* Log2(64) = 6, Log2(16) = 4 */
+#define NVME_LOG2_SQ_SIZE 6
+#define NVME_LOG2_CQ_SIZE 4
+
 /* Submission and colmpletion queues size computation */
 #define SQ_SIZE (NVME_QUEUE_DEPTH * SQ_ENTRY_SIZE) 
-#define CQ_SIZE (NVME_QUEUE_DEPTH * CQ_ENTRY_SIZE) 
+#define CQ_SIZE (NVME_QUEUE_DEPTH * CQ_ENTRY_SIZE)
 
 /* DDMA buffer size round up to next pagesize just in case */
 #define DEVICE_NVMEQ_BUFF_SIZE (((SQ_SIZE + CQ_SIZE) + PAGESIZE) & ~PAGESIZE)

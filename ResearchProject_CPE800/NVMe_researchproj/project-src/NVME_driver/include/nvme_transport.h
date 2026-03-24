@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "nvme_spec.h"
-#include "nvme_q.h"
+#include "nvme_queue_context.h"
 
 /* NVME QUEUES ENTRIES FORMAT */
 
@@ -50,35 +50,26 @@ typedef struct nvme_sqe_t {
 /* assert the size of Nvme_sqe_t at compile tiume to guarantee data alignement */
 _Static_assert(sizeof(Nvme_sqe_t) == SQ_ENTRY_SIZE);
 
-/*
-* Nvme_cqe_t : Definition of the Completion Queue Entry (SQE)
-* Format : 16 bytes total
-* (NVM Express® Base Specification, Revision 2.2, p95-96)
-*/
 typedef struct nvme_cqe_t {
-    /* Command Specific */
-    uint32_t dw0;
-    uint32_t dw1;
-
-    /* DWORD 2 -- SQ Identifier and Head Pointer */
-    uint16_t sqhd;
-    uint16_t sqid;
-
-    /* DWORD 3 -- Status field, Phase Tag, Command identifier */
-    uint16_t cid;
-    uint16_t p : 1;
-    uint16_t sf : 15;
-
-} Nvme_cqe_t;
+    uint32_t dw0;    /* Command Specific */
+    uint32_t dw1;    /* Command Specific */
+    uint16_t sqhd;   /* SQ Head Pointer */
+    uint16_t sqid;   /* SQ Identifier */
+    uint16_t cid;    /* Command Identifier */
+    
+    union {
+        struct {
+            uint16_t p  : 1;  /* Phase Tag (Bit 0) */
+            uint16_t sf : 15; /* Status Field (Bits 1-15) */
+        };
+        uint16_t status_raw;  /* Pour l'accès direct */
+    };
+} __attribute__((packed)) Nvme_cqe_t;
 
 /* assert the size of Nvme_cqe_t at compile tiume to guarantee data alignement */
 _Static_assert(sizeof(Nvme_cqe_t) == CQ_ENTRY_SIZE);
 
 /* Transport API to sendout commands to the NVMe controller */
-int8_t nvme_send_adm_sqe(Nvme_sqe_t * sqe, Nvmeq_context_t * adm_ctx); 
-int8_t nvme_send_io_sqe(Nvme_sqe_t * sqe, Nvmeq_context_t * io_ctx) ;
-
-Nvme_cqe_t * nvme_read_cqe(Nvmeq_context_t * nvmeq_ctx);
-int8_t nvme_parse_cqe(Nvme_cqe_t * cqe);
+int8_t nvme_send_command(volatile void *pci_bar, Nvme_sqe_t *sqe, Nvmeq_context_t *ctx, uint16_t qid); 
 
 #endif /* NVME_TRANSPORT_H */

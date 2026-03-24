@@ -82,7 +82,6 @@ launch_targ_fullscreen:
 	sudo fuser -k -9 ../../thirdparties/nvme_disk.img || true
 	sudo /usr/lib/qemu/virtiofsd --socket-path=/tmp/vfsd.sock --shared-dir=. --sandbox none &
 	
-	@# On modifie la boucle pour qu'elle sorte du bash proprement
 	gnome-terminal --window-with-profile='XMRDEV' \
 		--geometry +1920+0 \
 		--full-screen \

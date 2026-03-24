@@ -11,12 +11,17 @@
 
 #include "log.h"
 #include "nvme_spec.h"
-#include "nvme_q.h"
+#include "nvme_sqe.h"
+#include "nvme_queue_context.h"
+#include "nvme_transport.h"
 
 #include "nvme_core.h"
 
-/*
-*   bar0_mapping: maps bar0 register into process userspace
+
+/* Global that define the number of active IO queue pair, start at 1, Admin queue takes 0*/
+uint64_t IO_QUEUE_PAIR_NB = 1;
+
+/*  bar_map: maps bar0 register into process userspace
 *
 *   The function return the pointer to bar0 on success, NULL
 *   on error
@@ -34,7 +39,7 @@ void * bar_map(char * resource_path, char * bdf)
     }
 
     /* 
-        Map BAR0 into userspace memory 
+       Map BAR0 into userspace memory 
        MAP_SHARED so that NVMe device see modifications 
     */
     bar_ptr = mmap(NULL, NVME_BAR0_SIZE, PROT_READ | PROT_WRITE, 
@@ -50,6 +55,7 @@ void * bar_map(char * resource_path, char * bdf)
 }
 
 
+/*  bar_unmap: unmap bar0 register from process userspace */
 void bar_unmap(volatile void * bar)
 {
     if (munmap((void*) bar, NVME_BAR0_SIZE) == -1) {
@@ -57,6 +63,19 @@ void bar_unmap(volatile void * bar)
     }
 }
 
+/* nvme_init_queue_ctx: sets up the memory and logic for a pair of NVMe queues
+*
+*  This function performs three main tasks:
+*  1. Memory: Partitions the allocated buffer into SQ and CQ, and translates 
+*  virtual addresses to physical addresses for DMA operations.
+*  2. Transport: Resets host-side tracking indices (tail/head) and the 
+*  Phase Tag bit to synchronization state.
+*  3. Hardware: For Admin queues, it commits the physical addresses and 
+*  queue depths directly to the Controller's BAR0 registers (ASQ/ACQ/AQA).
+* 
+*  Returns EXIT_SUCCESS on success, or EXIT_FAILURE if address translation 
+*  or allocation fails.
+*/
 static int8_t nvme_init_queue_ctx(Nvmeq_context_t *nvmeq_ctx, volatile Nvme_registers *regs, int8_t is_admin)
 {
     uint8_t* sq_base = NULL;
@@ -74,15 +93,19 @@ static int8_t nvme_init_queue_ctx(Nvmeq_context_t *nvmeq_ctx, volatile Nvme_regi
     memset(sq_base, 0, PAGESIZE);
     memset(cq_base, 0, PAGESIZE);
 
-    nvmeq_ctx->sq_phys_addr = nvmeq_to_phys(nvmeq_ctx, (uint64_t) sq_base);;
-    nvmeq_ctx->cq_phys_addr = nvmeq_to_phys(nvmeq_ctx, (uint64_t) cq_base);;
     nvmeq_ctx->sq_virt_addr = (uint64_t) sq_base;
     nvmeq_ctx->cq_virt_addr = (uint64_t) cq_base;
+    nvmeq_ctx->sq_phys_addr = nvmeq_to_phys(nvmeq_ctx, nvmeq_ctx->sq_virt_addr);
+    nvmeq_ctx->cq_phys_addr = nvmeq_to_phys(nvmeq_ctx, nvmeq_ctx->cq_virt_addr);
 
-    if (nvmeq_ctx->sq_phys_addr == 0 || nvmeq_ctx->cq_phys_addr == 0) {
+    if (!nvmeq_ctx->sq_phys_addr || !nvmeq_ctx->cq_phys_addr) {
         L_ERR("Failed to initialize queues", "Address translation failure");
         return EXIT_FAILURE;
     }
+
+    nvmeq_ctx->sq_tail = 0;
+    nvmeq_ctx->cq_head = 0;
+    nvmeq_ctx->expected_phase = 1;
 
     /* Queue configuration on controler */
     if (is_admin) {
@@ -121,7 +144,6 @@ int8_t nvme_enable(volatile Nvme_registers *regs)
     __asm__ volatile ("fence rw, rw" ::: "memory");
 
     int bsy_wait_tries = 0;
-
 
     /* Enable controler */
     SET_NVME_PROP_FIELD_32(&(regs->cc), Nvme_cc_prop, EN, 1);
@@ -162,14 +184,47 @@ int8_t nvme_enable(volatile Nvme_registers *regs)
 }
 
 
-int8_t nvme_io_configure(volatile Nvme_registers * regs, Nvmeq_context_t *admin, Nvmeq_context_t * io) 
+int8_t nvme_io_queue_pair_create(volatile void * bar, Nvmeq_context_t *admin, Nvmeq_context_t * io) 
 {
-    (void) regs;
-    (void) admin;
-    (void) io;
+    /* Create the proper admin commands */
+    volatile Nvme_registers * regs = (volatile Nvme_registers *) bar;
 
-    /* Create and send to the admin queue an I/O queue creation command */
-    return EXIT_FAILURE;
+    /* STEP 2 : Set queue pair sizes */
+    SET_NVME_PROP_FIELD_32(&(regs->cc), Nvme_cc_prop, IOSQES, NVME_LOG2_SQ_SIZE);
+    SET_NVME_PROP_FIELD_32(&(regs->cc), Nvme_cc_prop, IOCQES, NVME_LOG2_CQ_SIZE);
+    
+    /* STEP 3 : Request 1 SQ and 1 CQ (0-based: 0 means 1 queue) */
+    uint32_t q_count = (0 << 16) | 0; 
+    L_INFO("Sending Set feature request");
+    if (nvme_send_command(bar, nvme_create_set_features_sqe(0x07, q_count), admin, 0)) 
+        return EXIT_FAILURE;
+    L_SUCC("Success");
+
+    L_INFO("Sending I/O completion creation request");
+    if (nvme_send_command(bar, 
+                        nvme_create_iocompcreate_sqe(
+                                        IO_QUEUE_PAIR_NB, 
+                                        io->sq_depth, 
+                                        io->cq_phys_addr),
+                        admin,
+                        0))
+        return EXIT_FAILURE;
+    L_SUCC("Success");
+
+    L_INFO("Sending I/O submission creation request");
+    if (nvme_send_command(bar, 
+                        nvme_create_iosubcreate_sqe(
+                                    IO_QUEUE_PAIR_NB, 
+                                    io->sq_depth, 
+                                    io->sq_phys_addr, 
+                                    IO_QUEUE_PAIR_NB), 
+                        admin, 0))
+        return EXIT_FAILURE;
+
+    L_SUCC("Success");
+    /* If confirmend created */
+    IO_QUEUE_PAIR_NB++;
+    return EXIT_SUCCESS;
 }
 
 

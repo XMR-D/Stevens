@@ -6,6 +6,7 @@
     Side effect : 
 
 */
+
 #include <err.h>
 #include <errno.h>
 #include <stdio.h>
@@ -16,10 +17,11 @@
        
 #include <sys/mman.h>
 
-#include "nvme_q.h"
+#include "nvme_queue_context.h"
 
 
-Nvmeq_context_t * create_nvmeq_ctx(uint64_t pool_size) {
+Nvmeq_context_t * create_nvmeq_ctx(uint64_t pool_size, int32_t sq_depth, int32_t cq_depth) 
+{
 
     uint64_t page_size = sysconf(_SC_PAGESIZE);
 
@@ -31,7 +33,7 @@ Nvmeq_context_t * create_nvmeq_ctx(uint64_t pool_size) {
 
     int64_t pagemap_fd = open("/proc/self/pagemap", O_RDONLY);
     if (pagemap_fd < 0) {
-        destroy_nvmeq_ctx(nvmeq_ctx);
+        destroy_nvmeq_ctx(nvmeq_ctx, 0);
         warn("Error");
         return NULL;
     }
@@ -41,30 +43,34 @@ Nvmeq_context_t * create_nvmeq_ctx(uint64_t pool_size) {
     
     
                     if (nvmeq_buffer == NULL || nvmeq_buffer == MAP_FAILED) {
-        destroy_nvmeq_ctx(nvmeq_ctx);
+        destroy_nvmeq_ctx(nvmeq_ctx, 0);
         warn("Error");
         return NULL;
     }
 
     mlock(nvmeq_buffer, pool_size);
-
-    nvmeq_ctx->page_size = page_size;
-    nvmeq_ctx->pool_size = pool_size;
     nvmeq_ctx->pagemap_fd = pagemap_fd;
+    nvmeq_ctx->pool_size= pool_size;
+    nvmeq_ctx->page_size = page_size;
+    nvmeq_ctx->sq_depth = sq_depth;
+    nvmeq_ctx->cq_depth = cq_depth;
     nvmeq_ctx->nvmeq_buff = nvmeq_buffer;
 
     return nvmeq_ctx;
 }
 
-void destroy_nvmeq_ctx(Nvmeq_context_t * nvmeq_ctx) {
-    if (nvmeq_ctx->pagemap_fd > 0) {
-        close(nvmeq_ctx->pagemap_fd);
+void destroy_nvmeq_ctx(Nvmeq_context_t * nvmeq_ctx, uint64_t pool_size) {
+
+    if (nvmeq_ctx) {
+        if (nvmeq_ctx->pagemap_fd > 0) {
+            close(nvmeq_ctx->pagemap_fd);
+        }
+        if(nvmeq_ctx && nvmeq_ctx->nvmeq_buff) {
+            munlock(nvmeq_ctx->nvmeq_buff, pool_size);
+            munmap(nvmeq_ctx->nvmeq_buff, pool_size);
+        }
+        free(nvmeq_ctx);
     }
-    if(nvmeq_ctx && nvmeq_ctx->nvmeq_buff) {
-        munlock(nvmeq_ctx->nvmeq_buff, nvmeq_ctx->pool_size);
-        munmap(nvmeq_ctx->nvmeq_buff, nvmeq_ctx->pool_size);
-    }
-    free(nvmeq_ctx);
 }
 
 uint64_t nvmeq_to_phys(Nvmeq_context_t * nvmeq_ctx, uint64_t virt_addr) 
@@ -78,14 +84,12 @@ uint64_t nvmeq_to_phys(Nvmeq_context_t * nvmeq_ctx, uint64_t virt_addr)
             sizeof(pagemap_entry),
             idx) == -1) {
         warn("Error");
-        destroy_nvmeq_ctx(nvmeq_ctx);
-        return EXIT_FAILURE;
+        return 0;
     }
     
     if (!IS_PAGE_PRESENT(pagemap_entry)) {
         warnx("Page in RAM is not present");
-        destroy_nvmeq_ctx(nvmeq_ctx);
-        return EXIT_FAILURE;
+        return 0;
     }
 
     uint64_t phys_pfn = (GET_PFN(pagemap_entry) * nvmeq_ctx->page_size);

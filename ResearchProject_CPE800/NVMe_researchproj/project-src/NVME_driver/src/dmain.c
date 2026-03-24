@@ -16,7 +16,7 @@
 #include "nvme_core.h"
 #include "nvme_spec.h"
 #include "options.h"
-#include "nvme_q.h"
+#include "nvme_queue_context.h"
 
 #include "log.h"
 
@@ -44,33 +44,35 @@ static inline void driver_exit(volatile void * pci_bar, Nvmeq_context_t *admin_c
         bar_unmap(pci_bar);
     }
 
-    destroy_nvmeq_ctx(io_ctx);
-    destroy_nvmeq_ctx(admin_ctx);
+    destroy_nvmeq_ctx(io_ctx, io_ctx->pool_size);
+    destroy_nvmeq_ctx(admin_ctx, admin_ctx->pool_size);
 }
 
 
-static int8_t nvme_init_handshake(volatile void * pci_bar, Nvmeq_context_t *admin_ctx, Nvmeq_context_t * io_ctx) {
+static int8_t nvme_init_procedure(volatile void * pci_bar, Nvmeq_context_t *admin_ctx, Nvmeq_context_t * io_ctx) {
 
     L_INFO("Trying to init NVMe context and controller");
 
     /* Get NVMe registers to init the admin_ctx */
     volatile Nvme_registers * regs = (volatile Nvme_registers *) pci_bar;
 
+    L_INFO("Initializing Queue Context");
     if (nvme_init_ctx(regs, admin_ctx, io_ctx)) {
         driver_exit(pci_bar, admin_ctx, io_ctx);
         return EXIT_FAILURE;
     }
+
+    L_INFO("Enabling NVMe controller");
     if (nvme_enable(regs)) {
         driver_exit(pci_bar, admin_ctx, io_ctx);
         return EXIT_FAILURE;
     }
 
-    /* 
-    if (nvme_io_configure(regs, admin_ctx, io_ctx)) {
+    L_INFO("Sending Controller I/O Queue creation request");
+    if (nvme_io_queue_pair_create(regs, admin_ctx, io_ctx)) {
         driver_exit(pci_bar, admin_ctx, io_ctx);
         return EXIT_FAILURE;
-    } 
-    */
+    }
 
     nvme_cap_log(pci_bar);
     nvme_cc_log(pci_bar);
@@ -78,7 +80,7 @@ static int8_t nvme_init_handshake(volatile void * pci_bar, Nvmeq_context_t *admi
     nvme_cmbloc_log(pci_bar);
     nvme_log_asq_acq(pci_bar);
 
-    L_SUCC("NVMe context initialized successfully and NVMe controller enabled");
+    L_SUCC("NVMe context, admin queues, I/O queue and controller enabled");
 
     return EXIT_SUCCESS;
 }
@@ -96,8 +98,8 @@ static int8_t driver_enter(char * res_path, char * bdf)
     */
     L_INFO("Creating NVMe contexts and mapping pci bar register mapped to NVMe device into process space");
 
-    admin_ctx = create_nvmeq_ctx(DEVICE_NVMEQ_BUFF_SIZE);
-    io_ctx = create_nvmeq_ctx(DEVICE_NVMEQ_BUFF_SIZE);
+    admin_ctx = create_nvmeq_ctx(DEVICE_NVMEQ_BUFF_SIZE, NVME_QUEUE_DEPTH, NVME_QUEUE_DEPTH);
+    io_ctx = create_nvmeq_ctx(DEVICE_NVMEQ_BUFF_SIZE, NVME_QUEUE_DEPTH, NVME_QUEUE_DEPTH);
 
     if (admin_ctx == NULL || io_ctx == NULL) {
         driver_exit(pci_bar, admin_ctx, io_ctx);
@@ -115,7 +117,7 @@ static int8_t driver_enter(char * res_path, char * bdf)
     /*
         NVMe initialization handshake (step 1/2/3/4)
     */
-    if (nvme_init_handshake(pci_bar, admin_ctx, io_ctx)) {
+    if (nvme_init_procedure(pci_bar, admin_ctx, io_ctx)) {
         driver_exit(pci_bar, admin_ctx, io_ctx);
         return EXIT_FAILURE;
     }
