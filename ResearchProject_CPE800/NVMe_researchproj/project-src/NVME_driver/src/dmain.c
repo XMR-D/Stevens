@@ -16,9 +16,9 @@
 #include "nvme_core.h"
 #include "nvme_spec.h"
 #include "options.h"
-#include "nvme_queue_context.h"
+#include "nvme_queue_ctx.h"
 
-#include "log.h"
+#include "macros.h"
 
 /* INFO : The idea for the whole implementaion will be : 
  * Make it work, make it right, then make it fast
@@ -115,6 +115,7 @@ static int8_t driver_enter(char * res_path, char * bdf)
     L_SUCC("NVMe context created successfully");
 
     /*
+        PHASE 1 : SYNCHRONOUS MODE FOR INITIALISATION
         NVMe initialization handshake (step 1/2/3/4)
     */
     if (nvme_init_procedure(pci_bar, admin_ctx, io_ctx)) {
@@ -122,6 +123,25 @@ static int8_t driver_enter(char * res_path, char * bdf)
         return EXIT_FAILURE;
     }
 
+
+    /* PHASE 2 : ASYNCHRONOUS MODE FOR BENCHMARKING */
+    /*
+        // On utilise le couple Submit / Reap pour le benchmark
+        for (int i = 0; i < BATCH_SIZE; i++) {
+            nvme_submit_io(pci_bar, &my_sqes[i], ctx_io, qid);
+        }
+
+        // On récolte les résultats au fur et à mesure
+        while (pending > 0) {
+            Nvme_cqe_t cqe;
+            if (nvme_reap_completion(pci_bar, ctx_io, qid, &cqe)) {
+                // Traitement par le scheduler (calcul deadline, stats)
+                process_completion(cqe.cid);
+                pending--;
+            }
+        }
+    
+    */
 
     driver_exit(pci_bar, admin_ctx, io_ctx);
     return EXIT_SUCCESS;

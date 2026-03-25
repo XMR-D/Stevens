@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "nvme_spec.h"
-#include "nvme_queue_context.h"
+#include "nvme_queue_ctx.h"
 
 /* Macros to write fields within nvme structs */
 #define SET_NVME_PROP_FIELD_32(prop_ptr, prop_ty, field, val) do { \

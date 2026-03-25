@@ -17,7 +17,7 @@
        
 #include <sys/mman.h>
 
-#include "nvme_queue_context.h"
+#include "nvme_queue_ctx.h"
 
 
 Nvmeq_context_t * create_nvmeq_ctx(uint64_t pool_size, int32_t sq_depth, int32_t cq_depth) 

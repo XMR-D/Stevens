@@ -9,10 +9,10 @@
 
 #include <sys/mman.h>
 
-#include "log.h"
+#include "macros.h"
 #include "nvme_spec.h"
 #include "nvme_sqe.h"
-#include "nvme_queue_context.h"
+#include "nvme_queue_ctx.h"
 #include "nvme_transport.h"
 
 #include "nvme_core.h"
@@ -196,12 +196,12 @@ int8_t nvme_io_queue_pair_create(volatile void * bar, Nvmeq_context_t *admin, Nv
     /* STEP 3 : Request 1 SQ and 1 CQ (0-based: 0 means 1 queue) */
     uint32_t q_count = (0 << 16) | 0; 
     L_INFO("Sending Set feature request");
-    if (nvme_send_command(bar, nvme_create_set_features_sqe(0x07, q_count), admin, 0)) 
+    if (sync_send_command(bar, nvme_create_set_features_sqe(0x07, q_count), admin, 0)) 
         return EXIT_FAILURE;
     L_SUCC("Success");
 
     L_INFO("Sending I/O completion creation request");
-    if (nvme_send_command(bar, 
+    if (sync_send_command(bar, 
                         nvme_create_iocompcreate_sqe(
                                         IO_QUEUE_PAIR_NB, 
                                         io->sq_depth, 
@@ -212,7 +212,7 @@ int8_t nvme_io_queue_pair_create(volatile void * bar, Nvmeq_context_t *admin, Nv
     L_SUCC("Success");
 
     L_INFO("Sending I/O submission creation request");
-    if (nvme_send_command(bar, 
+    if (sync_send_command(bar, 
                         nvme_create_iosubcreate_sqe(
                                     IO_QUEUE_PAIR_NB, 
                                     io->sq_depth, 

@@ -4,9 +4,13 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#include "log.h"
-#include "lockfree.h"
+#include "macros.h"
 #include "nvme_transport.h"
+
+
+/*
+    SYNCHRONOUS MODE FOR HANDLING COMMANDS TO ADMIN QUEUES
+*/
 
 /* * NVME_MAX_POLL_ITERATIONS : 
  * Based on ~5 cycles per loop (pause + inc + cmp + jmp).
@@ -68,7 +72,7 @@ static int8_t nvme_poll_completion(Nvmeq_context_t *ctx, uint16_t qid, uint16_t 
  * nvme_send_command: Submits an SQE to the specified queue, updates the 
  * submission doorbell, and synchronously polls for the completion result.
  */
-int8_t nvme_send_command(volatile void *pci_bar, Nvme_sqe_t *sqe, Nvmeq_context_t *ctx, uint16_t qid) 
+int8_t sync_send_command(volatile void *pci_bar, Nvme_sqe_t *sqe, Nvmeq_context_t *ctx, uint16_t qid) 
 {
     /* Copy command to the ring buffer and ensure visibility before doorbell */
     Nvme_sqe_t *target_slot = (Nvme_sqe_t *)ctx->sq_virt_addr + ctx->sq_tail;
@@ -97,6 +101,9 @@ int8_t nvme_send_command(volatile void *pci_bar, Nvme_sqe_t *sqe, Nvmeq_context_
 }
 
 
+/*
+    ASYNCHRONOUS MODE TO HANDLE IO REQUESTS TO THE IO_CONTEXT
+*/
 
 /*
     
@@ -109,9 +116,9 @@ int8_t nvme_send_command(volatile void *pci_bar, Nvme_sqe_t *sqe, Nvmeq_context_
  * at the physical address specified in the nvmeq_ctx.
  * Checks the Phase Tag (P) to determine if the entry is valid/new.
 
-Nvme_cqe_t * nvme_read_cqe(volatile void * pci_bar, Nvmeq_context_t * nvmeq_ctx)
-{
-    (void) nvmeq_ctx;
-    return NULL;
-}
+
 */
+
+//TODO: IO_transport_init();
+//TODO: IO_send();
+//TODO: IO_receive();

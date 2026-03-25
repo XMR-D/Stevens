@@ -8,4 +8,9 @@
 #define L_SUCC(msg) printf("[SUCC]: %s.\n", msg)
 #define L_INFO(msg) printf("[INFO]: %s.\n" , msg)
 
+#define MEM_FENCE(opA, opB) do { \
+    __asm__ volatile ("fence " #opA ", " #opB ::: "memory"); \
+} while (0)
+
+
 #endif /* !LOG_H */

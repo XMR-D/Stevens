@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "nvme_spec.h"
-#include "nvme_queue_context.h"
+#include "nvme_queue_ctx.h"
 
 /* NVME QUEUES ENTRIES FORMAT */
 
@@ -70,6 +70,12 @@ typedef struct nvme_cqe_t {
 _Static_assert(sizeof(Nvme_cqe_t) == CQ_ENTRY_SIZE);
 
 /* Transport API to sendout commands to the NVMe controller */
-int8_t nvme_send_command(volatile void *pci_bar, Nvme_sqe_t *sqe, Nvmeq_context_t *ctx, uint16_t qid); 
+int8_t sync_send_command(volatile void *pci_bar, Nvme_sqe_t *sqe, Nvmeq_context_t *ctx, uint16_t qid); 
+
+
+//TODO: IO_transport_init();
+//TODO: IO_send();
+//TODO: IO_receive();
+
 
 #endif /* NVME_TRANSPORT_H */
