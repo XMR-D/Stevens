@@ -7,7 +7,7 @@
 #include "IO_transport_ctx.h"
 
 
-static void _push_cid(Async_transport_ctx * self, uint16_t cid)
+void _push_cid(Async_transport_ctx * self, uint16_t cid)
 {
     uint32_t tail = atomic_load_explicit(&self->tail, memory_order_relaxed);
 
@@ -17,7 +17,7 @@ static void _push_cid(Async_transport_ctx * self, uint16_t cid)
 
 }
 
-static uint16_t _pop_cid(Async_transport_ctx * self)
+uint16_t _pop_cid(Async_transport_ctx * self)
 {
     uint32_t head = atomic_load_explicit(&self->head, memory_order_relaxed);
     uint32_t tail = atomic_load_explicit(&self->tail, memory_order_acquire);
@@ -51,6 +51,10 @@ uint16_t _get_completed(Async_transport_ctx * self)
    Unified interface to update the transport context to ensure a lock free
    fluid SPSC asynchronous layer.
 
+   Note :
+
+   upon task creation (0->1), cid parameter will be ignored
+
    return allocated cid for pending state
    return argument passed cid otherwise
 
@@ -60,26 +64,19 @@ uint16_t _get_completed(Async_transport_ctx * self)
    state = 1 => pending (submitted to hardware)
    state = 2 => completed (ready for reaper/scheduler)
 */
-uint16_t _update_requests(Async_transport_ctx *self, uint16_t cid, uint8_t new_state)
+void _update_requests(Async_transport_ctx *self, uint16_t cid, uint8_t new_state)
 {
     uint8_t expected;
 
     switch (new_state) {
         /* transition from free to pending state  */
         case 1:
-            /* retreive next available cid */
-            uint16_t new_cid = _pop_cid(self);
-            if (new_cid == 0xFFFF) {
-                return 0xFFFF;
-            }
-
             /* change state of the retreived cid and update pending jobs */
             expected = 0;
-            if (atomic_compare_exchange_strong(&self->request_status[new_cid], &expected, 1)) {
+            if (atomic_compare_exchange_strong(&self->request_status[cid], &expected, 1)) {
                 atomic_fetch_add(&self->nb_pending_requests, 1);
-                return new_cid;
             }
-            return 0xFFFF;
+            break;
 
         /* transition from pending to completed state  */
         case 2:
@@ -103,7 +100,6 @@ uint16_t _update_requests(Async_transport_ctx *self, uint16_t cid, uint8_t new_s
         default:
             break;
     }
-    return cid;
 }
 
 /* Transport SPSC context destructor */
@@ -134,6 +130,8 @@ Async_transport_ctx * create_asynch_transport_context(void)
         obj->available_cid[i] = i;
     }
 
+    obj->push_cid = _push_cid;
+    obj->pop_cid = _pop_cid;
     obj->is_active = _is_active;
     obj->get_pending = _get_pending;
     obj->get_completed = _get_completed;

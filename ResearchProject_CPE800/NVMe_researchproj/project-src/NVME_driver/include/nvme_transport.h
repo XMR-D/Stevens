@@ -5,6 +5,7 @@
 
 #include "nvme_spec.h"
 #include "nvme_queue_ctx.h"
+#include "IO_transport_ctx.h"
 
 /* NVME QUEUES ENTRIES FORMAT */
 
@@ -45,7 +46,7 @@ typedef struct nvme_sqe_t {
     uint32_t cdw13;
     uint32_t cdw14;
     uint32_t cdw15;
-}  Nvme_sqe_t;
+}  __attribute__((packed)) Nvme_sqe_t;
 
 /* assert the size of Nvme_sqe_t at compile tiume to guarantee data alignement */
 _Static_assert(sizeof(Nvme_sqe_t) == SQ_ENTRY_SIZE);
@@ -63,19 +64,27 @@ typedef struct nvme_cqe_t {
             uint16_t sf : 15; /* Status Field (Bits 1-15) */
         };
         uint16_t status_raw;  /* Pour l'accès direct */
-    };
+    } dw3;
 } __attribute__((packed)) Nvme_cqe_t;
 
 /* assert the size of Nvme_cqe_t at compile tiume to guarantee data alignement */
 _Static_assert(sizeof(Nvme_cqe_t) == CQ_ENTRY_SIZE);
 
+
+void nvme_trigger_doorbell(volatile void * pci_bar, uint8_t is_sq, uint16_t qid, uint32_t val);
+
 /* Transport API to sendout commands to the NVMe controller */
-int8_t sync_send_command(volatile void *pci_bar, Nvme_sqe_t *sqe, Nvmeq_context_t *ctx, uint16_t qid); 
+int8_t admin_send(volatile void *pci_bar, Nvme_sqe_t *sqe, Nvmeq_context_t *ctx, uint16_t qid); 
 
 
-//TODO: IO_transport_init();
-//TODO: IO_send();
-//TODO: IO_receive();
+Async_transport_ctx * IO_transport_ctx_init(void);
+
+int32_t IO_send(Nvmeq_context_t *IOctx, Async_transport_ctx *transport_ctx, 
+    uint8_t opc, uint32_t nsid, uint64_t slba, uint16_t nlb, uint64_t prp1,  uint64_t prp2);
+
+void IO_receive(Nvmeq_context_t *IOctx, Async_transport_ctx * transport_ctx);
+
+
 
 
 #endif /* NVME_TRANSPORT_H */

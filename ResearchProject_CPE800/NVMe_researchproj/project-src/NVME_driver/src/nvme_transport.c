@@ -5,7 +5,9 @@
 #include <stdlib.h>
 
 #include "macros.h"
+#include "nvme_sqe.h"
 #include "nvme_transport.h"
+#include "IO_transport_ctx.h"
 
 
 /*
@@ -23,7 +25,7 @@
  *  qid   : 0 for Admin, 1+ for I/O Queues
  *  val   : New Tail (for SQ) or New Head (for CQ)
  */
-static inline void nvme_trigger_doorbell(volatile void * pci_bar, uint8_t is_sq, uint16_t qid, uint32_t val)
+inline void nvme_trigger_doorbell(volatile void * pci_bar, uint8_t is_sq, uint16_t qid, uint32_t val)
 {
     /* Calculation based on NVMe Spec: 1000h + (2 * QID * (4 << CAP.DSTRD)) */
     /* Assuming standard DSTRD = 0 (4 bytes stride) */
@@ -43,11 +45,12 @@ static inline void nvme_trigger_doorbell(volatile void * pci_bar, uint8_t is_sq,
 static int8_t nvme_poll_completion(Nvmeq_context_t *ctx, uint16_t qid, uint16_t cid)
 {
     uint64_t timeout = 0;
+
     /* Use volatile to ensure the CPU re-reads the completion entry from RAM */
     volatile Nvme_cqe_t *current_cqe = (Nvme_cqe_t *)ctx->cq_virt_addr + ctx->cq_head;
 
     /* Wait for the controller to invert the Phase Tag (p) */
-    while (current_cqe->p != ctx->expected_phase) {
+    while (current_cqe->dw3.p != ctx->expected_phase) {
         __builtin_riscv_pause();
         
         if (++timeout > MAX_POLL_FREQ) {
@@ -61,7 +64,7 @@ static int8_t nvme_poll_completion(Nvmeq_context_t *ctx, uint16_t qid, uint16_t 
     MEM_FENCE(r, r);
 
     /* Validate that the Status Field (sf) is zero (Success) */
-    if (current_cqe->sf != 0) {
+    if (current_cqe->dw3.sf != 0) {
         return EXIT_FAILURE; 
     }
 
@@ -72,7 +75,7 @@ static int8_t nvme_poll_completion(Nvmeq_context_t *ctx, uint16_t qid, uint16_t 
  * nvme_send_command: Submits an SQE to the specified queue, updates the 
  * submission doorbell, and synchronously polls for the completion result.
  */
-int8_t sync_send_command(volatile void *pci_bar, Nvme_sqe_t *sqe, Nvmeq_context_t *ctx, uint16_t qid) 
+int8_t admin_send(volatile void *pci_bar, Nvme_sqe_t *sqe, Nvmeq_context_t *ctx, uint16_t qid) 
 {
     /* Copy command to the ring buffer and ensure visibility before doorbell */
     Nvme_sqe_t *target_slot = (Nvme_sqe_t *)ctx->sq_virt_addr + ctx->sq_tail;
@@ -105,20 +108,109 @@ int8_t sync_send_command(volatile void *pci_bar, Nvme_sqe_t *sqe, Nvmeq_context_
     ASYNCHRONOUS MODE TO HANDLE IO REQUESTS TO THE IO_CONTEXT
 */
 
+/* IO_transport_init: Initialize the Input/Output asynchronous transport layer
+   In order to keep track of submited IO requests and completions status.
+*/
+Async_transport_ctx * IO_transport_ctx_init(void) 
+{
+    Async_transport_ctx * io_transport_ctx = create_asynch_transport_context();
+    MEM_FENCE(rw, rw);
+
+    return io_transport_ctx;
+}
+
 /*
+static void log_nvme_sqe(Nvme_sqe_t *sqe) {
+    if (!sqe) return;
+
+    printf("\n--- [NVMe SQE DEBUG DUMP] ---\n");
     
-    TODO: CHANGE THE LOGIC LATER TO MORPH COMMAND SUBMISSION AND RECEPTION TO BE
-    ASYNCHRONOUS TO AVOID CONTENTION
+    // Affichage logique (Champs individuels)
+    printf("CDW0: OPC=0x%02X | CID=0x%04X | FUSE=0x%X | PSDT=0x%X\n", 
+            sqe->opcode, sqe->cid, sqe->fuse, sqe->psdt);
+    printf("NSID: 0x%08X\n", sqe->nsid);
+    printf("MPTR: 0x%016lX\n", sqe->mptr);
+    printf("PRP1: 0x%016lX\n", sqe->dptr.prp_t.prp1);
+    printf("PRP2: 0x%016lX\n", sqe->dptr.prp_t.prp2);
+    printf("CDWs: [10:0x%08X] [11:0x%08X] [12:0x%08X]\n", 
+            sqe->cdw10, sqe->cdw11, sqe->cdw12);
+    printf("      [13:0x%08X] [14:0x%08X] [15:0x%08X]\n", 
+            sqe->cdw13, sqe->cdw14, sqe->cdw15);
 
-
-
- * nvme_read_cqe: Fetches the next entry from the Completion Queue 
- * at the physical address specified in the nvmeq_ctx.
- * Checks the Phase Tag (P) to determine if the entry is valid/new.
-
-
+    // Affichage Raw (Hex dump pour vérifier le packing de 64 octets)
+    printf("\nRaw Binary (64 bytes):\n");
+    const uint8_t *raw = (const uint8_t *)sqe;
+    for (int i = 0; i < 64; i++) {
+        printf("%02X ", raw[i]);
+        if ((i + 1) % 16 == 0) printf("\n");
+        else if ((i + 1) % 4 == 0) printf("| ");
+    }
+    printf("-----------------------------\n");
+}
 */
 
-//TODO: IO_transport_init();
-//TODO: IO_send();
-//TODO: IO_receive();
+/* IO_send: Format a Write/Read operation and send it to the NVMe controller
+
+   Note: If the controller is full, IO_send return EXIT_FAILURE and it's up to
+   the scheduler to handle it (reschedule, check for deadline and evict..)
+*/
+int32_t IO_send(Nvmeq_context_t *IOctx, Async_transport_ctx *transport_ctx, uint8_t opc, uint32_t nsid, uint64_t slba, uint16_t nlb, uint64_t prp1, uint64_t prp2) {
+    
+    uint16_t new_cid = transport_ctx->pop_cid(transport_ctx);
+    
+    if (new_cid != 0xFFFF) {
+
+        Nvme_sqe_t ioreq = nvme_create_io_sqe(opc, slba, nlb, prp1, prp2);
+        if (ioreq.opcode == NVME_IO_INVALID) {
+            return -1;
+        }
+
+        ioreq.cid = new_cid;
+        ioreq.nsid = nsid;
+
+        /* Copy command to the ring buffer and ensure visibility before doorbell */
+        Nvme_sqe_t * target_slot = &((Nvme_sqe_t *) IOctx->sq_virt_addr)[IOctx->sq_tail];
+        *target_slot = ioreq;
+        MEM_FENCE(w, w);
+
+        /* Update the submission tail index and notify the controller */
+        IOctx->sq_tail = (IOctx->sq_tail + 1) % IOctx->sq_depth;
+        transport_ctx->update_requests(transport_ctx, new_cid, 1);
+        MEM_FENCE(w, w);
+
+        return (int32_t) new_cid;
+    }
+    return -1;
+}
+
+/* IO_receive: Poll to read incoming requests and update the dictionary to signal scheduler
+   a task was completed.
+*/
+void IO_receive(Nvmeq_context_t *IOctx, Async_transport_ctx *transport_ctx)
+{
+    Nvme_cqe_t *cqe = &((Nvme_cqe_t *)IOctx->cq_virt_addr)[IOctx->cq_head];
+
+    while ((cqe->dw3.p & 0x1) == IOctx->expected_phase) {
+        
+        uint16_t cid = cqe->cid;
+        uint16_t status = (cqe->dw3.sf >> 1);
+
+        transport_ctx->update_requests(transport_ctx, cid, 2);
+
+        if (status != 0) {
+            L_ERR("NVMe IO Error", "Command Status indicating failed operation | command CID = ");
+            printf("cid = %d", cid);
+            continue;
+        }
+
+        printf("command with cid : %d : SUCCESS\n", cid);
+
+        IOctx->cq_head++;
+        if (IOctx->cq_head >= IOctx->cq_depth) {
+            IOctx->cq_head = 0;
+            IOctx->expected_phase ^= 1;
+        }
+
+        cqe = &((Nvme_cqe_t *)IOctx->cq_virt_addr)[IOctx->cq_head];
+    }
+}

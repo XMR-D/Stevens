@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "macros.h"
+
 #include "nvme_spec.h"
 #include "nvme_transport.h"
 
@@ -53,40 +55,41 @@ Nvme_sqe_t * nvme_create_iosubcreate_sqe(uint16_t qid, uint16_t size, uint64_t s
     return &sqe;
 }
 
-/*
- * nvme_create_read_io_sqe: Formats an I/O Submission Queue Entry for a 
- * Read operation. Sets the appropriate Opcode, LBA, and PRP fields.
- */
-Nvme_sqe_t * nvme_create_read_io_sqe(uint64_t slba, uint16_t nlb, uint64_t prp1, uint64_t prp2) 
-{
-    (void) slba;
-    (void) nlb;
-    (void) prp1;
-    (void) prp2;
 
-    Nvme_sqe_t * sqe = calloc(1, sizeof(Nvme_sqe_t));
-    if (sqe == NULL) {
-        warn("Failed to create SQE request");
-        return NULL;
-    }
-    return sqe;
-}
+/* ASYNCHRONOUS COMMANDS */
 
 /*
  * nvme_create_write_io_sqe: Formats an I/O Submission Queue Entry for a 
- * Write operation. Sets the appropriate Opcode, LBA, and PRP fields.
+ * IO operation.
  */
-Nvme_sqe_t * nvme_create_write_io_sqe(uint64_t slba, uint16_t nlb, uint64_t prp1, uint64_t prp2)
+Nvme_sqe_t nvme_create_io_sqe(uint8_t opcode, uint64_t slba, uint16_t nlb, uint64_t prp1, uint64_t prp2)
 {
-    (void) slba;
-    (void) nlb;
-    (void) prp1;
-    (void) prp2;
-    
-    Nvme_sqe_t * sqe = calloc(1, sizeof(Nvme_sqe_t));
-    if (sqe == NULL) {
-        warn("Failed to create SQE request");
-        return NULL;
+
+    Nvme_sqe_t sqe = {0};
+
+    /* Anti-underflow barrier*/
+    if (nlb <= 0) {
+        L_WARN("Invalid or suprious IO command detected", "Underflow attempted using nlb");
+        sqe.opcode = NVME_IO_INVALID;
+        return sqe;
     }
+
+    // CDW0 & NSID
+    sqe.opcode = opcode;
+    sqe.nsid = 1; // Default Namespace
+    
+    // DPTR (Data Pointer)
+    sqe.dptr.prp_t.prp1 = prp1;
+    sqe.dptr.prp_t.prp2 = prp2;
+
+    /* * Manual mapping on CDWs (Command Specific)
+     * CDW10 : SLBA[31:00]
+     * CDW11 : SLBA[63:32]
+     * CDW12 : NLB (bits 15:00)
+     */
+    sqe.cdw10 = (uint32_t)(slba & 0xFFFFFFFF);
+    sqe.cdw11 = (uint32_t)(slba >> 32);
+    sqe.cdw12 = (uint16_t)(nlb - 1);
+
     return sqe;
 }

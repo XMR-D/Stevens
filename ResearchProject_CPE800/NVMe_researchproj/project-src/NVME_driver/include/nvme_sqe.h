@@ -3,8 +3,14 @@
 
 #include "nvme_transport.h"
 
+/* Error handling opcode */
+#define NVME_IO_INVALID 0xFF
 
-/* Opcodes pour les commandes Admin (Spec NVMe) */
+/* I/O commands opcodes */
+#define NVME_IO_WRITE 0x01
+#define NVME_IO_READ 0x02
+
+/* Admin commands opcodes (Spec NVMe) */
 #define NVME_ADM_OP_CREATE_SQ         0x01
 #define NVME_ADM_OP_CREATE_CQ         0x05
 #define NVME_ADM_OP_IDENTIFY          0x06
@@ -38,8 +44,10 @@ Nvme_sqe_t * nvme_create_async_event_sqe(void);
 
 /* IO COMMANDS CREATION ROUTINES */
 Nvme_sqe_t * nvme_create_flush_io_sqe(void);
-Nvme_sqe_t * nvme_create_write_io_sqe(uint64_t slba, uint16_t nlb, uint64_t prp1, uint64_t prp2);
-Nvme_sqe_t * nvme_create_read_io_sqe(uint64_t slba, uint16_t nlb, uint64_t prp1, uint64_t prp2);
+
+/* IO read/write sqe creation */
+Nvme_sqe_t nvme_create_io_sqe(uint8_t opcode, uint64_t slba, uint16_t nlb, uint64_t prp1, uint64_t prp2);
+
 Nvme_sqe_t * nvme_create_dsm_io_sqe(uint32_t num_ranges, uint64_t prp1);
 
 

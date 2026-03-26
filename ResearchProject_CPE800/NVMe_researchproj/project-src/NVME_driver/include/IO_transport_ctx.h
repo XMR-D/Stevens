@@ -30,6 +30,12 @@ struct async_transport_ctx {
     /* Atomic counter tracking the total number of completed asynchronous tasks */
     alignas(64) _Atomic uint16_t nb_completed_requests;
 
+    /* Push freed cid in the available cid ring buffer */
+    void (*push_cid)(Async_transport_ctx * self, uint16_t cid);
+
+    /* Pop and retreive a free cid in the available cid ring buffer*/
+    uint16_t (*pop_cid)(Async_transport_ctx * self);
+
     /* Check if a CID from a priority queue is currently registered as active */
     uint8_t (*is_active)(Async_transport_ctx *self, uint16_t cid);
     
@@ -40,7 +46,8 @@ struct async_transport_ctx {
     uint16_t (*get_completed)(Async_transport_ctx *self);
 
     /* Update CID status (op=1 for add, op=0 for remove) after queue submission */
-    uint16_t (*update_requests)(Async_transport_ctx *self, uint16_t cid, uint8_t new_state);
+    void (*update_requests)(Async_transport_ctx *self, uint16_t cid, uint8_t new_state);
+
 
     /* Destroy and free the object */
     void (*destroy)(Async_transport_ctx * self);
