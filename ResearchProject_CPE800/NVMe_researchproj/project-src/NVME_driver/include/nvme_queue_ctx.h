@@ -13,6 +13,9 @@ typedef struct {
     uint64_t sq_depth;        /* Maximum number of entries in the Submission Queue (0-based value in registers) */
     uint64_t cq_depth;        /* Maximum number of entries in the Completion Queue (0-based value in registers) */
 
+    uint32_t sq_tdbl;         /* Submission queue doorbell */
+    uint32_t cq_hdbl;         /* Completion queue doorbell */
+
     uint64_t sq_virt_addr;    /* Virtual base address of the Submission Queue (used by the CPU to write commands) */
     uint64_t cq_virt_addr;    /* Virtual base address of the Completion Queue (used by the CPU to read responses) */
 

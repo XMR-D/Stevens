@@ -63,82 +63,6 @@ void bar_unmap(volatile void * bar)
     }
 }
 
-/* nvme_init_queue_ctx: sets up the memory and logic for a pair of NVMe queues
-*
-*  This function performs three main tasks:
-*  1. Memory: Partitions the allocated buffer into SQ and CQ, and translates 
-*  virtual addresses to physical addresses for DMA operations.
-*  2. Transport: Resets host-side tracking indices (tail/head) and the 
-*  Phase Tag bit to synchronization state.
-*  3. Hardware: For Admin queues, it commits the physical addresses and 
-*  queue depths directly to the Controller's BAR0 registers (ASQ/ACQ/AQA).
-* 
-*  Returns EXIT_SUCCESS on success, or EXIT_FAILURE if address translation 
-*  or allocation fails.
-*/
-static int8_t nvme_init_queue_ctx(Nvmeq_context_t *nvmeq_ctx, volatile Nvme_registers *regs, int8_t is_admin)
-{
-    uint8_t* sq_base = NULL;
-    uint8_t* cq_base = NULL;
-
-    /* nvmeq Context setup */
-    sq_base = (uint8_t *) nvmeq_ctx->nvmeq_buff;
-    cq_base = (uint8_t *) nvmeq_ctx->nvmeq_buff + PAGESIZE;
-
-    if (nvmeq_ctx->nvmeq_buff == NULL) {
-        L_ERR("nvmeq buffer is NULL", "Buffer allocation failed");
-        return EXIT_FAILURE;
-    }
-
-    memset(sq_base, 0, PAGESIZE);
-    memset(cq_base, 0, PAGESIZE);
-
-    nvmeq_ctx->sq_virt_addr = (uint64_t) sq_base;
-    nvmeq_ctx->cq_virt_addr = (uint64_t) cq_base;
-    nvmeq_ctx->sq_phys_addr = nvmeq_to_phys(nvmeq_ctx, nvmeq_ctx->sq_virt_addr);
-    nvmeq_ctx->cq_phys_addr = nvmeq_to_phys(nvmeq_ctx, nvmeq_ctx->cq_virt_addr);
-
-    if (!nvmeq_ctx->sq_phys_addr || !nvmeq_ctx->cq_phys_addr) {
-        L_ERR("Failed to initialize queues", "Address translation failure");
-        return EXIT_FAILURE;
-    }
-
-    nvmeq_ctx->sq_tail = 0;
-    nvmeq_ctx->cq_head = 0;
-    nvmeq_ctx->expected_phase = 1;
-
-    /* Queue configuration on controler */
-    if (is_admin) {
-        SET_NVME_REG_64(&(regs->asq), nvmeq_ctx->sq_phys_addr);
-        SET_NVME_REG_64(&(regs->acq), nvmeq_ctx->cq_phys_addr);
-        SET_NVME_PROP_FIELD_32(&(regs->aqa), Nvme_aqa_prop, ASQS, (PAGESIZE / SQ_ENTRY_SIZE) - 1);
-        SET_NVME_PROP_FIELD_32(&(regs->aqa), Nvme_aqa_prop, ACQS, (PAGESIZE / CQ_ENTRY_SIZE) - 1);
-        L_INFO("Admin Queue configured in registers");
-    } else {
-        L_INFO("I/O Queue buffer prepared, pending Admin registration command");
-    }
-
-    return EXIT_SUCCESS;
-}
-
-/* 
-* nvme_init: init the nvme controler : create queues into previous nvmeq_ctx
-* and update registers to specify physical address and size
-* of queues to controller, Then enable the controller and wait for it to be ready
-*/
-int8_t nvme_init_ctx(volatile Nvme_registers *regs, Nvmeq_context_t * admin_ctx, Nvmeq_context_t * io_ctx)
-{
-    L_INFO("Initialization of the NVMe context");
-
-    /* Initialize the contexts */
-    if(nvme_init_queue_ctx(admin_ctx, regs, 1) == EXIT_FAILURE 
-        || nvme_init_queue_ctx(io_ctx, NULL, 0) == EXIT_FAILURE) {
-            return EXIT_FAILURE;
-    }
-
-    return EXIT_SUCCESS;
-}
-
 int8_t nvme_enable(volatile Nvme_registers *regs)
 {
     __asm__ volatile ("fence rw, rw" ::: "memory");
@@ -184,7 +108,105 @@ int8_t nvme_enable(volatile Nvme_registers *regs)
 }
 
 
-int8_t nvme_io_queue_pair_create(volatile void * bar, Nvmeq_context_t *admin, Nvmeq_context_t * io) 
+int8_t nvme_init_handshake(volatile void * pci_bar, Nvmeq_context_t *admin_ctx) {
+
+    L_INFO("Trying to init NVMe admin context and controller");
+
+    /* Get NVMe registers to init the admin_ctx */
+    volatile Nvme_registers * regs = (volatile Nvme_registers *) pci_bar;
+
+    L_INFO("Initialization of the NVMe admin context");
+    /* Initialize the contexts */
+    if(nvme_init_queue_ctx(admin_ctx, regs, 0, 1) == EXIT_FAILURE) {
+            L_ERR("Failed to initialize admin context", "nvme_init_queue_ctx failed");
+            return EXIT_FAILURE;
+    }
+
+    L_INFO("Enabling NVMe controller");
+    if (nvme_enable(regs)) {
+        return EXIT_FAILURE;
+    }
+
+    nvme_cap_log(pci_bar);
+    nvme_cc_log(pci_bar);
+    nvme_csts_log(pci_bar);
+    nvme_cmbloc_log(pci_bar);
+    nvme_log_asq_acq(pci_bar);
+
+    return EXIT_SUCCESS;
+}
+
+
+/* nvme_init_queue_ctx: sets up the memory and logic for a pair of NVMe queues
+*
+*  This function performs three main tasks:
+*  1. Memory: Partitions the allocated buffer into SQ and CQ, and translates 
+*  virtual addresses to physical addresses for DMA operations.
+*  2. Transport: Resets host-side tracking indices (tail/head) and the 
+*  Phase Tag bit to synchronization state.
+*  3. Hardware: For Admin queues, it commits the physical addresses and 
+*  queue depths directly to the Controller's BAR0 registers (ASQ/ACQ/AQA).
+* 
+*  Returns EXIT_SUCCESS on success, or EXIT_FAILURE if address translation 
+*  or allocation fails.
+*/
+int8_t nvme_init_queue_ctx(Nvmeq_context_t *nvmeq_ctx, volatile Nvme_registers *regs, uint64_t qid, int8_t is_admin)
+{
+    uint8_t* sq_base = NULL;
+    uint8_t* cq_base = NULL;
+
+    /* nvmeq Context setup */
+    sq_base = (uint8_t *) nvmeq_ctx->nvmeq_buff;
+    cq_base = (uint8_t *) nvmeq_ctx->nvmeq_buff + PAGESIZE;
+
+    if (nvmeq_ctx->nvmeq_buff == NULL) {
+        L_ERR("nvmeq buffer is NULL", "Buffer allocation failed");
+        return EXIT_FAILURE;
+    }
+
+    memset(sq_base, 0, PAGESIZE);
+    memset(cq_base, 0, PAGESIZE);
+
+    nvmeq_ctx->sq_virt_addr = (uint64_t) sq_base;
+    nvmeq_ctx->cq_virt_addr = (uint64_t) cq_base;
+    nvmeq_ctx->sq_phys_addr = nvmeq_to_phys(nvmeq_ctx, nvmeq_ctx->sq_virt_addr);
+    nvmeq_ctx->cq_phys_addr = nvmeq_to_phys(nvmeq_ctx, nvmeq_ctx->cq_virt_addr);
+
+    if (!nvmeq_ctx->sq_phys_addr || !nvmeq_ctx->cq_phys_addr) {
+        L_ERR("Failed to initialize queues", "Address translation failure");
+        return EXIT_FAILURE;
+    }
+
+    nvmeq_ctx->sq_tail = 0;
+    nvmeq_ctx->cq_head = 0;
+    nvmeq_ctx->expected_phase = 1;
+
+    /* Get Doorbell Stride (CAP.DSTRD) from bits 32:35 and calculate stride in bytes: (4 << DSTRD) */
+    uint32_t dstrd = (regs->cap >> 32) & 0xF;
+    uint32_t stride = 4 << dstrd;
+
+    /* Calculate Doorbell offsets: 0x1000 is the base offset for all DBs in BAR0.
+       Each qid has a pair of 32-bit registers (SQ Tail then CQ Head) spaced by stride.
+    */
+    nvmeq_ctx->sq_tdbl = (uint64_t)((uint8_t *)regs + 0x1000 + (2 * qid * stride));
+    nvmeq_ctx->cq_hdbl = (uint64_t)((uint8_t *)regs + 0x1000 + ((2 * qid + 1) * stride));
+
+    /* Queue configuration on controler */
+    if (is_admin) {
+        SET_NVME_REG_64(&(regs->asq), nvmeq_ctx->sq_phys_addr);
+        SET_NVME_REG_64(&(regs->acq), nvmeq_ctx->cq_phys_addr);
+        SET_NVME_PROP_FIELD_32(&(regs->aqa), Nvme_aqa_prop, ASQS, (PAGESIZE / SQ_ENTRY_SIZE) - 1);
+        SET_NVME_PROP_FIELD_32(&(regs->aqa), Nvme_aqa_prop, ACQS, (PAGESIZE / CQ_ENTRY_SIZE) - 1);
+        L_INFO("Admin Queue configured in registers");
+    } else {
+
+        L_INFO("I/O Queue buffer prepared, pending Admin registration command");
+    }
+
+    return EXIT_SUCCESS;
+}
+
+int8_t nvme_ioqueue_create(volatile void * bar, Nvmeq_context_t *admin, Nvmeq_context_t * io, uint16_t qid) 
 {
     /* Create the proper admin commands */
     volatile Nvme_registers * regs = (volatile Nvme_registers *) bar;
@@ -193,17 +215,10 @@ int8_t nvme_io_queue_pair_create(volatile void * bar, Nvmeq_context_t *admin, Nv
     SET_NVME_PROP_FIELD_32(&(regs->cc), Nvme_cc_prop, IOSQES, NVME_LOG2_SQ_SIZE);
     SET_NVME_PROP_FIELD_32(&(regs->cc), Nvme_cc_prop, IOCQES, NVME_LOG2_CQ_SIZE);
     
-    /* STEP 3 : Request 1 SQ and 1 CQ (0-based: 0 means 1 queue) */
-    uint32_t q_count = (0 << 16) | 0; 
-    L_INFO("Sending Set feature request");
-    if (admin_send(bar, nvme_create_set_features_sqe(0x07, q_count), admin, 0)) 
-        return EXIT_FAILURE;
-    L_SUCC("Success");
-
     L_INFO("Sending I/O completion creation request");
     if (admin_send(bar, 
                         nvme_create_iocompcreate_sqe(
-                                        IO_QUEUE_PAIR_NB, 
+                                        qid, 
                                         io->sq_depth, 
                                         io->cq_phys_addr),
                         admin,
@@ -214,7 +229,7 @@ int8_t nvme_io_queue_pair_create(volatile void * bar, Nvmeq_context_t *admin, Nv
     L_INFO("Sending I/O submission creation request");
     if (admin_send(bar, 
                         nvme_create_iosubcreate_sqe(
-                                    IO_QUEUE_PAIR_NB, 
+                                    qid, 
                                     io->sq_depth, 
                                     io->sq_phys_addr, 
                                     IO_QUEUE_PAIR_NB), 
@@ -226,6 +241,7 @@ int8_t nvme_io_queue_pair_create(volatile void * bar, Nvmeq_context_t *admin, Nv
     IO_QUEUE_PAIR_NB++;
     return EXIT_SUCCESS;
 }
+
 
 
 /* 

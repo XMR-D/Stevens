@@ -16,5 +16,5 @@ SMP            = 4
 # ON HOST COMPILATION FLAGS
 CC = ../../thirdparties/permanent/riscv64-lp64d--musl--stable-2025.08-1/bin/riscv64-buildroot-linux-musl-gcc
 AR=$(CROSS-COMPILE)ar
-INCLUDE=-Iinclude -Ikernel_headers/include 
+INCLUDE=-Iinclude -Iinclude/scheduler -Ikernel_headers/include 
 CFLAGS = -Wall -Wextra -Werror -static -march=rv64gc -march=rv64gc_zihintpause -mabi=lp64d -O0 -g 

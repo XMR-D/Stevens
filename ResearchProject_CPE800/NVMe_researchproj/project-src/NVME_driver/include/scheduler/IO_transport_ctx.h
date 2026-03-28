@@ -16,6 +16,7 @@ typedef struct async_transport_ctx Async_transport_ctx;
 
 struct async_transport_ctx {
 
+
     /* Lock-free array storing the status of each CID currently in flight */
     alignas(64) _Atomic uint8_t request_status[MAX_REQ_CAP];
 
@@ -24,36 +25,17 @@ struct async_transport_ctx {
     alignas(64) _Atomic uint32_t head; 
     alignas(64) _Atomic uint32_t tail;
 
-    /* Atomic counter tracking the total number of pending asynchronous tasks */
-    alignas(64) _Atomic uint16_t nb_pending_requests;
-
-    /* Atomic counter tracking the total number of completed asynchronous tasks */
-    alignas(64) _Atomic uint16_t nb_completed_requests;
-
     /* Push freed cid in the available cid ring buffer */
-    void (*push_cid)(Async_transport_ctx * self, uint16_t cid);
+    void (*push_cid)(Async_transport_ctx *self, uint16_t cid);
 
     /* Pop and retreive a free cid in the available cid ring buffer*/
-    uint16_t (*pop_cid)(Async_transport_ctx * self);
-
-    /* Check if a CID from a priority queue is currently registered as active */
-    uint8_t (*is_active)(Async_transport_ctx *self, uint16_t cid);
-    
-    /* Return the total count of requests currently managed by the transport layer */
-    uint16_t (*get_pending)(Async_transport_ctx *self);
-
-/* Return the total count of requests currently managed by the transport layer */
-    uint16_t (*get_completed)(Async_transport_ctx *self);
+    uint16_t (*pop_cid)(Async_transport_ctx *self);
 
     /* Update CID status (op=1 for add, op=0 for remove) after queue submission */
     void (*update_requests)(Async_transport_ctx *self, uint16_t cid, uint8_t new_state);
 
-
-    /* Destroy and free the object */
-    void (*destroy)(Async_transport_ctx * self);
-
 };
 
-Async_transport_ctx * create_asynch_transport_context(void);
+void tctx_class_init(Async_transport_ctx * tctx);
 
 #endif /* !IO_TRANSPORT_CONTEXT_H*/

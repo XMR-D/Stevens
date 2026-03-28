@@ -19,82 +19,31 @@
 #include "options.h"
 #include "nvme_queue_ctx.h"
 
-// TODO : remove after IO test
-#include "IO_transport_ctx.h"
-#include "nvme_transport.h"
-#include "nvme_sqe.h"
 
+#include "scheduler_ctx.h"
 
-/* INFO : The idea for the whole implementaion will be : 
- * Make it work, make it right, then make it fast
- */
-
-/* INFO: The idea will be to have two mode of command submission after the 
- * scheduling, a batching mode and a quick receive send mode, it will optimized the 
- * operations regarding onpeak / offpeak situations 
- */
-
-/* INFO: Every sqes will be temporary allocated objects so that handling them is easier
- * It will be this at the first stage, then a faster mode would be implemented where 
- * It will change the creation api to directly write in memory commands.
- *
- */
-
-
-static inline void driver_exit(volatile void * pci_bar, Nvmeq_context_t *admin_ctx, Nvmeq_context_t * io_ctx)
+static inline void driver_exit(volatile void * pci_bar, Nvmeq_context_t *admin_ctx, Scheduler_ctx * sctx)
 {
     L_INFO("Destroying NVMe contexts and unmaping pci bar register mapped to NVMe device");
 
-    if (pci_bar != NULL) {
+    if (pci_bar) {
         bar_unmap(pci_bar);
     }
 
-    destroy_nvmeq_ctx(io_ctx, io_ctx->pool_size);
-    destroy_nvmeq_ctx(admin_ctx, admin_ctx->pool_size);
-}
-
-
-static int8_t nvme_init_procedure(volatile void * pci_bar, Nvmeq_context_t *admin_ctx, Nvmeq_context_t * io_ctx) {
-
-    L_INFO("Trying to init NVMe context and controller");
-
-    /* Get NVMe registers to init the admin_ctx */
-    volatile Nvme_registers * regs = (volatile Nvme_registers *) pci_bar;
-
-    L_INFO("Initializing Queue Context");
-    if (nvme_init_ctx(regs, admin_ctx, io_ctx)) {
-        driver_exit(pci_bar, admin_ctx, io_ctx);
-        return EXIT_FAILURE;
+    if (admin_ctx) {
+        destroy_nvmeq_ctx(admin_ctx, admin_ctx->pool_size);
     }
 
-    L_INFO("Enabling NVMe controller");
-    if (nvme_enable(regs)) {
-        driver_exit(pci_bar, admin_ctx, io_ctx);
-        return EXIT_FAILURE;
+    if (sctx) {
+        sctx->destroy(sctx);
     }
-
-    L_INFO("Sending Controller I/O Queue creation request");
-    if (nvme_io_queue_pair_create(regs, admin_ctx, io_ctx)) {
-        driver_exit(pci_bar, admin_ctx, io_ctx);
-        return EXIT_FAILURE;
-    }
-
-    nvme_cap_log(pci_bar);
-    nvme_cc_log(pci_bar);
-    nvme_csts_log(pci_bar);
-    nvme_cmbloc_log(pci_bar);
-    nvme_log_asq_acq(pci_bar);
-
-    L_SUCC("NVMe context, admin queues, I/O queue and controller enabled");
-
-    return EXIT_SUCCESS;
+    L_SUCC("All structures freed");
 }
 
 
 static int8_t driver_enter(char * res_path, char * bdf)
 {
     Nvmeq_context_t * admin_ctx = NULL;
-    Nvmeq_context_t * io_ctx = NULL;
     volatile void * pci_bar = NULL;
 
     /* 
@@ -104,35 +53,48 @@ static int8_t driver_enter(char * res_path, char * bdf)
     L_INFO("Creating NVMe contexts and mapping pci bar register mapped to NVMe device into process space");
 
     admin_ctx = create_nvmeq_ctx(DEVICE_NVMEQ_BUFF_SIZE, NVME_QUEUE_DEPTH, NVME_QUEUE_DEPTH);
-    io_ctx = create_nvmeq_ctx(DEVICE_NVMEQ_BUFF_SIZE, NVME_QUEUE_DEPTH, NVME_QUEUE_DEPTH);
 
-    if (admin_ctx == NULL || io_ctx == NULL) {
-        driver_exit(pci_bar, admin_ctx, io_ctx);
+    if (admin_ctx == NULL) {
+        driver_exit(pci_bar, admin_ctx, NULL);
         return EXIT_FAILURE;
     }
 
     pci_bar = bar_map(res_path, bdf);
     if (pci_bar == NULL) {
-        driver_exit(pci_bar, admin_ctx, io_ctx);
+        driver_exit(pci_bar, admin_ctx, NULL);
         return EXIT_FAILURE;
     }
-
-    L_SUCC("NVMe context created successfully");
-
     /*
         PHASE 1 : SYNCHRONOUS MODE FOR INITIALISATION
-        NVMe initialization handshake (step 1/2/3/4)
+        NVMe initialization handshake (step 1/2)
     */
-    if (nvme_init_procedure(pci_bar, admin_ctx, io_ctx)) {
-        driver_exit(pci_bar, admin_ctx, io_ctx);
+    if (nvme_init_handshake(pci_bar, admin_ctx) == EXIT_FAILURE) {
+        driver_exit(pci_bar, admin_ctx, NULL);
         return EXIT_FAILURE;
     }
+    L_SUCC("NVMe context created successfully");
+    L_SUCC("Init handshake done");
 
 
     /* PHASE 2 : ASYNCHRONOUS MODE FOR BENCHMARKING */
+    L_INFO("Attempting to create the scheduler context");
+    Scheduler_ctx * scheduler = create_scheduler_context(pci_bar, admin_ctx);
+    if (scheduler == NULL) {
+        L_ERR("Failed to create the scheduler context", "NVMe Timeout");
+        return EXIT_FAILURE;
+    }
+
+    L_SUCC("Scheduler context created");
+    scheduler->log_scheduler(scheduler);
+
+
+    driver_exit(pci_bar, admin_ctx, scheduler);
+    return EXIT_SUCCESS;
 
 
     /* --- CONFIGURATION DU STRESS TEST --- */
+
+    /*
     #define STRESS_ITERATIONS 127
     #define LBA_START 2000          // On commence loin pour être tranquille
     #define BIG_REQ_INDEX 10        // L'indice de la "grosse" insertion
@@ -151,10 +113,8 @@ static int8_t driver_enter(char * res_path, char * bdf)
 
     L_INFO("Allocating buffers and preparing PRP List...");
 
-    /* 1. ALLOCATION ET PRÉPARATION */
     for (int i = 0; i < STRESS_ITERATIONS; i++) {
         if (i == BIG_REQ_INDEX) {
-            /* Cas spécial : Requête de 16 KiB */
             posix_memalign(&big_buffer, 4096, 4096 * BIG_REQ_PAGES);
             posix_memalign((void**)&prp_list, 4096, 4096);
             
@@ -173,7 +133,6 @@ static int8_t driver_enter(char * res_path, char * bdf)
             
             buffers[i] = big_buffer;
         } else {
-            /* Requêtes normales : 4 KiB */
             posix_memalign(&buffers[i], 4096, 4096);
             memset(buffers[i], 0xA0 + (i % 0x10), 4096);
         }
@@ -181,7 +140,6 @@ static int8_t driver_enter(char * res_path, char * bdf)
 
     L_INFO("Blasting commands into SQ (Batch mode)...");
 
-    /* 2. SOUMISSION MASSIVE (BATCH) */
     for (int i = 0; i < STRESS_ITERATIONS; i++) {
         uint64_t p1, p2;
         uint32_t nlb;
@@ -206,20 +164,17 @@ static int8_t driver_enter(char * res_path, char * bdf)
         }
     }
 
-    /* 3. TRIGGER UNIQUE (DOORBELL) */
     // On ne prévient le contrôleur qu'une seule fois après avoir tout rempli
     __asm__ __volatile__ ("fence w, w" : : : "memory"); 
     nvme_trigger_doorbell(pci_bar, 1, 1, io_ctx->sq_tail);
     
     L_INFO("Doorbell rung. Waiting for completions...");
 
-    /* 4. POLLING DE COMPLÉTION */
     while (tctx->get_completed(tctx) < STRESS_ITERATIONS) {
         IO_receive(io_ctx, tctx);
         // On pourrait ajouter un timeout ici pour l'audit de sécurité
     }
 
-    /* 5. VÉRIFICATION ET NETTOYAGE */
     int failed_status = 0;
     for (int i = 0; i < STRESS_ITERATIONS; i++) {
         if (tctx->is_active(tctx, cids[i]) != 2) {
@@ -244,10 +199,8 @@ static int8_t driver_enter(char * res_path, char * bdf)
         L_ERR("STRESS", "FAILURE: commands did not reach status 'Completed'");
     }
 
-    tctx->destroy(tctx);
+    tctx->destroy(tctx); */
     
-    driver_exit(pci_bar, admin_ctx, io_ctx);
-        return EXIT_SUCCESS;
     }
 
 

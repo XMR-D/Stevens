@@ -38,9 +38,10 @@ void * bar_map(char * ressource_path, char * bdf);
 void bar_unmap(volatile void * bar);
 
 /* NVMe controller initialization routines */
-int8_t nvme_init_ctx(volatile Nvme_registers *regs, Nvmeq_context_t * admin_ctx, Nvmeq_context_t * io_ctx);
+int8_t nvme_init_handshake(volatile void * pci_bar, Nvmeq_context_t *admin_ctx);
 int8_t nvme_enable(volatile Nvme_registers *regs);
-int8_t nvme_io_queue_pair_create(volatile void * bar, Nvmeq_context_t *admin, Nvmeq_context_t * io); 
+int8_t nvme_ioqueue_create(volatile void * bar, Nvmeq_context_t *admin, Nvmeq_context_t * io, uint16_t qid); 
+int8_t nvme_init_queue_ctx(Nvmeq_context_t *nvmeq_ctx, volatile Nvme_registers *regs, uint64_t qid, int8_t is_admin);
 
 /* Logging functions */
 void nvme_cap_log(volatile void * bar);

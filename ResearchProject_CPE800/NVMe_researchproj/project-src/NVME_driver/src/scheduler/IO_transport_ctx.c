@@ -1,9 +1,13 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdatomic.h>
+#include <stdalign.h>
 
 #include "macros.h"
-
+#include "nvme_sqe.h"
+#include "nvme_transport.h"
+#include "nvme_queue_ctx.h"
 #include "IO_transport_ctx.h"
 
 
@@ -31,25 +35,9 @@ uint16_t _pop_cid(Async_transport_ctx * self)
     return cid;
 }
 
-/* 1 means pending */
-uint8_t _is_active(Async_transport_ctx * self, uint16_t cid)
-{
-    return atomic_load(&self->request_status[cid]);
-}
-
-uint16_t _get_pending(Async_transport_ctx * self)
-{
-    return atomic_load(&self->nb_pending_requests);
-}
-
-uint16_t _get_completed(Async_transport_ctx * self)
-{
-    return atomic_load(&self->nb_completed_requests);
-}
-
 /*
    Unified interface to update the transport context to ensure a lock free
-   fluid SPSC asynchronous layer.
+   fluid PMC asynchronous layer.
 
    Note :
 
@@ -73,19 +61,13 @@ void _update_requests(Async_transport_ctx *self, uint16_t cid, uint8_t new_state
         case 1:
             /* change state of the retreived cid and update pending jobs */
             expected = 0;
-            if (atomic_compare_exchange_strong(&self->request_status[cid], &expected, 1)) {
-                atomic_fetch_add(&self->nb_pending_requests, 1);
-            }
+            atomic_compare_exchange_strong(&self->request_status[cid], &expected, 1);
             break;
 
         /* transition from pending to completed state  */
         case 2:
             expected = 1;
-            if (atomic_compare_exchange_strong(&self->request_status[cid], &expected, 2)) {
-                atomic_fetch_sub(&self->nb_pending_requests, 1);
-                atomic_fetch_add(&self->nb_completed_requests, 1);
-
-            }
+            atomic_compare_exchange_strong(&self->request_status[cid], &expected, 2);
             break;
 
         /* transition from completed to free state  */
@@ -93,7 +75,6 @@ void _update_requests(Async_transport_ctx *self, uint16_t cid, uint8_t new_state
             expected = 2;
             if (atomic_compare_exchange_strong(&self->request_status[cid], &expected, 0)) {
                 _push_cid(self, cid);
-                atomic_fetch_sub(&self->nb_completed_requests, 1);
             }
             break;
 
@@ -102,42 +83,18 @@ void _update_requests(Async_transport_ctx *self, uint16_t cid, uint8_t new_state
     }
 }
 
-/* Transport SPSC context destructor */
-void _destroy(Async_transport_ctx * self)
+void tctx_class_init(Async_transport_ctx * tctx)
 {
-    if (self) {
-        free(self);
-    }
-}
-
-/* 
-   Transport SPSC context constructor.
-   
-   Note: PLEASE USE A FENCE AFTER CALLING THE FUNCTION TO ENSURE THE STRUCTURE IS CORRECTLY 
-   INSTANCIATED AND THREADS DO NOT START OPERATIONS ON A ILL CONTEXT
-*/
-Async_transport_ctx * create_asynch_transport_context(void)
-{
-    Async_transport_ctx * obj = calloc(1, sizeof(Async_transport_ctx)); 
-    if (!obj) {
-        L_ERR("Failed to create asyncronous transport context (see async_transport_dsa.c l.127)", "calloc failed");
-        return NULL;
-    }
-
-    obj->tail = MAX_REQ_CAP;
+    /* Asynchronous Transport Context Initialization 
+       (see IO_transport_ctx.h to get tcx object infos)
+    */
+    tctx->tail = MAX_REQ_CAP;
 
     for (uint32_t i = 0; i < MAX_REQ_CAP; i++) {
-        obj->available_cid[i] = i;
+        tctx->available_cid[i] = i;
     }
 
-    obj->push_cid = _push_cid;
-    obj->pop_cid = _pop_cid;
-    obj->is_active = _is_active;
-    obj->get_pending = _get_pending;
-    obj->get_completed = _get_completed;
-    obj->update_requests = _update_requests;
-    obj->destroy = _destroy;
-
-    return obj;
-
+    tctx->push_cid = _push_cid;
+    tctx->pop_cid = _pop_cid;
+    tctx->update_requests = _update_requests;
 }

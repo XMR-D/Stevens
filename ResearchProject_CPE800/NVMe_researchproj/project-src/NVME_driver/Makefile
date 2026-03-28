@@ -1,6 +1,6 @@
 include mkflags.mk
 
-src-y := $(wildcard src/*.c)
+src-y := $(wildcard src/*.c) $(wildcard src/scheduler/*.c)
 
 all: run_term
 

@@ -76,15 +76,4 @@ void nvme_trigger_doorbell(volatile void * pci_bar, uint8_t is_sq, uint16_t qid,
 /* Transport API to sendout commands to the NVMe controller */
 int8_t admin_send(volatile void *pci_bar, Nvme_sqe_t *sqe, Nvmeq_context_t *ctx, uint16_t qid); 
 
-
-Async_transport_ctx * IO_transport_ctx_init(void);
-
-int32_t IO_send(Nvmeq_context_t *IOctx, Async_transport_ctx *transport_ctx, 
-    uint8_t opc, uint32_t nsid, uint64_t slba, uint16_t nlb, uint64_t prp1,  uint64_t prp2);
-
-void IO_receive(Nvmeq_context_t *IOctx, Async_transport_ctx * transport_ctx);
-
-
-
-
 #endif /* NVME_TRANSPORT_H */
