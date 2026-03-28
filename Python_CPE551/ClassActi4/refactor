@@ -1,0 +1,57 @@
+class Area:
+    #TODO- must read from an .atxt file that has walls and other info
+    def init(self,id):
+        self.id = id
+        self.name = ''
+        self.wall = []
+        self.entities = []
+        filename = f"area{id}.atxt"
+        if not os.path.exists(filename):
+            print(f"File {filename} is not found")
+
+        with open(filename, 'r') as f:
+            lines = f.readlines()
+            self.name = lines[0]
+
+            for line in lines[1:]:
+                tokens = line.strip().split()
+                match(tokens[0]):
+
+                    #Parse Sky property
+                    case "Sky":
+                        self.sky_color = tokens[1]
+
+                    #Parse Ground property
+                    case "Ground":
+                        self.ground_color =  tokens[1]
+
+                    #Parse Wall property
+                    case "Wall":
+                        self.wall_color = tokens[1]
+                        self.wall.append(tokens[2:])
+
+                    #Parse Entity property
+                    case "Entity":
+                        for name in tokens[1:]:
+                            self.entities.append(name)
+                    case _:
+                        raise Exception(f"Error while parsing the file unknown property : {tokens[0]}")
+
+
+            lines = [line.strip() for line in f if line.strip()]
+            self.name = lines[0]
+            for line in lines[1:]:
+                if line.startswith("Sky"):
+                    self.sky_color = line
+                elif line.startswith("Ground"):
+                    self.ground_color = line
+                elif line.startswith("Wall"):
+                    parts = line.split(',')
+                    for part in parts:
+                        self.wall_color = part[0]
+                        self.wall.append(part[1:])
+                elif line.startswith("Entity"):
+                    name = line.split("'")[1]
+                    self.entities.append(name)
+
+        pass

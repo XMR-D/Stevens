@@ -1,0 +1,99 @@
+import turtle
+
+# Setup Constants
+GRID_SIZE = 10
+CELL_STEP = 40
+START_X, START_Y = -200, 200 # Top-left of the screen
+
+def setup_screen():
+    screen = turtle.Screen()
+    screen.setup(500, 500)
+    screen.tracer(0) # Turns off animation for instant grid drawing
+    return screen
+
+def draw_grid():
+    t = turtle.Turtle()
+    t.penup()
+    t.speed(0)
+    # Draw horizontal and vertical lines
+    for i in range(GRID_SIZE + 1):
+        # Horizontal
+        t.goto(START_X, START_Y - (i * CELL_STEP))
+        t.pendown()
+        t.goto(START_X + (GRID_SIZE * CELL_STEP), START_Y - (i * CELL_STEP))
+        t.penup()
+        # Vertical
+        t.goto(START_X + (i * CELL_STEP), START_Y)
+        t.pendown()
+        t.goto(START_X + (i * CELL_STEP), START_Y - (GRID_SIZE * CELL_STEP))
+        t.penup()
+    t.hideturtle()
+
+def mark_point(x, y, label, color):
+    t = turtle.Turtle()
+    t.penup()
+    # Center the label in the cell
+    t.goto(START_X + (x * CELL_STEP) + 20, START_Y - (y * CELL_STEP) - 30)
+    t.color(color)
+    t.write(label, align="center", font=("Arial", 16, "bold"))
+    t.hideturtle()
+
+def run_simulation(dirt_pos):
+    # Setup Roomba
+    roomba = turtle.Turtle(shape="circle")
+    roomba.color("blue")
+    roomba.shapesize(1.5)
+    roomba.penup()
+    roomba.speed(1)
+    
+    # Initialize state
+    curr_x, curr_y = 0, 0
+    direction = 1 # 1 for Right, -1 for Left
+    
+    def move_to_cell(x, y):
+        screen.update()
+        # Calculate screen coordinates
+        screen_x = START_X + (x * CELL_STEP) + 20
+        screen_y = START_Y - (y * CELL_STEP) - 20
+        roomba.goto(screen_x, screen_y)
+
+    # Phase 1: Search (Snake Pattern)
+    print("Searching...")
+    while (curr_x, curr_y) != dirt_pos:
+        move_to_cell(curr_x, curr_y)
+        
+        # Check if we can move sideways
+        next_x = curr_x + direction
+        if 0 <= next_x < GRID_SIZE:
+            curr_x = next_x
+        else:
+            # Hit wall, move down and flip direction
+            curr_y += 1
+            direction *= -1
+            move_to_cell(curr_x, curr_y)
+
+    move_to_cell(curr_x, curr_y)
+    roomba.color("green") # Found dirt!
+    print("Dirt Found! Returning to dock...")
+
+    # Phase 2: Return to Dock (Direct Path)
+    while curr_x > 0:
+        curr_x -= 1
+        move_to_cell(curr_x, curr_y)
+    while curr_y > 0:
+        curr_y -= 1
+        move_to_cell(curr_x, curr_y)
+
+    print("Back at Dock.")
+
+# Execution
+screen = setup_screen()
+draw_grid()
+
+# Place assets
+dirt_at = (5, 5) # Coordinates from previous example
+mark_point(0, 0, "D", "red")
+mark_point(dirt_at[0], dirt_at[1], "d", "brown")
+
+run_simulation(dirt_at)
+screen.mainloop()
