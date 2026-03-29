@@ -1,6 +1,6 @@
 include mkflags.mk
 
-src-y := $(wildcard src/*.c) $(wildcard src/scheduler/*.c)
+src-y := $(wildcard src/*.c) $(wildcard src/scheduler/*.c) $(wildcard src/nvme_core_funcs/*.c)
 
 all: run_term
 

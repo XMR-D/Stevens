@@ -21,66 +21,50 @@ void _push_cid(Async_transport_ctx * self, uint16_t cid)
 
 }
 
-uint16_t _pop_cid(Async_transport_ctx * self)
+uint32_t _pop_cid(Async_transport_ctx * self)
 {
     uint32_t head = atomic_load_explicit(&self->head, memory_order_relaxed);
     uint32_t tail = atomic_load_explicit(&self->tail, memory_order_acquire);
 
     if (head == tail) {
-        return 0xFFFF;
+        return 0xFFFFFFFF;
     }
 
-    uint16_t cid = self->available_cid[head & 0xFFFF];
+    uint32_t cid = self->available_cid[head & 0xFFFF];
     atomic_store_explicit(&self->head, head + 1, memory_order_release);
     return cid;
 }
 
+
 /*
-   Unified interface to update the transport context to ensure a lock free
-   fluid PMC asynchronous layer.
-
-   Note :
-
-   upon task creation (0->1), cid parameter will be ignored
-
-   return allocated cid for pending state
-   return argument passed cid otherwise
-
-   on errors : return 0xFFFF if no ressources are available
-
-   state = 0 => free
-   state = 1 => pending (submitted to hardware)
-   state = 2 => completed (ready for reaper/scheduler)
+*  Unified interface to update the transport context to ensure a lock free
+*  fluid layer
 */
-void _update_requests(Async_transport_ctx *self, uint16_t cid, uint8_t new_state)
+uint8_t _update_requests(Async_transport_ctx *self, uint8_t new_state, uint8_t new_status, uint16_t cid)
 {
+    uint8_t current = self->TaskTable[cid].state;
+    MEM_FENCE(r, rw);
     uint8_t expected;
 
-    switch (new_state) {
-        /* transition from free to pending state  */
-        case 1:
-            /* change state of the retreived cid and update pending jobs */
-            expected = 0;
-            atomic_compare_exchange_strong(&self->request_status[cid], &expected, 1);
-            break;
-
-        /* transition from pending to completed state  */
-        case 2:
-            expected = 1;
-            atomic_compare_exchange_strong(&self->request_status[cid], &expected, 2);
-            break;
-
-        /* transition from completed to free state  */
-        case 0:
-            expected = 2;
-            if (atomic_compare_exchange_strong(&self->request_status[cid], &expected, 0)) {
-                _push_cid(self, cid);
-            }
-            break;
-
-        default:
-            break;
+    /* Special Case: Direct transition from FREE (0) to DONE (2) 
+     * allowed only if the task is already expired/invalid.
+     */
+    if (new_state == STATE_DONE && current == STATE_FREE && new_status == STATUS_DEADLINE_PASSED) {
+        expected = STATE_FREE;
+    } else {
+        expected = (new_state == STATE_FREE) ? STATE_DONE : (new_state - 1);
     }
+
+    /* Update data (status) before the state barrier */
+    atomic_store(&self->TaskTable[cid].status, new_status);
+
+    /* Atomic state transition */
+    if (!atomic_compare_exchange_strong(&self->TaskTable[cid].state, &expected, new_state)) {
+        printf("[CRITICAL] State sync error: CID %u, Expected %u, Target %u\n", 
+            cid, expected, new_state);
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }
 
 void tctx_class_init(Async_transport_ctx * tctx)

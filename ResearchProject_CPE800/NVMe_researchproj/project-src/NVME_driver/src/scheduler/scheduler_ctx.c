@@ -6,11 +6,12 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
-
+#include <pthread.h>
 
 #include <sys/mman.h>
 
 #include "macros.h"
+#include "benchmark.h"
 
 #include "nvme_sqe.h"
 #include "nvme_transport.h"
@@ -20,11 +21,25 @@
 #include "scheduler_ctx.h"
 #include "IO_transport_ctx.h"
 #include "priority_queues_ctx.h"
+#include "workers.h"
 
-/* Transport SPSC context destructor */
+
+
+/* Scheduler context destructor */
 void _destroy(Scheduler_ctx * self)
 {
     if (self) {
+
+        self->running = 0;
+
+        for (int i = 0; i < NB_PRIO_QUEUE; i++) {
+            if (self->worker_threads[i] != 0) {
+                if (pthread_join(self->worker_threads[i], NULL) != 0) {
+                    L_ERR("Thread Join", "Failed to join worker :");
+                    printf("worker_id : %d\n", i);
+                }
+            }
+        }
         free(self);
     }
 }
@@ -56,84 +71,34 @@ void _log_scheduler(Scheduler_ctx *self)
     L_SUCC("Scheduler status logged successfully");
 }
 
-
-/* IO_receive: Poll to read incoming requests and update the dictionary to signal scheduler
-   a task was completed.
-*/
-void IO_receive(Async_transport_ctx *transport_ctx, Nvmeq_context_t *IOctx)
+void _submit_task(Scheduler_ctx *self, uint16_t cid, uint64_t absolute_deadline, uint64_t timestamp_start, uint64_t queue_ID,
+    uint8_t opc, uint32_t nsid, uint64_t slba, uint16_t nlb, uint64_t prp1, uint64_t prp2)
 {
-    Nvme_cqe_t *cqe = &((Nvme_cqe_t *)IOctx->cq_virt_addr)[IOctx->cq_head];
-    uint8_t processed = 0;
 
-    /* Poll while the Phase Tag (P) matches our expected phase */
-    while ((cqe->dw3.p & 0x1) == IOctx->expected_phase) {
-        processed = 1;
-        uint16_t cid = cqe->cid;
+    atomic_store_explicit(&self->tctx.TaskTable[cid].slba, slba, memory_order_relaxed);
+    atomic_store_explicit(&self->tctx.TaskTable[cid].prp1, prp1, memory_order_relaxed);
+    atomic_store_explicit(&self->tctx.TaskTable[cid].prp2, prp2, memory_order_relaxed);
+    atomic_store_explicit(&self->tctx.TaskTable[cid].nsid, nsid, memory_order_relaxed);
+    atomic_store_explicit(&self->tctx.TaskTable[cid].nlb, nlb, memory_order_relaxed);
+    atomic_store_explicit(&self->tctx.TaskTable[cid].opc, opc, memory_order_relaxed);
+    atomic_store_explicit(&self->tctx.TaskTable[cid].absolute_deadline, absolute_deadline, memory_order_relaxed);
+    atomic_store_explicit(&self->tctx.TaskTable[cid].timestamp_start, timestamp_start, memory_order_relaxed);
+    atomic_store_explicit(&self->tctx.TaskTable[cid].queue_ID, queue_ID, memory_order_relaxed);
 
-        uint16_t status = (cqe->dw3.sf >> 1);
+    /* submit the task to the appropriate queue */
+    self->pqueues[queue_ID].push_Tobj(&self->pqueues[queue_ID], cid, absolute_deadline, timestamp_start);
 
-        transport_ctx->update_requests(transport_ctx, cid, 2);
-
-        if (status != 0) {
-            L_ERR("NVMe IO Error", "Command Status indicating failed operation | command CID = ");
-            printf("cid = %d", cid);
-        }
-        
-        IOctx->cq_head++;
-        if (IOctx->cq_head >= IOctx->cq_depth) {
-            IOctx->cq_head = 0;
-            /* Flip phase bit on wrap-around */
-            IOctx->expected_phase ^= 1; 
-        }
-
-        cqe = &((Nvme_cqe_t *)IOctx->cq_virt_addr)[IOctx->cq_head];
-    }
-
-    /* If we processed completions, update the hardware Head Doorbell */
-    if (processed) {
-        *((volatile uint32_t*) (uintptr_t) IOctx->cq_hdbl) = (uint32_t) IOctx->cq_head;
-    }
 }
 
-
-/* IO_send: Format a Write/Read operation and send it to the NVMe controller
-
-   Note: If the controller is full, IO_send return EXIT_FAILURE and it's up to
-   the scheduler to handle it (reschedule, check for deadline and evict..)
-*/
-int32_t IO_send(Async_transport_ctx *transport_ctx, Nvmeq_context_t *IOctx,  uint8_t opc, uint32_t nsid, uint64_t slba, uint16_t nlb, uint64_t prp1, uint64_t prp2)
+void _dispatch_loop(Scheduler_ctx *self, rnd_bench_ctx_t* bench)
 {
-    
-    uint16_t new_cid = transport_ctx->pop_cid(transport_ctx);
-    
-    if (new_cid != 0xFFFF) {
-
-        /* create request */
-        Nvme_sqe_t ioreq = nvme_create_io_sqe(opc, slba, nlb, prp1, prp2);
-        if (ioreq.opcode == NVME_IO_INVALID) {
-            return -1;
-        }
-
-        ioreq.cid = new_cid;
-        ioreq.nsid = nsid;
-
-        /* Write to the ring buffer (DMA memory) */
-        Nvme_sqe_t * target_slot = &((Nvme_sqe_t *) IOctx->sq_virt_addr)[IOctx->sq_tail];
-        *target_slot = ioreq;
-
-        /* Ensure the command is written to RAM before triggering the doorbell */
-        MEM_FENCE(w, w);
-
-        /* Increment local tail index */
-        IOctx->sq_tail = (IOctx->sq_tail + 1) % IOctx->sq_depth;
-        
-        /* Direct Register Write: Trigger the hardware doorbell */
-        *((volatile uint32_t*) (uintptr_t) IOctx->sq_tdbl) = (uint32_t) IOctx->sq_tail;
-
-        transport_ctx->update_requests(transport_ctx, new_cid, 1);
-        return (int32_t) new_cid;
+    /* Parse requests from benchmark */
+    L_INFO("Dispatcher loop reached");
+    while (self->running) {
+        bench = bench + 1;
+        continue;
     }
-    return -1;
+    L_INFO("Dispatch finished for the actual benchmark, destroying scheduler, so long...");
 }
 
 /* this function create the worker thread using a wrapper for IO_send polling and 
@@ -141,16 +106,33 @@ int32_t IO_send(Async_transport_ctx *transport_ctx, Nvmeq_context_t *IOctx,  uin
 
    once every thread launched, poll for upcomming workloads from the benchmark layer
 */
-void _start_scheduler(void)
+void _start_scheduler(Scheduler_ctx *self, rnd_bench_ctx_t* bench)
 {
-    //TODO
+    /* first init the workers */
+    for (uint8_t i = 0; i < NB_PRIO_QUEUE; i++) {
+        self->worker_ids[i] = i;
+
+        self->thread_args[i].self = self;
+        self->thread_args[i].queue_ID = i;
+        
+        if (pthread_create(&self->worker_threads[i], NULL, worker, &self->thread_args[i]) != 0) {
+            L_ERR("Thread Init", "Failed to spawn sender worker");
+            _destroy(self);
+            return;
+        }
+    }
+
+    L_SUCC("Scheduler: Worker threads created, starting dispatcher");
+    self->running++;
+    _dispatch_loop(self, bench);
+
+    return;
+
 }
 
+
 /* 
-   Transport SPSC context constructor.
-   
-   Note: PLEASE USE A FENCE AFTER CALLING THE FUNCTION TO ENSURE THE STRUCTURE IS CORRECTLY 
-   INSTANCIATED AND THREADS DO NOT START OPERATIONS ON A ILL CONTEXT
+    SCHEDULER CONSTRUCTOR
 */
 Scheduler_ctx * create_scheduler_context(volatile void * bar, Nvmeq_context_t * admin_ctx)
 {
@@ -187,9 +169,10 @@ Scheduler_ctx * create_scheduler_context(volatile void * bar, Nvmeq_context_t * 
 
     L_SUCC("Scheduler Context created successfully");
 
-    obj->destroy = _destroy;
-    obj->log_scheduler = _log_scheduler;
     obj->start_scheduler = _start_scheduler;
+    obj->submit_task = _submit_task;
+    obj->log_scheduler = _log_scheduler;
+    obj->destroy = _destroy;
 
     return obj;
 

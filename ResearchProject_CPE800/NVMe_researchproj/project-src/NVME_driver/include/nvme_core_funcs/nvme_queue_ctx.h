@@ -22,6 +22,7 @@ typedef struct {
     void * nvmeq_buff;        /* Pointer to the contiguous memory block allocated via mmap for both queues */
 
     uint16_t sq_tail;         /* Current write index for the host; updated before ringing the doorbell */
+    uint16_t sq_head;
     uint16_t cq_head;         /* Current read index for the host; updated after consuming a completion entry */
     int8_t expected_phase;    /* Expected Phase Tag (P) bit value to identify new completion entries */
 

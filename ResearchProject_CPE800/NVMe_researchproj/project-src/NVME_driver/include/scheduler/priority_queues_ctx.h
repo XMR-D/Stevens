@@ -15,7 +15,8 @@ typedef struct prio_queue_obj PQueueObj;
 
 struct task_obj {
     uint32_t cid;
-    uint32_t deadline;
+    uint64_t timestamp_start;
+    uint64_t absolute_deadline;
 };
 
 struct prio_queue_obj {
@@ -36,7 +37,7 @@ struct prio_queue_obj {
     /* Class methods*/
 
     /* Used by the dispatcher to submit new tasks */
-    void (*push_Tobj)(PQueueObj *self, uint16_t cid, uint16_t deadline);
+    void (*push_Tobj)(PQueueObj * self, uint16_t cid, uint64_t absolute_deadline, uint64_t timestamp_start);
 
     /* Used by the sender to retreive a job and send it to the transport layer */
     TObj (*pop_Tobj)(PQueueObj *self);

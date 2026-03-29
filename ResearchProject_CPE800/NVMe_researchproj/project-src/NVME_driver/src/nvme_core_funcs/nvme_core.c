@@ -178,6 +178,7 @@ int8_t nvme_init_queue_ctx(Nvmeq_context_t *nvmeq_ctx, volatile Nvme_registers *
     }
 
     nvmeq_ctx->sq_tail = 0;
+    nvmeq_ctx->sq_head = 0;
     nvmeq_ctx->cq_head = 0;
     nvmeq_ctx->expected_phase = 1;
 

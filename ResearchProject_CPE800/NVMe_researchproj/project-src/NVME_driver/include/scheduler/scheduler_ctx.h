@@ -1,14 +1,21 @@
 #ifndef SCHEDULER_CTX_H
 #define SCHEDULER_CTX_H
 
+#include <pthread.h>
+
+#include "benchmark.h"
+
 #include "nvme_queue_ctx.h"
 
 #include "IO_transport_ctx.h"
 #include "priority_queues_ctx.h"
 
+
 typedef struct scheduler_ctx Scheduler_ctx;
 
 #define NB_PRIO_QUEUE 3
+
+#include "workers.h"
 
 struct scheduler_ctx {
 
@@ -18,9 +25,20 @@ struct scheduler_ctx {
     /* Child class that contain priority queues and related methods */
     alignas(64) PQueueObj pqueues[NB_PRIO_QUEUE];
 
+    /* Scheduler state */
+    _Atomic uint8_t running;
+
+    worker_arg_t thread_args[NB_PRIO_QUEUE];
+    pthread_t worker_threads[NB_PRIO_QUEUE];
+    int worker_ids[NB_PRIO_QUEUE];
+
+    /* Create a new task inside the Metadata table */
+    void (*submit_task)(Scheduler_ctx *self, uint16_t cid, uint64_t absolute_deadline, uint64_t timestamp_start, uint64_t queue_ID,
+    uint8_t opc, uint32_t nsid, uint64_t slba, uint16_t nlb, uint64_t prp1, uint64_t prp2);
+
     void (*destroy)(Scheduler_ctx *self);
     void (*log_scheduler)(Scheduler_ctx *self);
-    void (*start_scheduler)(void);
+    void (*start_scheduler)(Scheduler_ctx *self, rnd_bench_ctx_t* bench);
     
 };
 
