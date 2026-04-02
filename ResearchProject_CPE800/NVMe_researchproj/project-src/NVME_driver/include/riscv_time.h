@@ -1,17 +1,19 @@
 #ifndef RISCV_TIME_H
 #define RISCV_TIME_H
 
+#include <time.h>
 /*
  * get_riscv_tick - Read the 64-bit cycle counter (CSR)
  * * Note: On 32-bit RISC-V, you'd need to read 'cycleh' and 'cycle' separately.
  * On 64-bit (Aarch64/RV64), a single rdcycle instruction is sufficient.
  */
-static inline uint64_t get_riscv_tick(void) 
-{
-    uint64_t cycles;
-    // Reading the 'cycle' Control and Status Register (CSR)
-    __asm__ volatile ("rdcycle %0" : "=r" (cycles));
-    return cycles;
+#include <time.h>
+
+static inline uint64_t get_riscv_tick(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    /* Convert to a synthetic tick (nanoseconds) */
+    return (uint64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
 }
 
 /*

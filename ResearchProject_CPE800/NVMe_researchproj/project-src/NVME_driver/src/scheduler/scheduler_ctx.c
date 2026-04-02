@@ -1,8 +1,11 @@
+#define _GNU_SOURCE
+
 #include <err.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <sched.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -22,7 +25,6 @@
 #include "IO_transport_ctx.h"
 #include "priority_queues_ctx.h"
 #include "workers.h"
-
 
 
 /* Scheduler context destructor */
@@ -61,8 +63,8 @@ void _log_scheduler(Scheduler_ctx *self)
         printf("Queue [%d] (QID: %d):\n", i, i + 1);
         printf("  -> Virtual SQ Base: 0x%016lx\n", q->io_ctx.sq_virt_addr);
         printf("  -> Virtual CQ Base: 0x%016lx\n", q->io_ctx.cq_virt_addr);
-        printf("  -> Doorbell SQ Tail: 0x%016x\n", q->io_ctx.sq_tdbl);
-        printf("  -> Doorbell CQ Head: 0x%016x\n", q->io_ctx.cq_hdbl);
+        printf("  -> Doorbell SQ Tail: 0x%016lx\n", q->io_ctx.sq_tdbl);
+        printf("  -> Doorbell CQ Head: 0x%016lx\n", q->io_ctx.cq_hdbl);
         printf("  -> Current Indices: SQ_T=%u | CQ_H=%u\n", q->io_ctx.sq_tail, q->io_ctx.cq_head);
         printf("  -> Expected Phase:  %d\n", q->io_ctx.expected_phase);
         printf("------------------------------------------------\n");
@@ -71,34 +73,106 @@ void _log_scheduler(Scheduler_ctx *self)
     L_SUCC("Scheduler status logged successfully");
 }
 
-void _submit_task(Scheduler_ctx *self, uint16_t cid, uint64_t absolute_deadline, uint64_t timestamp_start, uint64_t queue_ID,
-    uint8_t opc, uint32_t nsid, uint64_t slba, uint16_t nlb, uint64_t prp1, uint64_t prp2)
+/* Create and submit a task to the appropriate queue */
+static inline void submit_task(Scheduler_ctx *self, uint16_t cid, uint32_t queue_id, const bench_req_t *task)
 {
+    /* Use local pointer for readability and potential compiler optimization */
+    volatile IO_metadata_t *entry = &self->tctx.TaskTable[cid];
 
-    atomic_store_explicit(&self->tctx.TaskTable[cid].slba, slba, memory_order_relaxed);
-    atomic_store_explicit(&self->tctx.TaskTable[cid].prp1, prp1, memory_order_relaxed);
-    atomic_store_explicit(&self->tctx.TaskTable[cid].prp2, prp2, memory_order_relaxed);
-    atomic_store_explicit(&self->tctx.TaskTable[cid].nsid, nsid, memory_order_relaxed);
-    atomic_store_explicit(&self->tctx.TaskTable[cid].nlb, nlb, memory_order_relaxed);
-    atomic_store_explicit(&self->tctx.TaskTable[cid].opc, opc, memory_order_relaxed);
-    atomic_store_explicit(&self->tctx.TaskTable[cid].absolute_deadline, absolute_deadline, memory_order_relaxed);
-    atomic_store_explicit(&self->tctx.TaskTable[cid].timestamp_start, timestamp_start, memory_order_relaxed);
-    atomic_store_explicit(&self->tctx.TaskTable[cid].queue_ID, queue_ID, memory_order_relaxed);
+    /* Direct extraction from the task structure */
+    entry->slba = task->slba;
+    entry->prp1 = task->prp1;
+    entry->prp2 = task->prp2;
+    entry->nsid = task->nsid;
+    entry->nlb = task->nlb;
+    entry->opc = task->opc;
+    entry->absolute_deadline = task->absolute_deadline;
+    entry->timestamp_start = task->timestamp_submit;
+    entry->queue_ID = queue_id;
 
-    /* submit the task to the appropriate queue */
-    self->pqueues[queue_ID].push_Tobj(&self->pqueues[queue_ID], cid, absolute_deadline, timestamp_start);
+    atomic_thread_fence(memory_order_release);
 
+    /* Submit to the priority queue's object manager */
+    atomic_fetch_add(&self->pqueues[queue_id].service_time, task->expected_duration);
+
+    self->pqueues[queue_id].push_Tobj(&self->pqueues[queue_id], cid, task->absolute_deadline, task->timestamp_submit);
+}
+
+/* test all the priority queues to check where to place the workload based on it's */
+static inline uint32_t queue_select(Scheduler_ctx *self, bench_req_t * req)
+{
+    for (uint32_t i = 0; i < NB_PRIO_QUEUE; i++) {
+
+        /* retreive the service time */
+        uint64_t q_ready = atomic_load_explicit(&self->pqueues[i].service_time, memory_order_relaxed);
+
+        if (q_ready + req->expected_duration <= req->latency_budget_ticks) {
+            return i;
+        }
+    }
+    return 0xFFFFFFFF;
 }
 
 void _dispatch_loop(Scheduler_ctx *self, rnd_bench_ctx_t* bench)
 {
+    bench_req_t generated_task;
     /* Parse requests from benchmark */
     L_INFO("Dispatcher loop reached");
     while (self->running) {
-        bench = bench + 1;
-        continue;
+
+        /* Retreive the task from the benchmark */
+        if (!get_next_bench_request(bench, &generated_task)) {
+            L_INFO("All task from benchmark have been treated, signaling everyone to stop");
+            L_INFO("waiting a bit before exiting");
+            self->running = 0;
+            continue;
+        }
+
+        /* Estimate the absolute deadline required for the operation */
+        /* Read / Write time based on the task size */
+        /* Decide based on the service time of each queue where to place task */
+        uint32_t queue_id = queue_select(self, &generated_task);
+        uint32_t t_cid = self->tctx.pop_cid(&self->tctx);
+
+        if (t_cid == 0xFFFFFFFF) {
+            bench->requests_not_accepted++;
+            bench->drop_reason_no_cid++;
+            continue;
+        }
+
+        if (queue_id == 0xFFFFFFFF) {
+            /* No queue available at this point so just mark it as unable to process to benchmark */
+            bench->requests_not_accepted++;
+            bench->drop_reason_queue_full++;
+            continue;
+        }
+
+        uint32_t head = atomic_load_explicit(&self->pqueues[queue_id].head, memory_order_acquire);
+        uint32_t tail = atomic_load_explicit(&self->pqueues[queue_id].tail, memory_order_relaxed);
+
+        /* check if the queue is full, unlinkely to happen*/
+        if ((tail - head) < 0x10000) {
+            submit_task(self, t_cid, queue_id, &generated_task);
+        } else {
+            /* mark the cid free again and mark the request as not accepted */
+            self->tctx.push_cid(&self->tctx, t_cid);
+            bench->requests_not_accepted++;
+        }
     }
     L_INFO("Dispatch finished for the actual benchmark, destroying scheduler, so long...");
+}
+
+
+static void pin_thread_to_core(pthread_t thread, int core_id) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core_id, &cpuset);
+
+    if (pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset) != 0) {
+        printf("Affinity: Failed to pin thread to core %d", core_id);
+    } else {
+        printf("[INFO] Thread pinned to core %d\n", core_id);
+    }
 }
 
 /* this function create the worker thread using a wrapper for IO_send polling and 
@@ -108,6 +182,12 @@ void _dispatch_loop(Scheduler_ctx *self, rnd_bench_ctx_t* bench)
 */
 void _start_scheduler(Scheduler_ctx *self, rnd_bench_ctx_t* bench)
 {
+    /* enable the scheduler */
+    self->running++;
+
+    /* core 0 is used by the main thread */
+    int current_core = 1;
+
     /* first init the workers */
     for (uint8_t i = 0; i < NB_PRIO_QUEUE; i++) {
         self->worker_ids[i] = i;
@@ -120,10 +200,20 @@ void _start_scheduler(Scheduler_ctx *self, rnd_bench_ctx_t* bench)
             _destroy(self);
             return;
         }
+        pin_thread_to_core(self->worker_threads[i], current_core++);
     }
+    L_SUCC("Scheduler: Request submission worker threads created");
 
-    L_SUCC("Scheduler: Worker threads created, starting dispatcher");
-    self->running++;
+    self->reap_arg.self = self;
+    self->reap_arg.bench = bench;
+    L_INFO("Creating reaper thread");
+    if (pthread_create(&self->reap_thread, NULL, reap_worker, &self->reap_arg) != 0) {
+        L_ERR("Thread Init", "Failed to spawn reaper worker");
+        _destroy(self);
+        return;
+    }
+    L_SUCC("Scheduler: reaper thread created, starting dispatcher");
+
     _dispatch_loop(self, bench);
 
     return;
@@ -151,7 +241,7 @@ Scheduler_ctx * create_scheduler_context(volatile void * bar, Nvmeq_context_t * 
     L_INFO("Attempting to initialize Asynchronous context");
     tctx_class_init(&obj->tctx);
 
-    /* STEP 1 : Request  NB_PRIO_QUEUE SQ/CQ queue pairs */
+    /* Request  NB_PRIO_QUEUE SQ/CQ queue pairs */
     uint32_t q_count = ((NB_PRIO_QUEUE - 1) << 16) | (NB_PRIO_QUEUE - 1);
     L_INFO("Sending Set feature request");
     if (admin_send(bar, nvme_create_set_features_sqe(0x07, q_count), admin_ctx, 0)) 
@@ -161,6 +251,7 @@ Scheduler_ctx * create_scheduler_context(volatile void * bar, Nvmeq_context_t * 
     /* for each context init an I/O nvme queue pair and send a create command */
     for (uint8_t i = 0; i < NB_PRIO_QUEUE; i++) {
         L_INFO("Attempting to initialize new prio queue : ");
+        printf("[NEW] IO Queue %d BAR base: %p\n", i, bar);
         if (pqueue_class_init(bar, admin_ctx, &(obj->pqueues[i]), pagemap_fd, i+1) == EXIT_FAILURE) {
             _destroy(obj);
             return NULL;
@@ -170,7 +261,6 @@ Scheduler_ctx * create_scheduler_context(volatile void * bar, Nvmeq_context_t * 
     L_SUCC("Scheduler Context created successfully");
 
     obj->start_scheduler = _start_scheduler;
-    obj->submit_task = _submit_task;
     obj->log_scheduler = _log_scheduler;
     obj->destroy = _destroy;
 

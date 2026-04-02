@@ -17,6 +17,7 @@ struct task_obj {
     uint32_t cid;
     uint64_t timestamp_start;
     uint64_t absolute_deadline;
+    uint64_t expected_duration;
 };
 
 struct prio_queue_obj {
@@ -27,12 +28,12 @@ struct prio_queue_obj {
     /* Dispatcher access head */
     alignas(64) _Atomic uint32_t head; 
 
-    /* Sender access tail and io_ctx */
+    /* Sender access tail and SQ/CQ pairs in form of io_ctx */
     alignas(64) _Atomic uint32_t tail;
-
     alignas(64) Nvmeq_context_t io_ctx;
 
-    uint8_t nb_in_batch;
+    /* time required for a new task to be executed regarding the state of all others */
+    _Atomic uint64_t service_time;
 
     /* Class methods*/
 

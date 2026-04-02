@@ -8,6 +8,13 @@ typedef struct {
     uint8_t queue_ID;
 } worker_arg_t;
 
-void * worker(void* arg);
+typedef struct {
+    Scheduler_ctx *self;
+    rnd_bench_ctx_t* bench;
+} reaper_arg_t;
+
+void* worker(void* arg);
+void* reap_worker(void* arg);
+
 
 #endif /* WORKERS_H */

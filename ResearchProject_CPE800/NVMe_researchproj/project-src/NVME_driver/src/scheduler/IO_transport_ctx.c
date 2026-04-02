@@ -35,34 +35,25 @@ uint32_t _pop_cid(Async_transport_ctx * self)
     return cid;
 }
 
-
 /*
 *  Unified interface to update the transport context to ensure a lock free
 *  fluid layer
 */
-uint8_t _update_requests(Async_transport_ctx *self, uint8_t new_state, uint8_t new_status, uint16_t cid)
+uint8_t _update_requests(Async_transport_ctx *self, uint8_t expected, uint8_t next, uint8_t status, uint16_t cid)
 {
-    uint8_t current = self->TaskTable[cid].state;
-    MEM_FENCE(r, rw);
-    uint8_t expected;
+    /* Update status before state transition */
+    atomic_store_explicit(&self->TaskTable[cid].status, status, memory_order_relaxed);
 
-    /* Special Case: Direct transition from FREE (0) to DONE (2) 
-     * allowed only if the task is already expired/invalid.
-     */
-    if (new_state == STATE_DONE && current == STATE_FREE && new_status == STATUS_DEADLINE_PASSED) {
-        expected = STATE_FREE;
-    } else {
-        expected = (new_state == STATE_FREE) ? STATE_DONE : (new_state - 1);
-    }
-
-    /* Update data (status) before the state barrier */
-    atomic_store(&self->TaskTable[cid].status, new_status);
-
-    /* Atomic state transition */
-    if (!atomic_compare_exchange_strong(&self->TaskTable[cid].state, &expected, new_state)) {
-        printf("[CRITICAL] State sync error: CID %u, Expected %u, Target %u\n", 
-            cid, expected, new_state);
-        return EXIT_FAILURE;
+    /* Atomic CAS: handles spurious failures and ensures memory visibility */
+    while (!atomic_compare_exchange_strong_explicit(&self->TaskTable[cid].state, 
+                                                   &expected, next, 
+                                                   memory_order_acq_rel, 
+                                                   memory_order_acquire)) {
+        /* If state changed under our feet, it's a real sync error */
+        if (expected != 0 && expected != 1 && expected != 2) { // Logic check
+            printf("[CRITICAL] Sync Error: CID %u, State was %u\n", cid, expected);
+            return EXIT_FAILURE;
+        }
     }
     return EXIT_SUCCESS;
 }

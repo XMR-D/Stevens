@@ -112,6 +112,8 @@ int8_t nvme_init_handshake(volatile void * pci_bar, Nvmeq_context_t *admin_ctx) 
 
     L_INFO("Trying to init NVMe admin context and controller");
 
+    printf("[OLD] Admin BAR virtual base: %p\n", pci_bar);
+
     /* Get NVMe registers to init the admin_ctx */
     volatile Nvme_registers * regs = (volatile Nvme_registers *) pci_bar;
 
@@ -184,14 +186,16 @@ int8_t nvme_init_queue_ctx(Nvmeq_context_t *nvmeq_ctx, volatile Nvme_registers *
 
     /* Get Doorbell Stride (CAP.DSTRD) from bits 32:35 and calculate stride in bytes: (4 << DSTRD) */
     uint32_t dstrd = (regs->cap >> 32) & 0xF;
-    uint32_t stride = 4 << dstrd;
-
+    uint32_t step = 4 << dstrd;
     /* Calculate Doorbell offsets: 0x1000 is the base offset for all DBs in BAR0.
        Each qid has a pair of 32-bit registers (SQ Tail then CQ Head) spaced by stride.
     */
-    nvmeq_ctx->sq_tdbl = (uint64_t)((uint8_t *)regs + 0x1000 + (2 * qid * stride));
-    nvmeq_ctx->cq_hdbl = (uint64_t)((uint8_t *)regs + 0x1000 + ((2 * qid + 1) * stride));
+    nvmeq_ctx->sq_tdbl = (uint64_t)((uint8_t *)regs + 0x1000 + (2 * qid * step));
+    nvmeq_ctx->cq_hdbl = (uintptr_t)regs + 0x1000 + (uintptr_t)((2 * qid + 1) * step);
 
+    printf("[CRITICAL DEBUG] QID %lu: regs=%p, calculation result=%lx\n", 
+        qid, (void*) regs, nvmeq_ctx->sq_tdbl);
+    
     /* Queue configuration on controler */
     if (is_admin) {
         SET_NVME_REG_64(&(regs->asq), nvmeq_ctx->sq_phys_addr);

@@ -42,8 +42,6 @@ TObj _pop_Tobj(PQueueObj * self)
     if (head == tail) {
         TObj tobject;
         tobject.cid = 0xFFFFFFFF;
-        tobject.absolute_deadline = 0xFFFFFFFFFFFFFFFF;
-        tobject.timestamp_start = 0xFFFFFFFFFFFFFFFF;
         return tobject;
     }
 
@@ -58,7 +56,7 @@ int8_t pqueue_class_init(volatile void * bar, Nvmeq_context_t * admin_ctx, PQueu
     volatile Nvme_registers * regs = (volatile Nvme_registers *) bar;
 
     void * nvmeq_buffer = mmap(NULL, DEVICE_NVMEQ_BUFF_SIZE, PROT_READ | PROT_WRITE, 
-                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+                MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     if (nvmeq_buffer == NULL || nvmeq_buffer == MAP_FAILED) {
         return EXIT_FAILURE;
     }

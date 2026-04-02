@@ -24,6 +24,9 @@
 
 #include "scheduler_ctx.h"
 
+/* declare it as static to keep it in bss section and avoid immediate segfault */
+static rnd_bench_ctx_t * b_ctx;
+
 static inline void driver_exit(volatile void * pci_bar, Nvmeq_context_t *admin_ctx, Scheduler_ctx * sctx)
 {
     L_INFO("Destroying NVMe contexts and unmaping pci bar register mapped to NVMe device");
@@ -80,6 +83,21 @@ static int8_t driver_enter(char * res_path, char * bdf)
 
 
     /* PHASE 2 : ASYNCHRONOUS MODE FOR BENCHMARKING */
+    L_INFO("Attempting to generate benchmark....");
+    b_ctx = calloc(1, sizeof(rnd_bench_ctx_t));
+    if (b_ctx == NULL) {
+        L_ERR("Benchmark", "Null benchmark exiting.");
+        driver_exit(pci_bar, admin_ctx, NULL);
+        return EXIT_SUCCESS;
+    }
+    b_ctx->cpu_freq_mhz = 10;
+    b_ctx->max_requests = NB_WORLOADS;
+    b_ctx->read_ratio = 30;
+    b_ctx->seed = 0xdeadbeef;
+
+    printf("bench = %p\n", b_ctx);
+
+
     L_INFO("Attempting to create the scheduler context");
     Scheduler_ctx * scheduler = create_scheduler_context(pci_bar, admin_ctx);
     if (scheduler == NULL) {
@@ -90,14 +108,12 @@ static int8_t driver_enter(char * res_path, char * bdf)
     L_SUCC("Scheduler context created");
     scheduler->log_scheduler(scheduler);
 
-    rnd_bench_ctx_t my_bench = {
-        .max_requests  = 1000000,               // 1 Million requests
-        .current_count = 0,                     // start from 0
-        .seed          = 0xDEADBEEF,            // fixed seed
-        .read_ratio    = 50                     // Read/Write ratio
-    };
+    generate_workload_buffer(b_ctx);
+    printf("bench post workload buffer init = %p\n", b_ctx);
 
-    scheduler->start_scheduler(scheduler, &my_bench);
+    scheduler->start_scheduler(scheduler, b_ctx);
+
+    log_benchmark(b_ctx);
 
     driver_exit(pci_bar, admin_ctx, scheduler);
     return EXIT_SUCCESS;

@@ -20,7 +20,7 @@ typedef struct async_transport_ctx Async_transport_ctx;
 #define STATE_DONE      2
 
 #define STATUS_SUCCESS              0
-#define STATUS_PENDING               1
+#define STATUS_PENDING              1
 #define STATUS_ERR_NVME             2
 #define STATUS_DEADLINE_PASSED      3
 
@@ -39,11 +39,9 @@ typedef struct {
 
     /* Additional infos for rescheduling */
     _Atomic uint64_t absolute_deadline;
+    _Atomic uint64_t expected_duration;
     _Atomic uint64_t timestamp_start;
-    _Atomic uint64_t queue_ID;
-
-    /* padding for cache optimization */
-    uint8_t pad[15];
+    _Atomic uint32_t queue_ID;
 
 }__attribute__((aligned(64))) IO_metadata_t;
 
@@ -65,7 +63,7 @@ struct async_transport_ctx {
     uint32_t (*pop_cid)(Async_transport_ctx *self);
 
     /* Update CID status (op=1 for add, op=0 for remove) after queue submission */
-    uint8_t (*update_requests)(Async_transport_ctx *self, uint8_t new_state, uint8_t new_status, uint16_t cid);
+    uint8_t (*update_requests)(Async_transport_ctx *self, uint8_t expected, uint8_t new_state, uint8_t new_status, uint16_t cid);
 
 };
 

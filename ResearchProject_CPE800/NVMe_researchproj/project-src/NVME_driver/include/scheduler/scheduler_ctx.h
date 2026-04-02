@@ -30,18 +30,23 @@ struct scheduler_ctx {
 
     worker_arg_t thread_args[NB_PRIO_QUEUE];
     pthread_t worker_threads[NB_PRIO_QUEUE];
-    int worker_ids[NB_PRIO_QUEUE];
 
-    /* Create a new task inside the Metadata table */
-    void (*submit_task)(Scheduler_ctx *self, uint16_t cid, uint64_t absolute_deadline, uint64_t timestamp_start, uint64_t queue_ID,
-    uint8_t opc, uint32_t nsid, uint64_t slba, uint16_t nlb, uint64_t prp1, uint64_t prp2);
+    reaper_arg_t reap_arg;
+    pthread_t reap_thread;
+
+    int worker_ids[NB_PRIO_QUEUE];
 
     void (*destroy)(Scheduler_ctx *self);
     void (*log_scheduler)(Scheduler_ctx *self);
     void (*start_scheduler)(Scheduler_ctx *self, rnd_bench_ctx_t* bench);
-    
+
 };
 
 Scheduler_ctx * create_scheduler_context(volatile void * bar, Nvmeq_context_t * admin_ctx);
 
+
+/*
+
+
+*/
 #endif

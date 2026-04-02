@@ -4,26 +4,45 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* Benchmark Context: Stores the state of the random generator */
-typedef struct {
-    uint32_t max_requests;    // N requests limit
-    uint32_t current_count;   // Current progress
-    uint32_t seed;            // Seed for reproducibility (rand_r)
-    uint8_t  read_ratio;      // Percentage of Reads (e.g., 70 for 70/30 R/W)
-} rnd_bench_ctx_t;
+#define NB_WORLOADS 1000000
 
-/* Benchmark Request: sent to the Dispatcher */
 typedef struct {
-    uint64_t slba;              // Starting LBA
-    uint32_t nsid;              // Namespace ID
-    uint16_t nlb;               // Number of Blocks
-    uint8_t  opc;               // Opcode (0x01: Write, 0x02: Read)
-    uint64_t latency_budget_us; // Budget in microseconds
-    uint64_t timestamp_submit;  // Start cycle (submission time)
+    uint64_t latency_budget_ticks;
+    uint64_t expected_duration;
+    uint64_t timestamp_submit;
+    uint64_t absolute_deadline;
+    uint64_t slba;
+    uint64_t prp1;              
+    uint64_t prp2;
+    uint32_t nsid;
+    uint16_t nlb;
+    uint8_t  opc;
 } bench_req_t;
 
+typedef struct {
+    uint32_t max_requests;
+    uint32_t head;
+    uint32_t tail;
+    uint32_t seed;
+    uint64_t requests_completed;    /* Successfully processed by worker */
+    uint64_t requests_not_accepted; /* Dropped by dispatcher (no queue/CID) */
+    uint64_t requests_failed;       /* Processed but missed deadline */    
+    uint64_t drop_reason_already_expired; /* passed_deadline */
+    uint64_t drop_reason_no_cid;          /* Plus de place dans la queue (CID) */
+    uint64_t drop_reason_queue_full;      /* SQ pleine */
+    uint8_t  read_ratio;
+    uint64_t cpu_freq_mhz;
 
-/* Function pointer type for the provider */
-typedef bool (*bench_provider_t)(void *ctx, bench_req_t *out_req);
+    bench_req_t buffer[NB_WORLOADS];
+
+} rnd_bench_ctx_t;
+
+/* Pre-fills the buffer to isolate random generation overhead */
+void generate_workload_buffer(rnd_bench_ctx_t *b_ctx);
+
+/* O(1) consumer for the dispatch loop */
+bool get_next_bench_request(void *ctx, bench_req_t *out_req);
+
+void log_benchmark(rnd_bench_ctx_t * bench);
 
 #endif
