@@ -73,7 +73,7 @@ static int8_t driver_enter(char * res_path, char * bdf)
 
     /*
         PHASE 1 : SYNCHRONOUS MODE FOR INITIALISATION
-        NVMe initialization handshake (step 1/2)
+        NVMe initialization handshake
     */
     if (nvme_init_handshake(pci_bar, admin_ctx) == EXIT_FAILURE) {
         driver_exit(pci_bar, admin_ctx, NULL);
@@ -99,7 +99,6 @@ static int8_t driver_enter(char * res_path, char * bdf)
 
     printf("bench = %p\n", b_ctx);
 
-
     L_INFO("Attempting to create the scheduler context");
     Scheduler_ctx * scheduler = create_scheduler_context(pci_bar, admin_ctx);
     if (scheduler == NULL) {
@@ -108,10 +107,9 @@ static int8_t driver_enter(char * res_path, char * bdf)
     }
 
     L_SUCC("Scheduler context created");
-    //scheduler->log_scheduler(scheduler);
 
+    L_INFO("generating workload buffer and starting scheduler");
     generate_workload_buffer(b_ctx);
-    printf("bench post workload buffer init = %p\n", b_ctx);
 
     scheduler->start_scheduler(scheduler, b_ctx);
 

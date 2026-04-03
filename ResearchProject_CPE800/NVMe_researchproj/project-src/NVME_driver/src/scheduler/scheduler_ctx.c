@@ -187,9 +187,11 @@ void _dispatch_loop(Scheduler_ctx *self, rnd_bench_ctx_t* bench)
         /* Read / Write time based on the task size */
         /* Decide based on the service time of each queue where to place task */
 
-        uint32_t t_cid;
-        while ((t_cid = self->tctx.pop_cid(&self->tctx)) == 0xFFFFFFFF) {
-            __asm__ volatile ("pause" ::: "memory"); // Laisser respirer le CPU
+        uint32_t t_cid = self->tctx.pop_cid(&self->tctx);
+        if (t_cid == 0xFFFFFFFF) {
+            bench->requests_not_accepted++;
+            bench->drop_reason_no_cid++;
+            continue;
         }
 
         uint32_t queue_id = queue_id = queue_select(self, &generated_task);
@@ -202,7 +204,7 @@ void _dispatch_loop(Scheduler_ctx *self, rnd_bench_ctx_t* bench)
         uint32_t head = atomic_load_explicit(&self->pqueues[queue_id].head, memory_order_acquire);
         uint32_t tail = atomic_load_explicit(&self->pqueues[queue_id].tail, memory_order_relaxed);
 
-        /* check if the queue is full, unlinkely to happen*/
+        /* check if the queue is full */
         if ((tail - head) < PQUEUE_CAP) {
             submit_task(self, t_cid, queue_id, &generated_task);
         } else {
@@ -244,6 +246,7 @@ void _start_scheduler(Scheduler_ctx *self, rnd_bench_ctx_t* bench)
         self->worker_states[i] = 1;
         self->thread_args[i].self = self;
         self->thread_args[i].queue_ID = i;
+        self->thread_args[i].bench = bench;
         
         if (pthread_create(&self->worker_threads[i], NULL, worker, &self->thread_args[i]) != 0) {
             L_ERR("Thread Init", "Failed to spawn sender worker");

@@ -46,9 +46,4 @@ struct scheduler_ctx {
 
 Scheduler_ctx * create_scheduler_context(volatile void * bar, Nvmeq_context_t * admin_ctx);
 
-
-/*
-
-
-*/
 #endif

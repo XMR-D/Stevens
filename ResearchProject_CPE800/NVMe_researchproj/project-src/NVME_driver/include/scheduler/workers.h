@@ -6,6 +6,7 @@
 typedef struct {
     Scheduler_ctx *self;
     uint8_t queue_ID;
+    rnd_bench_ctx_t* bench;
 } worker_arg_t;
 
 typedef struct {

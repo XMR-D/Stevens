@@ -116,6 +116,8 @@ void * worker(void* arg)
     worker_arg_t *args = (worker_arg_t *) arg;
     Scheduler_ctx *self = args->self;
     uint8_t queue_ID = args->queue_ID;
+    rnd_bench_ctx_t* bench = args->bench;
+    
     Nvmeq_context_t *io_ctx = &self->pqueues[queue_ID].io_ctx;
 
     if (!io_ctx || !self) {
@@ -160,11 +162,16 @@ void * worker(void* arg)
         /* Check for task deadline */
         uint64_t current_time = get_riscv_tick();
         if (current_time > task.absolute_deadline) {
+            
+            bench->requests_not_accepted++;
+            bench->drop_reason_already_expired++;
+
             /* Update the request */
             if(self->tctx.update_requests(&self->tctx, STATE_FREE, STATE_DONE, STATUS_DEADLINE_PASSED, task.cid) == EXIT_FAILURE) {
                 self->worker_states[queue_ID] = 0;
                 break;
             }
+
         } else {
             /* Send the IO */
             if (IO_send(&self->tctx, io_ctx, task.cid)) {

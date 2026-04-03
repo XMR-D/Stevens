@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define NB_WORLOADS 10000
+#define NB_WORLOADS 1000
 
 typedef struct {
     uint64_t latency_budget_ticks;
