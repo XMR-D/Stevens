@@ -21,7 +21,6 @@
 
 void _push_Tobj(PQueueObj * self, uint16_t cid, uint64_t absolute_deadline, uint64_t timestamp_start)
 {
-    
     uint32_t tail = atomic_load_explicit(&self->tail, memory_order_relaxed);
     TObj tobject;
     tobject.cid = cid;
@@ -57,6 +56,7 @@ int8_t pqueue_class_init(volatile void * bar, Nvmeq_context_t * admin_ctx, PQueu
 
     void * nvmeq_buffer = mmap(NULL, DEVICE_NVMEQ_BUFF_SIZE, PROT_READ | PROT_WRITE, 
                 MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
     if (nvmeq_buffer == NULL || nvmeq_buffer == MAP_FAILED) {
         return EXIT_FAILURE;
     }
@@ -68,6 +68,8 @@ int8_t pqueue_class_init(volatile void * bar, Nvmeq_context_t * admin_ctx, PQueu
     obj->io_ctx.sq_depth = NVME_QUEUE_DEPTH;
     obj->io_ctx.cq_depth = NVME_QUEUE_DEPTH;
     obj->io_ctx.nvmeq_buff = nvmeq_buffer;
+
+    obj->service_time = 0;
     
     if (nvme_init_queue_ctx(&(obj->io_ctx), regs, i, 0) == EXIT_FAILURE) {
         return EXIT_FAILURE;

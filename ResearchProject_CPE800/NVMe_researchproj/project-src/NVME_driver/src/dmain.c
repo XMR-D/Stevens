@@ -15,6 +15,7 @@
 
 #include "macros.h"
 #include "benchmark.h"
+#include "riscv_time.h"
 
 #include "nvme_core.h"
 #include "nvme_spec.h"
@@ -85,6 +86,7 @@ static int8_t driver_enter(char * res_path, char * bdf)
     /* PHASE 2 : ASYNCHRONOUS MODE FOR BENCHMARKING */
     L_INFO("Attempting to generate benchmark....");
     b_ctx = calloc(1, sizeof(rnd_bench_ctx_t));
+
     if (b_ctx == NULL) {
         L_ERR("Benchmark", "Null benchmark exiting.");
         driver_exit(pci_bar, admin_ctx, NULL);
@@ -106,14 +108,12 @@ static int8_t driver_enter(char * res_path, char * bdf)
     }
 
     L_SUCC("Scheduler context created");
-    scheduler->log_scheduler(scheduler);
+    //scheduler->log_scheduler(scheduler);
 
     generate_workload_buffer(b_ctx);
     printf("bench post workload buffer init = %p\n", b_ctx);
 
     scheduler->start_scheduler(scheduler, b_ctx);
-
-    log_benchmark(b_ctx);
 
     driver_exit(pci_bar, admin_ctx, scheduler);
     return EXIT_SUCCESS;

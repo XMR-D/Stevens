@@ -35,9 +35,9 @@
 
 /* NVME CUSTOM DEFINITIONS */
 
-#define NVME_QUEUE_DEPTH 128            /* starting value for queue depth */
-#define PAGESIZE 4096                   /* Mem page size */
-#define NVME_BUSY_WAIT_THRESHOLD 1000   /* Nb of iteration for busy wait optimization */
+#define NVME_QUEUE_DEPTH 2048          /* starting value for queue depth */
+#define PAGESIZE 4096                  /* Mem page size */
+#define NVME_BUSY_WAIT_THRESHOLD 1000  /* Nb of iteration for busy wait optimization */
 #define NVME_MAX_CID 65534             /* Nb of total possible cid to indentify tasks */
 /* 
  * 16KB is sufficient for standard NVMe controller registers.

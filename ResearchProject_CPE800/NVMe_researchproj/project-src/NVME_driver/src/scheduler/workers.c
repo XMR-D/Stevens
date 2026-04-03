@@ -124,10 +124,11 @@ void * worker(void* arg)
 
     printf("Worker %d : Up and running.\n", queue_ID);
 
-    while (self->running) {
+    while (1) {
 
         if (IO_receive(&self->tctx, io_ctx) == -1) {
-            self->running = 0;
+            self->worker_states[queue_ID] = 0;
+            break;
         }
 
         /* 
@@ -140,9 +141,16 @@ void * worker(void* arg)
         }
 
         TObj task = self->pqueues[queue_ID].pop_Tobj(&self->pqueues[queue_ID]);
+
         /* Queue is empty so busy wait */
         if (task.cid == 0xFFFFFFFF) {
             atomic_store_explicit(&self->pqueues[queue_ID].service_time, 0, memory_order_relaxed);
+
+            /* Mark the actual worker as inactive and exit */
+            if (self->dispatch_finished && (io_ctx->sq_tail == io_ctx->cq_head)) {
+                self->worker_states[queue_ID] = 0;
+                break;
+            }
             continue;
         }
 
@@ -154,15 +162,16 @@ void * worker(void* arg)
         if (current_time > task.absolute_deadline) {
             /* Update the request */
             if(self->tctx.update_requests(&self->tctx, STATE_FREE, STATE_DONE, STATUS_DEADLINE_PASSED, task.cid) == EXIT_FAILURE) {
-                self->running = 0;
-                continue;
+                self->worker_states[queue_ID] = 0;
+                break;
             }
         } else {
             /* Send the IO */
             if (IO_send(&self->tctx, io_ctx, task.cid)) {
                     L_ERR("Failed to create task", "nvme_create_io_sqe() error");
                     if (self->tctx.update_requests(&self->tctx, STATE_FREE, STATE_DONE, STATUS_ERR_NVME, task.cid) == EXIT_FAILURE) {
-                        self->running = 0;
+                        self->worker_states[queue_ID] = 0;
+                        break;
                     }
             }
         }
@@ -170,6 +179,17 @@ void * worker(void* arg)
     printf("Worker %d : Exiting.\n", queue_ID);
     return NULL;
 }
+
+static inline uint8_t workers_finished(Scheduler_ctx * self)
+{
+    for (uint8_t i = 0; i < NB_PRIO_QUEUE; i++) {
+        if (self->worker_states[i]) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 
 void * reap_worker(void * arg)
 {
@@ -182,7 +202,9 @@ void * reap_worker(void * arg)
         return NULL;
     }
 
-    while (self->running) {
+    while (!self->dispatch_finished && !workers_finished(self)) {
+        static uint64_t last_reap_count = 0;
+
         for (uint64_t i = 0; i < MAX_REQ_CAP; i++) {
             /* Atomic Take: Try to move state from DONE to FREE in one op */
             if (atomic_exchange_explicit(&self->tctx.TaskTable[i].state, 
@@ -192,11 +214,30 @@ void * reap_worker(void * arg)
                 bench->requests_completed = bench->requests_completed + 1;
                 /* Push CID back to free pool only if we won the exchange */
                 self->tctx.push_cid(&self->tctx, i);
+                last_reap_count++;
             }
         }
-        __asm__ volatile ("pause" ::: "memory");
+
     }
 
+    /* Last pass before gracefull exit */
+    for (uint64_t i = 0; i < MAX_REQ_CAP; i++) {
+        /* Atomic Take: Try to move state from DONE to FREE in one op */
+        if (atomic_exchange_explicit(&self->tctx.TaskTable[i].state, 
+                                   STATE_FREE, 
+                                   memory_order_acq_rel) == STATE_DONE) {
+            
+            bench->requests_completed = bench->requests_completed + 1;
+            /* Push CID back to free pool only if we won the exchange */
+            self->tctx.push_cid(&self->tctx, i);
+        }
+    }
+
+
+
     L_INFO("Garbage collection finished. reaper exiting.");
+
+    log_benchmark(bench);
+
     return NULL;
 }

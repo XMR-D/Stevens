@@ -33,8 +33,8 @@ void generate_workload_buffer(rnd_bench_ctx_t *b_ctx)
         }
 
         /* Deterministic cost formula: 100 * n^2 */
-        req->expected_duration = 100 * (uint64_t)n * n;
-
+        req->expected_duration = (uint64_t)n * 50;
+        
         /* 3. Operation type and cost adjustment */
         if ((rand_r(&b_ctx->seed) % 100) < b_ctx->read_ratio) {
             req->opc = 0x02; /* NVME_CMD_READ */

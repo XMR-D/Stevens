@@ -26,15 +26,17 @@ struct scheduler_ctx {
     alignas(64) PQueueObj pqueues[NB_PRIO_QUEUE];
 
     /* Scheduler state */
-    _Atomic uint8_t running;
+    _Atomic uint8_t dispatch_finished;
 
     worker_arg_t thread_args[NB_PRIO_QUEUE];
     pthread_t worker_threads[NB_PRIO_QUEUE];
+    uint32_t worker_ids[NB_PRIO_QUEUE];
+
+    uint8_t worker_states[NB_PRIO_QUEUE];
 
     reaper_arg_t reap_arg;
     pthread_t reap_thread;
 
-    int worker_ids[NB_PRIO_QUEUE];
 
     void (*destroy)(Scheduler_ctx *self);
     void (*log_scheduler)(Scheduler_ctx *self);

@@ -21,6 +21,7 @@ void _push_cid(Async_transport_ctx * self, uint16_t cid)
 
 }
 
+/* try to retreive a proper cid */
 uint32_t _pop_cid(Async_transport_ctx * self)
 {
     uint32_t head = atomic_load_explicit(&self->head, memory_order_relaxed);
@@ -63,10 +64,11 @@ void tctx_class_init(Async_transport_ctx * tctx)
     /* Asynchronous Transport Context Initialization 
        (see IO_transport_ctx.h to get tcx object infos)
     */
-    tctx->tail = MAX_REQ_CAP;
+    tctx->head = 0;
+    tctx->tail = 0;
 
     for (uint32_t i = 0; i < MAX_REQ_CAP; i++) {
-        tctx->available_cid[i] = i;
+        _push_cid(tctx, i);
     }
 
     tctx->push_cid = _push_cid;
