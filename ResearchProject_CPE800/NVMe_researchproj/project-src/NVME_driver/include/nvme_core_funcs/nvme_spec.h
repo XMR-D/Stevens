@@ -238,8 +238,4 @@ typedef union {
 #define GET_FEATURE_OP 0xA
 #define ASYNC_EVENT_OP 0XC
 
-#define IO_READ_OP 
-#define IO_WRITE_OP
-
-
 #endif /* ! NVME_SPEC_H */

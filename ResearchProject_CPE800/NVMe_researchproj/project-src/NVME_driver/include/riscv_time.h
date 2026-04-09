@@ -10,14 +10,14 @@
 #include <time.h>
 
 static inline uint64_t get_riscv_tick(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    /* Convert to a synthetic tick (nanoseconds) */
-    return (uint64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+    uint64_t ticks;
+    // 'rdtime' est généralement autorisé là où 'rdcycle' est bloqué
+    asm volatile ("rdtime %0" : "=r" (ticks));
+    return ticks;
 }
 
 /*
- * us_to_ticks - Convert microseconds to CPU cycles
+ * us_to_ticks - Convert microseconds to ticks
  * us: microseconds
  * cpu_freq_mhz: CPU frequency in MHz (e.g., 1000 for 1GHz)
  */
@@ -26,4 +26,13 @@ static inline uint64_t us_to_ticks(uint64_t us, uint64_t cpu_freq_mhz)
     return us * cpu_freq_mhz;
 }
 
+/*
+ * ticks_to_us - Convert ticks to microseconds
+ * us: microseconds
+ * cpu_freq_mhz: CPU frequency in MHz (e.g., 1000 for 1GHz)
+ */
+static inline double ticks_to_us(uint64_t ticks, uint64_t cpu_freq_mhz) 
+{
+    return (double)ticks / (double)cpu_freq_mhz;
+}
 #endif /* !RISCV_TIME_H */

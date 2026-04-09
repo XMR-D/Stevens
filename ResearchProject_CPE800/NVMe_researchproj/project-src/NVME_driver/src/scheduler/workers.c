@@ -87,11 +87,22 @@ static int8_t IO_receive(Async_transport_ctx *tctx, Nvmeq_context_t *IOctx)
 
         uint16_t cid = entry->cid;
         uint8_t final_status = (entry->dw3.sf != 0) ? STATUS_ERR_NVME : STATUS_SUCCESS;
-        
-        if (tctx->update_requests(tctx, STATE_PENDING, STATE_FREE, final_status, cid) == EXIT_FAILURE) {
-            return -1;
+
+        uint16_t status = entry->dw3.status_raw;
+        uint8_t sc = (status >> 1) & 0xFF;   // On décale le bit de Phase
+        uint8_t sct = (status >> 9) & 0x07;
+            
+        if (sc != 0) {
+            printf("[NVMe ERR] CID: %u | SCT: %u | SC: 0x%02X\n", entry->cid, sct, sc);
         }
 
+
+        if (tctx->update_requests(tctx, STATE_PENDING, STATE_DONE, final_status, cid) == EXIT_FAILURE) {
+            return -1;
+        }
+        
+        /* Record task finishing time for the benchmark */
+        tctx->TaskTable[cid].end_ts = get_riscv_tick();
 
         /* Update local SQ head from SQHD field */
         IOctx->sq_head = entry->sqhd;
@@ -103,6 +114,8 @@ static int8_t IO_receive(Async_transport_ctx *tctx, Nvmeq_context_t *IOctx)
             IOctx->expected_phase ^= 1;
         }
 
+        atomic_fetch_sub(&tctx->in_flight, 1);
+
         /* Update CQ Doorbell */
         *((volatile uint32_t*) (uintptr_t) IOctx->cq_hdbl) = (uint32_t) IOctx->cq_head;
     }
@@ -110,21 +123,27 @@ static int8_t IO_receive(Async_transport_ctx *tctx, Nvmeq_context_t *IOctx)
     return 0;
 }
 
-
 void * worker(void* arg)
 {
     worker_arg_t *args = (worker_arg_t *) arg;
     Scheduler_ctx *self = args->self;
     uint8_t queue_ID = args->queue_ID;
     rnd_bench_ctx_t* bench = args->bench;
-    
+
+    uint64_t accepted = 0;
     Nvmeq_context_t *io_ctx = &self->pqueues[queue_ID].io_ctx;
 
     if (!io_ctx || !self) {
         return NULL;
     }
 
-    printf("Worker %d : Up and running.\n", queue_ID);
+    /* synchronize for everyone and compute the temporal drift to normalize computations in the benchmark */
+    pthread_barrier_wait(&self->start_barrier);
+
+    self->temporal_drifts[queue_ID] = (get_riscv_tick() - self->dispatch_temp);
+
+    printf("Worker %d : Up and running (estimated temporal_drift : %ld).\n", 
+        queue_ID, self->temporal_drifts[queue_ID]);
 
     while (1) {
 
@@ -133,7 +152,7 @@ void * worker(void* arg)
             break;
         }
 
-        /* 
+        /*
             Check if the submission queue is full, if it's the case, just
             call the IO_receive reaper once again
         */
@@ -143,26 +162,30 @@ void * worker(void* arg)
         }
 
         TObj task = self->pqueues[queue_ID].pop_Tobj(&self->pqueues[queue_ID]);
-
+        
         /* Queue is empty so busy wait */
         if (task.cid == 0xFFFFFFFF) {
             atomic_store_explicit(&self->pqueues[queue_ID].service_time, 0, memory_order_relaxed);
 
             /* Mark the actual worker as inactive and exit */
-            if (self->dispatch_finished && (io_ctx->sq_tail == io_ctx->cq_head)) {
+            /* Need to mark the worker as inactive more effictively otherwise we miss some inflight requests completion */
+
+            if (self->dispatch_finished && (io_ctx->sq_tail == io_ctx->cq_head) && self->tctx.in_flight == 0) {
                 self->worker_states[queue_ID] = 0;
+                printf("Worker %d : Exiting after accepting : %ld\n", queue_ID, accepted);
                 break;
             }
             continue;
         }
 
+        accepted++;
+
         /* update the service time of the appropriate queue */
         atomic_fetch_sub(&self->pqueues[queue_ID].service_time, task.expected_duration);
 
         /* Check for task deadline */
-        uint64_t current_time = get_riscv_tick();
-        if (current_time > task.absolute_deadline) {
-            
+        if (get_riscv_tick() > task.absolute_deadline) {
+
             bench->requests_not_accepted++;
             bench->drop_reason_already_expired++;
 
@@ -181,70 +204,9 @@ void * worker(void* arg)
                         break;
                     }
             }
+
+            atomic_fetch_add(&self->tctx.in_flight, 1);
         }
     }
-    printf("Worker %d : Exiting.\n", queue_ID);
-    return NULL;
-}
-
-static inline uint8_t workers_finished(Scheduler_ctx * self)
-{
-    for (uint8_t i = 0; i < NB_PRIO_QUEUE; i++) {
-        if (self->worker_states[i]) {
-            return 0;
-        }
-    }
-    return 1;
-}
-
-
-void * reap_worker(void * arg)
-{
-    reaper_arg_t *args = (reaper_arg_t *) arg;
-    Scheduler_ctx *self = args->self;
-    rnd_bench_ctx_t* bench = args->bench;
-
-    if (bench == NULL) {
-        L_ERR("Reaper", "Benchmark context is NULL. Reaper exit.");
-        return NULL;
-    }
-
-    while (!self->dispatch_finished && !workers_finished(self)) {
-        static uint64_t last_reap_count = 0;
-
-        for (uint64_t i = 0; i < MAX_REQ_CAP; i++) {
-            /* Atomic Take: Try to move state from DONE to FREE in one op */
-            if (atomic_exchange_explicit(&self->tctx.TaskTable[i].state, 
-                                       STATE_FREE, 
-                                       memory_order_acq_rel) == STATE_DONE) {
-                
-                bench->requests_completed = bench->requests_completed + 1;
-                /* Push CID back to free pool only if we won the exchange */
-                self->tctx.push_cid(&self->tctx, i);
-                last_reap_count++;
-            }
-        }
-
-    }
-
-    /* Last pass before gracefull exit */
-    for (uint64_t i = 0; i < MAX_REQ_CAP; i++) {
-        /* Atomic Take: Try to move state from DONE to FREE in one op */
-        if (atomic_exchange_explicit(&self->tctx.TaskTable[i].state, 
-                                   STATE_FREE, 
-                                   memory_order_acq_rel) == STATE_DONE) {
-            
-            bench->requests_completed = bench->requests_completed + 1;
-            /* Push CID back to free pool only if we won the exchange */
-            self->tctx.push_cid(&self->tctx, i);
-        }
-    }
-
-
-
-    L_INFO("Garbage collection finished. reaper exiting.");
-
-    log_benchmark(bench);
-
     return NULL;
 }

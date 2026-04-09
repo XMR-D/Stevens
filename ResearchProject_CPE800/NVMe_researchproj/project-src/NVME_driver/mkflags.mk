@@ -7,7 +7,6 @@ NVME_DISK      = ../../thirdparties/nvme_disk.img
 
 # Machine & CPU Configuration
 # 'aia=aplic-imsic' is the modern RISC-V interrupt standard
-# 'cpu=max' ensures all experimental extensions are available
 QEMU_MACHINE   = virt,aia=aplic-imsic
 QEMU_CPU       = max
 MEM            = 4G

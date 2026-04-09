@@ -19,18 +19,15 @@
 #include "priority_queues_ctx.h"
 
 
-void _push_Tobj(PQueueObj * self, uint16_t cid, uint64_t absolute_deadline, uint64_t timestamp_start)
+void _push_Tobj(PQueueObj * self, uint16_t cid, uint64_t absolute_deadline)
 {
     uint32_t tail = atomic_load_explicit(&self->tail, memory_order_relaxed);
     TObj tobject;
     tobject.cid = cid;
     tobject.absolute_deadline = absolute_deadline;
-    tobject.timestamp_start = timestamp_start;
-
     self->queue[tail & 0xFFFF] = tobject;
 
     atomic_store_explicit(&self->tail, tail + 1, memory_order_release);
-
 }
 
 TObj _pop_Tobj(PQueueObj * self)

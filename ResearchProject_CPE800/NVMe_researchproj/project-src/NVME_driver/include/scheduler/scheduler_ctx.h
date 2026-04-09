@@ -25,19 +25,24 @@ struct scheduler_ctx {
     /* Child class that contain priority queues and related methods */
     alignas(64) PQueueObj pqueues[NB_PRIO_QUEUE];
 
-    /* Scheduler state */
-    _Atomic uint8_t dispatch_finished;
+    /* Table that hold all inter-cores temporal drifts for benchmarking computation */
+    pthread_barrier_t start_barrier;
+    uint64_t dispatch_temp;
+    int64_t temporal_drifts[NB_PRIO_QUEUE];
 
     worker_arg_t thread_args[NB_PRIO_QUEUE];
     pthread_t worker_threads[NB_PRIO_QUEUE];
     uint32_t worker_ids[NB_PRIO_QUEUE];
 
+    _Atomic uint8_t dispatch_finished;
     uint8_t worker_states[NB_PRIO_QUEUE];
 
     reaper_arg_t reap_arg;
     pthread_t reap_thread;
 
 
+
+    /* Scheduler state */
     void (*destroy)(Scheduler_ctx *self);
     void (*log_scheduler)(Scheduler_ctx *self);
     void (*start_scheduler)(Scheduler_ctx *self, rnd_bench_ctx_t* bench);

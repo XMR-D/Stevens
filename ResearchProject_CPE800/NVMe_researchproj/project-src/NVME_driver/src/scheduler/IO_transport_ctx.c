@@ -51,7 +51,7 @@ uint8_t _update_requests(Async_transport_ctx *self, uint8_t expected, uint8_t ne
                                                    memory_order_acq_rel, 
                                                    memory_order_acquire)) {
         /* If state changed under our feet, it's a real sync error */
-        if (expected != 0 && expected != 1 && expected != 2) { // Logic check
+        if (expected > 2) {
             printf("[CRITICAL] Sync Error: CID %u, State was %u\n", cid, expected);
             return EXIT_FAILURE;
         }
@@ -66,6 +66,7 @@ void tctx_class_init(Async_transport_ctx * tctx)
     */
     tctx->head = 0;
     tctx->tail = 0;
+    tctx->in_flight = 0;
 
     for (uint32_t i = 0; i < MAX_REQ_CAP; i++) {
         _push_cid(tctx, i);

@@ -33,6 +33,7 @@ run_fullscreen:
         -cpu $(QEMU_CPU) \
         -m $(MEM) \
         -smp $(SMP) \
+		-rtc clock=vm \
         -display none \
         -chardev serial,id=serial0,path="$$PTY_VAL" \
         -serial chardev:serial0 \
@@ -63,6 +64,7 @@ run_term:
 		-cpu $(QEMU_CPU) \
 		-m $(MEM) \
 		-smp $(SMP) \
+		-rtc clock=vm \
 		-display none \
 		-serial stdio \
 		-kernel $(VMLINUX) \

@@ -43,6 +43,7 @@ static inline void driver_exit(volatile void * pci_bar, Nvmeq_context_t *admin_c
     if (sctx) {
         sctx->destroy(sctx);
     }
+
     L_SUCC("All structures freed");
 }
 
@@ -94,7 +95,7 @@ static int8_t driver_enter(char * res_path, char * bdf)
     }
     b_ctx->cpu_freq_mhz = 10;
     b_ctx->max_requests = NB_WORLOADS;
-    b_ctx->read_ratio = 30;
+    b_ctx->read_ratio = 100;
     b_ctx->seed = 0xdeadbeef;
 
     printf("bench = %p\n", b_ctx);
@@ -112,6 +113,8 @@ static int8_t driver_enter(char * res_path, char * bdf)
     generate_workload_buffer(b_ctx);
 
     scheduler->start_scheduler(scheduler, b_ctx);
+
+    log_benchmark(b_ctx);
 
     driver_exit(pci_bar, admin_ctx, scheduler);
     return EXIT_SUCCESS;

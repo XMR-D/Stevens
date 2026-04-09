@@ -40,13 +40,17 @@ typedef struct {
     /* Additional infos for rescheduling */
     _Atomic uint64_t absolute_deadline;
     _Atomic uint64_t expected_duration;
-    _Atomic uint64_t timestamp_start;
+    
+    _Atomic uint64_t start_ts;
+    _Atomic uint64_t end_ts;
+
     _Atomic uint32_t queue_ID;
 
 }__attribute__((aligned(64))) IO_metadata_t;
 
 struct async_transport_ctx {
 
+    _Atomic uint64_t in_flight;
 
     /* Lock-free array storing the status of each CID currently in flight */
     alignas(64) IO_metadata_t TaskTable[MAX_REQ_CAP];
