@@ -1,7 +1,6 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -22,15 +21,14 @@
 #include "options.h"
 #include "nvme_queue_ctx.h"
 
-
 #include "scheduler_ctx.h"
+
 
 /* declare it as static to keep it in bss section and avoid immediate segfault */
 static rnd_bench_ctx_t * b_ctx;
 
-static inline void driver_exit(volatile void * pci_bar, Nvmeq_context_t *admin_ctx, Scheduler_ctx * sctx)
+static inline void driver_exit(volatile void * pci_bar, Nvmeq_context_t *admin_ctx, Scheduler_ctx * sctx,  rnd_bench_ctx_t * bench)
 {
-    L_INFO("Destroying NVMe contexts and unmaping pci bar register mapped to NVMe device");
 
     if (pci_bar) {
         bar_unmap(pci_bar);
@@ -41,7 +39,7 @@ static inline void driver_exit(volatile void * pci_bar, Nvmeq_context_t *admin_c
     }
 
     if (sctx) {
-        sctx->destroy(sctx);
+        sctx->destroy(sctx, bench);
     }
 
     L_SUCC("All structures freed");
@@ -62,13 +60,13 @@ static int8_t driver_enter(char * res_path, char * bdf)
     admin_ctx = create_nvmeq_ctx(DEVICE_NVMEQ_BUFF_SIZE, NVME_QUEUE_DEPTH, NVME_QUEUE_DEPTH);
 
     if (admin_ctx == NULL) {
-        driver_exit(pci_bar, admin_ctx, NULL);
+        driver_exit(pci_bar, admin_ctx, NULL, NULL);
         return EXIT_FAILURE;
     }
 
     pci_bar = bar_map(res_path, bdf);
     if (pci_bar == NULL) {
-        driver_exit(pci_bar, admin_ctx, NULL);
+        driver_exit(pci_bar, admin_ctx, NULL, NULL);
         return EXIT_FAILURE;
     }
 
@@ -77,7 +75,7 @@ static int8_t driver_enter(char * res_path, char * bdf)
         NVMe initialization handshake
     */
     if (nvme_init_handshake(pci_bar, admin_ctx) == EXIT_FAILURE) {
-        driver_exit(pci_bar, admin_ctx, NULL);
+        driver_exit(pci_bar, admin_ctx, NULL, NULL);
         return EXIT_FAILURE;
     }
     L_SUCC("NVMe context created successfully");
@@ -90,12 +88,13 @@ static int8_t driver_enter(char * res_path, char * bdf)
 
     if (b_ctx == NULL) {
         L_ERR("Benchmark", "Null benchmark exiting.");
-        driver_exit(pci_bar, admin_ctx, NULL);
+        driver_exit(pci_bar, admin_ctx, NULL, NULL);
         return EXIT_SUCCESS;
     }
+    b_ctx->min_lat = MAXINT;
     b_ctx->cpu_freq_mhz = 10;
     b_ctx->max_requests = NB_WORLOADS;
-    b_ctx->read_ratio = 100;
+    b_ctx->read_ratio = 30;
     b_ctx->seed = 0xdeadbeef;
 
     printf("bench = %p\n", b_ctx);
@@ -114,18 +113,23 @@ static int8_t driver_enter(char * res_path, char * bdf)
 
     scheduler->start_scheduler(scheduler, b_ctx);
 
-    log_benchmark(b_ctx);
-
-    driver_exit(pci_bar, admin_ctx, scheduler);
+    driver_exit(pci_bar, admin_ctx, scheduler, b_ctx);
     return EXIT_SUCCESS;
     
 }
 
 
-int main(int argc, char ** argv) {
+int main(int argc, char ** argv) 
+{
 
     int8_t errcode;
     Opt_flgs * opts = NULL;
+
+    /* LOOP to CHECK DETERMINISM */
+    uint64_t t1 = get_riscv_tick();
+    for(volatile int i=0; i<10000; i++); // Petite boucle de délai fixe
+    uint64_t t2 = get_riscv_tick();
+    printf("Stall check: %ld ticks\n", t2 - t1);
 
     if ((opts = parse_options(&argc, &argv)) == NULL) {
         return EXIT_FAILURE;

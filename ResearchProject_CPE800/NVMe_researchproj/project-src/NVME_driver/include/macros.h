@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+#define MAXINT 2147483647 
+
 #define L_ERR(msg, reason) printf("[ERROR]: %s : %s\n", msg, reason)
 #define L_WARN(msg, reason) printf("[WARN]: %s : %s\n", msg, reason)
 #define L_SUCC(msg) printf("[SUCC]: %s.\n", msg)

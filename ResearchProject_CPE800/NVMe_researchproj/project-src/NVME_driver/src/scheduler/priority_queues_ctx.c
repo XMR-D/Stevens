@@ -18,14 +18,29 @@
 
 #include "priority_queues_ctx.h"
 
+static inline void update_queue_service_time(PQueueObj * self, uint64_t duration, bool add) {
+    if (add) {
+        atomic_fetch_add(&self->service_time, duration);
+    } else {
+        uint64_t old = atomic_load_explicit(&self->service_time, memory_order_relaxed);
+        
+        while (old > duration && !atomic_compare_exchange_weak(&self->service_time, &old, old - duration));
+        
+        if (old <= duration) 
+            atomic_store_explicit(&self->service_time, 0, memory_order_relaxed);
+    }
+}
 
-void _push_Tobj(PQueueObj * self, uint16_t cid, uint64_t absolute_deadline)
+void _push_Tobj(PQueueObj * self, uint16_t cid, uint64_t deadline, uint64_t exp_dur)
 {
     uint32_t tail = atomic_load_explicit(&self->tail, memory_order_relaxed);
     TObj tobject;
     tobject.cid = cid;
-    tobject.absolute_deadline = absolute_deadline;
+    tobject.deadline = deadline;
+    tobject.expected_duration = exp_dur;
     self->queue[tail & 0xFFFF] = tobject;
+
+    update_queue_service_time(self, exp_dur, 1);
 
     atomic_store_explicit(&self->tail, tail + 1, memory_order_release);
 }
@@ -42,6 +57,9 @@ TObj _pop_Tobj(PQueueObj * self)
     }
 
     TObj tobject = self->queue[head & 0xFFFF];
+    
+    update_queue_service_time(self, tobject.expected_duration, 1);
+
     atomic_store_explicit(&self->head, head + 1, memory_order_release);
     return tobject;
 }

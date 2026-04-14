@@ -53,7 +53,7 @@ struct async_transport_ctx {
     _Atomic uint64_t in_flight;
 
     /* Lock-free array storing the status of each CID currently in flight */
-    alignas(64) IO_metadata_t TaskTable[MAX_REQ_CAP];
+    IO_metadata_t TaskTable[MAX_REQ_CAP];
 
     /* Lock-free ring buffer to store available cids */
     alignas(64) _Atomic uint32_t available_cid[MAX_REQ_CAP];

@@ -30,6 +30,7 @@ run_fullscreen:
 	echo "Using : $$PTY_VAL"; \
 	sudo chmod 666 "$$PTY_VAL"; \
 	sudo $(QEMU_BIN) -M $(QEMU_MACHINE) \
+		-accel tcg,thread=multi \
         -cpu $(QEMU_CPU) \
         -m $(MEM) \
         -smp $(SMP) \
@@ -59,8 +60,8 @@ run_term:
 	sudo rm -f /tmp/vfsd.sock /tmp/vfsd.sock.pid /tmp/qemu_pty
 	sudo fuser -k -9 ../../thirdparties/nvme_disk.img || true
 	sudo /usr/lib/qemu/virtiofsd --socket-path=/tmp/vfsd.sock --shared-dir=. --sandbox none &
-
 	sudo $(QEMU_BIN) -M $(QEMU_MACHINE) \
+		-accel tcg,thread=multi \
 		-cpu $(QEMU_CPU) \
 		-m $(MEM) \
 		-smp $(SMP) \
@@ -98,6 +99,7 @@ launch_targ_fullscreen:
 	echo "Using : $$PTY_VAL"; \
 	sudo chmod 666 "$$PTY_VAL"; \
 	sudo $(QEMU_BIN) -M $(QEMU_MACHINE) \
+		-accel tcg,thread=multi \
 		-cpu $(QEMU_CPU) \
 		-m $(MEM) \
 		-smp $(SMP) \
@@ -128,6 +130,7 @@ launch_targ_term:
 	sudo /usr/lib/qemu/virtiofsd --socket-path=/tmp/vfsd.sock --shared-dir=. --sandbox none &
 
 	sudo $(QEMU_BIN) -M $(QEMU_MACHINE) \
+		-accel tcg,thread=multi \
 		-cpu $(QEMU_CPU) \
 		-m $(MEM) \
 		-smp $(SMP) \

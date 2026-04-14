@@ -20,10 +20,10 @@ typedef struct scheduler_ctx Scheduler_ctx;
 struct scheduler_ctx {
 
     /* Child class that contain dictionnary to keep track of harware send and receive I/O */
-    alignas(64) Async_transport_ctx tctx;
+    Async_transport_ctx tctx;
 
     /* Child class that contain priority queues and related methods */
-    alignas(64) PQueueObj pqueues[NB_PRIO_QUEUE];
+    PQueueObj pqueues[NB_PRIO_QUEUE];
 
     /* Table that hold all inter-cores temporal drifts for benchmarking computation */
     pthread_barrier_t start_barrier;
@@ -35,7 +35,7 @@ struct scheduler_ctx {
     uint32_t worker_ids[NB_PRIO_QUEUE];
 
     _Atomic uint8_t dispatch_finished;
-    uint8_t worker_states[NB_PRIO_QUEUE];
+    _Atomic uint8_t worker_states[NB_PRIO_QUEUE];
 
     reaper_arg_t reap_arg;
     pthread_t reap_thread;
@@ -43,7 +43,7 @@ struct scheduler_ctx {
 
 
     /* Scheduler state */
-    void (*destroy)(Scheduler_ctx *self);
+    void (*destroy)(Scheduler_ctx *self,  rnd_bench_ctx_t * bench);
     void (*log_scheduler)(Scheduler_ctx *self);
     void (*start_scheduler)(Scheduler_ctx *self, rnd_bench_ctx_t* bench);
 

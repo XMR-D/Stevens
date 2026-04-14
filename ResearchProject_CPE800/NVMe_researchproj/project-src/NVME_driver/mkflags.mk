@@ -16,4 +16,4 @@ SMP            = 4
 CC = ../../thirdparties/permanent/riscv64-lp64d--musl--stable-2025.08-1/bin/riscv64-buildroot-linux-musl-gcc
 AR=$(CROSS-COMPILE)ar
 INCLUDE=-Iinclude -Iinclude/scheduler -Iinclude/nvme_core_funcs -Ikernel_headers/include 
-CFLAGS = -Wall -Wextra -Werror -static -march=rv64gc -march=rv64gc_zihintpause -mabi=lp64d -O0 -g 
+CFLAGS = -Wall -Wextra -Werror -static -march=rv64gc -march=rv64gc_zihintpause -mabi=lp64d -Ofast -g 

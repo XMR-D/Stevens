@@ -7,37 +7,35 @@
 #include "benchmark.h"
 #include "riscv_time.h"
 
-void generate_workload_buffer(rnd_bench_ctx_t *b_ctx) 
+void generate_workload_buffer(rnd_bench_ctx_t *b_ctx)
 {
     for (uint32_t i = 0; i < b_ctx->max_requests; i++) 
     {
         bench_req_t *req = &b_ctx->buffer[i];
 
-        /* mark the nsid at 1*/
         req->nsid = 1;
 
-        /* Deadline distribution (Soft Real-Time budgets) */
-        int r = rand_r(&b_ctx->seed) % 100;
+        /* Randomized budget assignment based on probability buckets */
+        int32_t r = rand_r(&b_ctx->seed) % 100;
         uint64_t budget_us = (r < 10) ? 500 : (r < 30 ? 2000 : 10000);
-        req->latency_budget_ticks = us_to_ticks(budget_us, b_ctx->cpu_freq_mhz);
+        uint64_t budget_ticks = us_to_ticks(budget_us, b_ctx->cpu_freq_mhz);
+        
 
-        /* Workload size and Cost Calculation (expected_duration) */
+        /* Store relative offset and budget for dynamic deadline calculation */
+        req->latency_budget_ticks = budget_ticks;
 
-        req->nlb = 7; /* 4KB (8 blocks of 512B) */
-        uint8_t n = 8;
+        req->nlb = 7;
         req->prp1 = 0x20000000 + (i * 0x1000);
         req->prp2 = 0;
         
-
-        /* Deterministic cost formula: 100 * n^2 */
-        req->expected_duration = (uint64_t)n * 5000;
+        /* Deterministic cost formula: Base cost of 4KB operation */
+        req->expected_duration = 8 * 5000;
         
-        /* Operation type and cost adjustment */
+        /* Set operation type with weight-based cost adjustment */
         if ((rand_r(&b_ctx->seed) % 100) < b_ctx->read_ratio) {
-            req->opc = 0x02; /* NVME_CMD_READ */
+            req->opc = 0x02; /* Read */
         } else {
-            req->opc = 0x01; /* NVME_CMD_WRITE */
-            /* Writes are typically 20 % more expensive in this model */
+            req->opc = 0x01; /* Write */
             req->expected_duration = (req->expected_duration * 120) / 100;
         }
 
@@ -56,11 +54,8 @@ bool get_next_bench_request(void *ctx, bench_req_t *out_req)
     /* Fast copy of pre-generated request */
     *out_req = b_ctx->buffer[b_ctx->head];
 
-    /* Record exact start time using hardware CSR */
-    uint64_t now = get_riscv_tick();
+    out_req->latency_budget_ticks += get_riscv_tick();
 
-    /* Absolute deadline using tick-only arithmetic */
-    out_req->absolute_deadline = now + out_req->latency_budget_ticks;
     b_ctx->head++;
     return true;
 }
@@ -72,9 +67,12 @@ void log_benchmark(rnd_bench_ctx_t * bench)
            "                 NVMe DETERMINISTIC BENCHMARK                  \n"
            "===============================================================\n");
 
-    printf(" [EXECUTION]\n");
-    
-    printf("  Total Time      : %.4f s\n", ticks_to_us((get_riscv_tick() - bench->dispatch_start), bench->cpu_freq_mhz) / 1000000);
+    printf("\n [PERFORMANCE]\n");
+
+    printf("  Total Dispatch Time : %.4f s\n", ticks_to_us((bench->dispatch_end - bench->dispatch_start), bench->cpu_freq_mhz) / 1000000);
+    printf("  Total Latency : %.4f ticks\n", (double) bench->latencies);
+    printf("  Max Latency : %lu\n", bench->max_lat);
+    printf("  Min Latency : %lu\n", bench->min_lat);
     printf("  Average Latency : %.4f ticks\n", (double) bench->latencies / (double) bench->requests_completed);
     
     printf("  CPU Frequency   : %lu MHz\n", bench->cpu_freq_mhz);
@@ -91,9 +89,7 @@ void log_benchmark(rnd_bench_ctx_t * bench)
     printf("  Failed (NVMe error) : %-12lu\n", bench->complete_reason_failure);
     printf("  Dropped         : %-12lu (Dispatcher rejected)\n", bench->requests_not_accepted);
 
-    printf("\n [PERFORMANCE]\n");
-    //printf("  Throughput      : %8.2f IOPS\n", iops);
-    //printf("  Est. Bandwidth  : %8.2f MB/s\n", throughput_mb);
+
 
     printf("\n [REJECTION ANALYSIS]\n");
     if (bench->requests_not_accepted > 0) {

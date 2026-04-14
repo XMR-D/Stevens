@@ -15,14 +15,14 @@ typedef struct prio_queue_obj PQueueObj;
 
 struct task_obj {
     uint32_t cid;
-    uint64_t absolute_deadline;
+    uint64_t deadline;
     uint64_t expected_duration;
 };
 
 struct prio_queue_obj {
 
     /* Ring buffer that contains the objects */
-    alignas(64) TObj queue[PQUEUE_CAP];
+    TObj queue[PQUEUE_CAP];
     
     /* Dispatcher access head */
     alignas(64) _Atomic uint32_t head; 
@@ -37,7 +37,7 @@ struct prio_queue_obj {
     /* Class methods*/
 
     /* Used by the dispatcher to submit new tasks */
-    void (*push_Tobj)(PQueueObj * self, uint16_t cid, uint64_t absolute_deadline);
+    void (*push_Tobj)(PQueueObj * self, uint16_t cid, uint64_t deadline, uint64_t exp_dur);
 
     /* Used by the sender to retreive a job and send it to the transport layer */
     TObj (*pop_Tobj)(PQueueObj *self);

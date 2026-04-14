@@ -4,12 +4,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define NB_WORLOADS 1
+#define NB_WORLOADS 5
 
 typedef struct {
     uint64_t latency_budget_ticks;
     uint64_t expected_duration;
-    uint64_t absolute_deadline;
+    uint64_t arrival_offset;
     uint64_t slba;
     uint64_t prp1;              
     uint64_t prp2;
@@ -32,7 +32,12 @@ typedef struct {
     uint64_t complete_reason_success;     /* Completed successfully */
     uint64_t complete_reason_failure;     /* Completed with nvme failure */
     uint64_t latencies;                   /* latencies counter to compute average latency */
+    uint64_t max_lat;
+    uint64_t min_lat;
     uint64_t dispatch_start;
+    uint64_t dispatch_end;
+     
+    uint64_t dispatch_finished;
     uint64_t time_elapsed;
     uint8_t  read_ratio;
     uint64_t cpu_freq_mhz;

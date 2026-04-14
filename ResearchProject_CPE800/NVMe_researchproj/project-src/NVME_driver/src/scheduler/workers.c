@@ -27,10 +27,10 @@
    Note: If the controller is full, IO_send return EXIT_FAILURE and it's up to
    the scheduler to handle it (reschedule, check for deadline and evict..)
 */
-static int8_t IO_send(Async_transport_ctx *transport_ctx, Nvmeq_context_t *IOctx, uint16_t new_cid)
+static int8_t IO_send(Async_transport_ctx *tctx, Nvmeq_context_t *IOctx, uint16_t new_cid)
 {
-    /* create request */
-    IO_metadata_t *meta = &transport_ctx->TaskTable[new_cid];
+    /* Create request */
+    IO_metadata_t *meta = &tctx->TaskTable[new_cid];
 
     /* Ensure we see all data written by the Dispatcher */
     atomic_thread_fence(memory_order_acquire);
@@ -55,17 +55,23 @@ static int8_t IO_send(Async_transport_ctx *transport_ctx, Nvmeq_context_t *IOctx
     *target_slot = ioreq;
 
 
-    if(transport_ctx->update_requests(transport_ctx, STATE_FREE, STATE_PENDING, STATUS_PENDING, new_cid) == EXIT_FAILURE) {
+    if(tctx->update_requests(tctx, STATE_FREE, STATE_PENDING, STATUS_PENDING, new_cid) == EXIT_FAILURE) {
         return -1;
     }
 
     /* Ensure we see all data written by the Dispatcher */
     atomic_thread_fence(memory_order_acquire);
 
+    /* Record task finishing time for the benchmark */
+    tctx->TaskTable[ioreq.cid].start_ts = get_riscv_tick();
+
     /* Increment local tail index */
     IOctx->sq_tail = (IOctx->sq_tail + 1) % IOctx->sq_depth;
     /* Direct Register Write: Trigger the hardware doorbell */
     *((volatile uint32_t*) (uintptr_t) IOctx->sq_tdbl) = (uint32_t) IOctx->sq_tail;
+                
+    atomic_fetch_add(&tctx->in_flight, 1);
+
     return 0;
 
 }
@@ -89,7 +95,7 @@ static int8_t IO_receive(Async_transport_ctx *tctx, Nvmeq_context_t *IOctx)
         uint8_t final_status = (entry->dw3.sf != 0) ? STATUS_ERR_NVME : STATUS_SUCCESS;
 
         uint16_t status = entry->dw3.status_raw;
-        uint8_t sc = (status >> 1) & 0xFF;   // On décale le bit de Phase
+        uint8_t sc = (status >> 1) & 0xFF;
         uint8_t sct = (status >> 9) & 0x07;
             
         if (sc != 0) {
@@ -117,6 +123,8 @@ static int8_t IO_receive(Async_transport_ctx *tctx, Nvmeq_context_t *IOctx)
         atomic_fetch_sub(&tctx->in_flight, 1);
 
         /* Update CQ Doorbell */
+
+        /* TODO: HEISENBUG HERE */
         *((volatile uint32_t*) (uintptr_t) IOctx->cq_hdbl) = (uint32_t) IOctx->cq_head;
     }
 
@@ -133,20 +141,20 @@ void * worker(void* arg)
     uint64_t accepted = 0;
     Nvmeq_context_t *io_ctx = &self->pqueues[queue_ID].io_ctx;
 
+    uint64_t req_in_flight = 0;
+
     if (!io_ctx || !self) {
         return NULL;
     }
-
-    /* synchronize for everyone and compute the temporal drift to normalize computations in the benchmark */
+    /* 
+     * Synchronize everyone and compute the temporal drift 
+     * to normalize computations in the benchmark
+     */
     pthread_barrier_wait(&self->start_barrier);
 
     self->temporal_drifts[queue_ID] = (get_riscv_tick() - self->dispatch_temp);
 
-    printf("Worker %d : Up and running (estimated temporal_drift : %ld).\n", 
-        queue_ID, self->temporal_drifts[queue_ID]);
-
     while (1) {
-
         if (IO_receive(&self->tctx, io_ctx) == -1) {
             self->worker_states[queue_ID] = 0;
             break;
@@ -162,17 +170,17 @@ void * worker(void* arg)
         }
 
         TObj task = self->pqueues[queue_ID].pop_Tobj(&self->pqueues[queue_ID]);
-        
+
         /* Queue is empty so busy wait */
         if (task.cid == 0xFFFFFFFF) {
-            atomic_store_explicit(&self->pqueues[queue_ID].service_time, 0, memory_order_relaxed);
-
-            /* Mark the actual worker as inactive and exit */
-            /* Need to mark the worker as inactive more effictively otherwise we miss some inflight requests completion */
-
-            if (self->dispatch_finished && (io_ctx->sq_tail == io_ctx->cq_head) && self->tctx.in_flight == 0) {
+            /* 
+             * Mark the actual worker as inactive and exit
+             * Need to mark the worker as inactive more effictively otherwise 
+             * we miss some inflight requests completion 
+             */
+            req_in_flight = atomic_load_explicit(&self->tctx.in_flight, memory_order_acquire);
+            if (self->dispatch_finished && (req_in_flight == 0)) {
                 self->worker_states[queue_ID] = 0;
-                printf("Worker %d : Exiting after accepting : %ld\n", queue_ID, accepted);
                 break;
             }
             continue;
@@ -180,23 +188,23 @@ void * worker(void* arg)
 
         accepted++;
 
-        /* update the service time of the appropriate queue */
+        /* Update the service time of the appropriate queue */
         atomic_fetch_sub(&self->pqueues[queue_ID].service_time, task.expected_duration);
 
         /* Check for task deadline */
-        if (get_riscv_tick() > task.absolute_deadline) {
+        if (get_riscv_tick() > task.deadline) {
 
             bench->requests_not_accepted++;
-            bench->drop_reason_already_expired++;
 
             /* Update the request */
-            if(self->tctx.update_requests(&self->tctx, STATE_FREE, STATE_DONE, STATUS_DEADLINE_PASSED, task.cid) == EXIT_FAILURE) {
+            if (self->tctx.update_requests(&self->tctx, STATE_FREE, STATE_DONE, STATUS_DEADLINE_PASSED, task.cid) == EXIT_FAILURE) {
                 self->worker_states[queue_ID] = 0;
                 break;
             }
 
         } else {
             /* Send the IO */
+
             if (IO_send(&self->tctx, io_ctx, task.cid)) {
                     L_ERR("Failed to create task", "nvme_create_io_sqe() error");
                     if (self->tctx.update_requests(&self->tctx, STATE_FREE, STATE_DONE, STATUS_ERR_NVME, task.cid) == EXIT_FAILURE) {
@@ -204,9 +212,8 @@ void * worker(void* arg)
                         break;
                     }
             }
-
-            atomic_fetch_add(&self->tctx.in_flight, 1);
         }
     }
+    self->worker_states[queue_ID] = 0;
     return NULL;
 }
